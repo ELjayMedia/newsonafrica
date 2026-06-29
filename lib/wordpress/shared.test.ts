@@ -36,7 +36,9 @@ describe("getFpTagForCountry", () => {
       { slug: "fp" },
       {
         revalidate: CACHE_DURATIONS.NONE,
-        tags: ["edition:za", "tag:za:fp"],
+        tags: ["edition:za", "edition:za:tag:fp"],
+        operationName: "TagBySlug",
+        routeContext: { route: "/[countryCode]", surface: "home_feed" },
       },
     )
     expect(result).toEqual({ databaseId: 101, id: 101, name: "Front Page", slug: "fp" })

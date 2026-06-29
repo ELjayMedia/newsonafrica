@@ -9,6 +9,8 @@ vi.mock("@/config/env", () => ({
 }))
 
 vi.mock("@/lib/wordpress/editions-registry", () => ({
+  EDITION_CODES: ["sz", "za", "ng"],
+  isEditionCode: (country: string) => ["sz", "za", "ng"].includes(country),
   WORDPRESS_EDITIONS_REGISTRY: {
     sz: { graphql: "https://example.com/sz/graphql" },
     za: { graphql: "https://example.com/za/graphql" },
@@ -43,6 +45,7 @@ const graphqlSuccess = <T,>(data: T) => ({
 describe("getArticleBySlug", () => {
   beforeEach(() => {
     vi.resetAllMocks()
+    vi.unstubAllEnvs()
   })
 
   it("uses database-id query for numeric-suffix routes", async () => {
@@ -94,6 +97,7 @@ describe("getArticleBySlug", () => {
   })
 
   it("does not escalate GraphQL schema errors to temporary_error when direct slug lookup can continue", async () => {
+    vi.stubEnv("FEATURE_ARTICLE_CROSS_COUNTRY_FALLBACK", "true")
     vi.mocked(fetchWordPressGraphQL)
       .mockResolvedValueOnce({
         ok: false,
