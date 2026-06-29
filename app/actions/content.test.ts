@@ -4,16 +4,15 @@ const getPostsByCategoryForCountryMock = vi.fn()
 const mapWordPressPostsToPostListItemsMock = vi.fn()
 const fetchTaggedPostsMock = vi.fn()
 
+// A single mock per module — a second vi.mock("@/lib/wordpress/service") would
+// replace this factory entirely and drop the other export.
 vi.mock("@/lib/wordpress/service", () => ({
   getPostsByCategoryForCountry: getPostsByCategoryForCountryMock,
+  fetchTaggedPosts: fetchTaggedPostsMock,
 }))
 
 vi.mock("@/lib/data/post-list", () => ({
   mapWordPressPostsToPostListItems: mapWordPressPostsToPostListItemsMock,
-}))
-
-vi.mock("@/lib/wordpress/service", () => ({
-  fetchTaggedPosts: fetchTaggedPostsMock,
 }))
 
 beforeEach(() => {
