@@ -1,29 +1,70 @@
 # News on Africa
 
-## Supabase setup
+Independent African journalism — a greenfield rebuild of the News on Africa web app.
 
-1. Copy `.env.example` to `.env.local` (or your deployment environment secret manager).
-2. Fill in the Supabase keys for your project.
+## Stack
 
-### Required variables
+- **Next.js 15** (App Router) + **React 19**
+- **TypeScript** (strict, `noUncheckedIndexedAccess`)
+- **Tailwind CSS v4** with a documented design-tokens layer
+- **next-themes** for light/dark theming
+- **zod** for typed, validated environment config
+- **pnpm** on **Node 22**
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-  - Used in both client and server runtime to initialize Supabase clients.
-  - Format: `https://<your-project-ref>.supabase.co`. Retrieve your project URL from the Supabase dashboard (Project settings → API).
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - Public key used by browser/client runtime and non-privileged server calls.
-  - Scope is limited by your Row Level Security (RLS) policies.
-- `SUPABASE_SERVICE_ROLE_KEY`
-  - **Server-only** key for privileged backend tasks.
-  - Never expose this key in client code, logs, or public environment files.
+Supabase (accounts/data), headless WordPress (content), and Paystack
+(subscriptions) integrate in later phases. Clean seams are already in place
+(see `lib/env.ts` and the notes below).
 
-### Data API endpoint derivation
+## Getting started
 
-The Supabase Data API endpoint is derived from `NEXT_PUBLIC_SUPABASE_URL` by appending `/rest/v1`.
+```bash
+pnpm install
+cp .env.example .env.local   # fill in values as integrations land
+pnpm dev                     # http://localhost:3000
+```
 
-Example:
+## Scripts
 
-- Project URL: `https://your-project-ref.supabase.co`
-- Data API endpoint: `https://your-project-ref.supabase.co/rest/v1`
+| Command          | Description                 |
+| ---------------- | --------------------------- |
+| `pnpm dev`       | Start the dev server        |
+| `pnpm build`     | Production build            |
+| `pnpm start`     | Run the production build    |
+| `pnpm lint`      | ESLint (eslint-config-next) |
+| `pnpm typecheck` | `tsc --noEmit`              |
+| `pnpm format`    | Format with Prettier        |
 
-Use the anon key for client-safe Data API access and the service role key only for trusted server-side operations.
+## Project layout
+
+```
+app/                 App Router routes, layout, error boundaries, globals.css
+  design-system/     Live preview of UI primitives + tokens
+components/          Shell (header/footer/theme) + ui/ primitives
+  ui/                Button, Card, Input, Container, Skeleton
+lib/                 utils (cn), design-tokens, env (zod validation)
+legacy/              The previous app, archived for reference & parity
+```
+
+## Conventions
+
+- Import via the `@/*` path alias (maps to repo root).
+- Use design tokens, not hard-coded values: `bg-primary`, `text-foreground`,
+  and the typography helpers (`display-lg`, `heading-md`, `body-md`, ...).
+  Tokens live in `app/globals.css` (runtime source of truth) and are mirrored
+  in `lib/design-tokens.ts`.
+- Environment access goes through `lib/env.ts` (`publicEnv` / `serverEnv`).
+  Never import `serverEnv` into a `"use client"` module.
+
+## Integration seams (later phases)
+
+- **Supabase**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `SUPABASE_SERVICE_ROLE_KEY` already in the env schema (optional for now).
+- **WordPress**: `WORDPRESS_API_URL`.
+- **Paystack**: `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`, `PAYSTACK_SECRET_KEY`.
+- Remote image patterns / rewrites belong in `next.config.ts`.
+
+## Legacy app
+
+The previous implementation is preserved under [`legacy/`](./legacy) for
+reference and feature parity. It is excluded from typecheck, lint, and the
+build.
