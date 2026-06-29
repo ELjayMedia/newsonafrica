@@ -14,7 +14,9 @@ describe("/api/revalidate-sitemaps", () => {
   })
 
   it("revalidates metadata and index sitemap routes when secret is valid", async () => {
-    const request = new NextRequest("https://example.com/api/revalidate-sitemaps?secret=test-secret")
+    const request = new NextRequest("https://example.com/api/revalidate-sitemaps", {
+      headers: { "X-Revalidate-Secret": "test-secret" },
+    })
 
     const { GET } = await import("./route")
     const response = await GET(request)
@@ -26,7 +28,9 @@ describe("/api/revalidate-sitemaps", () => {
   })
 
   it("rejects requests with an invalid secret", async () => {
-    const request = new NextRequest("https://example.com/api/revalidate-sitemaps?secret=wrong")
+    const request = new NextRequest("https://example.com/api/revalidate-sitemaps", {
+      headers: { "X-Revalidate-Secret": "wrong" },
+    })
 
     const { GET } = await import("./route")
     const response = await GET(request)

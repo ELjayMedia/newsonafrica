@@ -24,7 +24,7 @@ describe("buildBookmarkStats", () => {
     expect(stats.total).toBe(6)
     expect(stats.unread).toBe(4)
     expect(stats.categories).toEqual({ news: 4, analysis: 1 })
-    expect(stats.readStates).toEqual({ read: 2, unread: 3, in_progress: 1 })
+    expect(stats.readStates).toEqual({ read: 2, unread: 3, in_progress: 1, unknown: 0 })
     expect(stats.collections).toEqual({ "collection-1": 2, __unassigned__: 1 })
   })
 

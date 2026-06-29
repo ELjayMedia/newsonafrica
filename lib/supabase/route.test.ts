@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { NextRequest } from "next/server"
 
-const createRouteHandlerClientMock = vi.fn()
+const createServerClientMock = vi.fn()
 const getSupabaseConfigMock = vi.fn()
 
-vi.mock("@supabase/auth-helpers-nextjs", () => ({
-  createRouteHandlerClient: createRouteHandlerClientMock,
+vi.mock("@supabase/ssr", () => ({
+  createServerClient: createServerClientMock,
 }))
 
 vi.mock("./server", () => ({
@@ -17,7 +17,7 @@ describe("createSupabaseRouteClient", () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn> | undefined
 
   beforeEach(() => {
-    createRouteHandlerClientMock.mockReset()
+    createServerClientMock.mockReset()
     getSupabaseConfigMock.mockReset()
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
   })
@@ -35,7 +35,7 @@ describe("createSupabaseRouteClient", () => {
     const result = createSupabaseRouteClient(request)
 
     expect(result).toBeNull()
-    expect(createRouteHandlerClientMock).not.toHaveBeenCalled()
+    expect(createServerClientMock).not.toHaveBeenCalled()
   })
 
   it("creates a route client when configuration is available", async () => {
@@ -45,7 +45,7 @@ describe("createSupabaseRouteClient", () => {
     })
 
     const supabaseClient = { auth: {} }
-    createRouteHandlerClientMock.mockReturnValue(supabaseClient)
+    createServerClientMock.mockReturnValue(supabaseClient)
 
     const { createSupabaseRouteClient } = await import("./route")
     const request = new NextRequest("https://example.com")
@@ -54,12 +54,15 @@ describe("createSupabaseRouteClient", () => {
 
     expect(result?.supabase).toBe(supabaseClient)
     expect(typeof result?.applyCookies).toBe("function")
-    expect(createRouteHandlerClientMock).toHaveBeenCalledWith(
-      { cookies: expect.any(Function) },
-      {
-        supabaseUrl: "https://example.supabase.co",
-        supabaseKey: "anon-key",
-      },
+    expect(createServerClientMock).toHaveBeenCalledWith(
+      "https://example.supabase.co",
+      "anon-key",
+      expect.objectContaining({
+        cookies: expect.objectContaining({
+          getAll: expect.any(Function),
+          setAll: expect.any(Function),
+        }),
+      }),
     )
   })
 })

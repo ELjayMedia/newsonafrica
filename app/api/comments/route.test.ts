@@ -6,7 +6,7 @@ import { ApiRequestError, parseApiEnvelope } from "@/lib/comments/contracts"
 
 interface CommentRecord {
   id: string
-  wp_post_id: string
+  wp_post_id: string | number
   edition_code: string
   user_id: string
   status: string
@@ -171,7 +171,7 @@ function createSupabaseClient({
   }
 }
 
-const createRequest = (search: string) => new NextRequest(`https://example.com/api/comments?wp_post_id=post-1${search}`)
+const createRequest = (search: string) => new NextRequest(`https://example.com/api/comments?wp_post_id=101${search}`)
 
 describe("GET /api/comments", () => {
   beforeEach(() => {
@@ -201,7 +201,7 @@ describe("GET /api/comments", () => {
     const comments: CommentRecord[] = [
       {
         id: "comment-active",
-        wp_post_id: "post-1",
+        wp_post_id: 101,
         edition_code: "african-edition",
         user_id: "user-2",
         status: "active",
@@ -210,7 +210,7 @@ describe("GET /api/comments", () => {
       },
       {
         id: "comment-flagged",
-        wp_post_id: "post-1",
+        wp_post_id: 101,
         edition_code: "african-edition",
         user_id: "user-3",
         status: "flagged",
@@ -237,7 +237,7 @@ describe("GET /api/comments", () => {
     const comments: CommentRecord[] = [
       {
         id: "comment-user-flagged",
-        wp_post_id: "post-1",
+        wp_post_id: 101,
         edition_code: "african-edition",
         user_id: "user-1",
         status: "flagged",
@@ -246,7 +246,7 @@ describe("GET /api/comments", () => {
       },
       {
         id: "comment-other-flagged",
-        wp_post_id: "post-1",
+        wp_post_id: 101,
         edition_code: "african-edition",
         user_id: "user-2",
         status: "flagged",
@@ -255,7 +255,7 @@ describe("GET /api/comments", () => {
       },
       {
         id: "comment-active",
-        wp_post_id: "post-1",
+        wp_post_id: 101,
         edition_code: "african-edition",
         user_id: "user-3",
         status: "active",
@@ -394,7 +394,7 @@ describe("POST /api/comments", () => {
     const response = await POST(
       new NextRequest("https://example.com/api/comments", {
         method: "POST",
-        body: JSON.stringify({ wp_post_id: "post-1", body: "Hello world" }),
+        body: JSON.stringify({ wp_post_id: "101", body: "Hello world" }),
         headers: { "content-type": "application/json" },
       }),
     )
@@ -404,12 +404,12 @@ describe("POST /api/comments", () => {
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         edition_code: "sz",
-        wp_post_id: "post-1",
+        wp_post_id: 101,
         body: "Hello world",
       }),
     )
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("sz", "post-1"))
+    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("sz", "101"))
   })
 
   it("falls back to the primary edition when no country context is available", async () => {
@@ -426,7 +426,7 @@ describe("POST /api/comments", () => {
     const response = await POST(
       new NextRequest("https://example.com/api/comments", {
         method: "POST",
-        body: JSON.stringify({ wp_post_id: "post-1", body: "Hello world" }),
+        body: JSON.stringify({ wp_post_id: "101", body: "Hello world" }),
         headers: { "content-type": "application/json" },
       }),
     )
@@ -435,12 +435,12 @@ describe("POST /api/comments", () => {
     expect(onInsert).toHaveBeenCalledWith(
       expect.objectContaining({
         edition_code: "african-edition",
-        wp_post_id: "post-1",
+        wp_post_id: 101,
         body: "Hello world",
       }),
     )
     expect(revalidateByTagMock).toHaveBeenCalledTimes(1)
-    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("african-edition", "post-1"))
+    expect(revalidateByTagMock).toHaveBeenCalledWith(cacheTags.comments("african-edition", "101"))
   })
 
   it("returns structured retry metadata when posting too quickly", async () => {
@@ -458,7 +458,7 @@ describe("POST /api/comments", () => {
     const response = await POST(
       new NextRequest("https://example.com/api/comments", {
         method: "POST",
-        body: JSON.stringify({ wp_post_id: "post-1", body: "Hello world" }),
+        body: JSON.stringify({ wp_post_id: "101", body: "Hello world" }),
         headers: { "content-type": "application/json" },
       }),
     )
