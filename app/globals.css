@@ -204,4 +204,69 @@
     letter-spacing: 0.025em;
     font-weight: 500;
   }
+
+  /**
+   * Article body typography (NOA-90). Applied to sanitized WordPress post
+   * HTML (see lib/sanitize-html.ts + components/article/article-body.tsx).
+   * Hand-rolled rather than @tailwindcss/typography since that plugin isn't
+   * part of this stack.
+   */
+  .prose-article {
+    color: hsl(var(--foreground));
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+  .prose-article > * + * {
+    margin-top: 1.25em;
+  }
+  .prose-article h2 {
+    margin-top: 2em;
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .prose-article h3 {
+    margin-top: 1.75em;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .prose-article a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .prose-article img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-lg);
+  }
+  .prose-article blockquote {
+    border-left: 3px solid hsl(var(--primary));
+    padding-left: 1rem;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
+  }
+  .prose-article ul,
+  .prose-article ol {
+    padding-left: 1.5rem;
+  }
+  .prose-article ul {
+    list-style-type: disc;
+  }
+  .prose-article ol {
+    list-style-type: decimal;
+  }
+  .prose-article li + li {
+    margin-top: 0.5em;
+  }
+  .prose-article iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-lg);
+  }
+  .prose-article figcaption {
+    font-size: 0.875rem;
+    color: hsl(var(--muted-foreground));
+  }
 }
