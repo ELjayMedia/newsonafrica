@@ -67,6 +67,8 @@ export type SearchContentRow = {
   url_path: string;
   featured_image_url: string | null;
   rank: number;
+  /** Window count of ALL rows matching the query/filters (same on every row) — added by 20260702150000_search_pagination.sql for pagination. */
+  total_count: number;
 };
 
 export type SearchSuggestionRow = {
