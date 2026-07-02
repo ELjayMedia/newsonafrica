@@ -6,34 +6,26 @@
  *   REST:    `${WORDPRESS_API_URL}/<country>/wp-json/wp/v2`
  *   GraphQL: `${WORDPRESS_API_URL}/<country>/graphql`
  *
- * Add a new edition in exactly one place: append it to `COUNTRIES` below.
+ * The country catalogue itself lives in `@/lib/countries` (client-safe, no
+ * `server-only`) so the country switcher (NOA-92) can share it; this module
+ * re-exports it and adds the server-only URL builders that need
+ * `serverEnv`. Add a new edition in exactly one place: `@/lib/countries`.
  */
 import "server-only";
 
 import { serverEnv } from "@/lib/env";
+import {
+  COUNTRIES,
+  COUNTRY_LIST,
+  DEFAULT_COUNTRY,
+  isValidCountry,
+  SUPPORTED_COUNTRY_CODES,
+  type CountryCode,
+  type CountryConfig,
+} from "@/lib/countries";
 
-export const SUPPORTED_COUNTRY_CODES = ["sz", "za", "ng"] as const;
-
-export type CountryCode = (typeof SUPPORTED_COUNTRY_CODES)[number];
-
-export function isValidCountry(code: string): code is CountryCode {
-  return (SUPPORTED_COUNTRY_CODES as readonly string[]).includes(code);
-}
-
-export interface CountryConfig {
-  code: CountryCode;
-  name: string;
-}
-
-export const COUNTRIES: Record<CountryCode, CountryConfig> = {
-  sz: { code: "sz", name: "Eswatini" },
-  za: { code: "za", name: "South Africa" },
-  ng: { code: "ng", name: "Nigeria" },
-};
-
-export const COUNTRY_LIST: CountryConfig[] = Object.values(COUNTRIES);
-
-export const DEFAULT_COUNTRY: CountryCode = "sz";
+export { COUNTRIES, COUNTRY_LIST, DEFAULT_COUNTRY, isValidCountry, SUPPORTED_COUNTRY_CODES };
+export type { CountryCode, CountryConfig };
 
 function trimTrailingSlashes(value: string): string {
   return value.replace(/\/+$/, "");
