@@ -101,3 +101,17 @@ export interface PostListParams {
   authorSlug?: string;
   search?: string;
 }
+
+/** A most-read entry (Supabase `most_read_content` RPC, NOA-89/NOA-87). */
+export interface MostReadPost {
+  id: string;
+  wpPostId: number;
+  slug: string;
+  country: CountryCode;
+  title: string;
+  excerpt: string;
+  url: string;
+  featuredImageUrl: string | null;
+  viewCount: number;
+  publishedAt: string;
+}
