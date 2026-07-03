@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
+import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { colorTokens } from "@/lib/design-tokens";
 import { publicEnv } from "@/lib/env";
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <ServiceWorkerRegistration />
         </ThemeProvider>
       </body>
     </html>

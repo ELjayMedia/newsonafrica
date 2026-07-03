@@ -11,6 +11,20 @@ const nextConfig: NextConfig = {
   // breaks page-data collection. Keep it as a real Node `require` instead of
   // bundling it.
   serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
+
+  async headers() {
+    return [
+      {
+        // Service worker (NOA-108): must revalidate on every check so new
+        // versions deploy promptly instead of being pinned by the HTTP cache.
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
