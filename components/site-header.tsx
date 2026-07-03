@@ -18,7 +18,7 @@ const NAV_LINKS = [
  * Responsive navigation shell (NOA-84): brand, primary nav (collapses to a
  * disclosure menu on small screens), and the theme toggle.
  */
-export function SiteHeader() {
+export function SiteHeader({ accountSlot }: { accountSlot?: React.ReactNode }) {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -43,8 +43,9 @@ export function SiteHeader() {
         <div className="flex items-center gap-2">
           <CountrySwitcher className="hidden sm:inline-flex" />
           <HeaderSearch />
-          {/* Auth phase: slot the account/profile menu here, next to the
-              theme toggle. */}
+          {/* Account/profile menu (NOA-99): server-rendered slot passed in
+              from the root layout, next to the theme toggle. */}
+          {accountSlot}
           <ThemeToggle />
           <button
             type="button"

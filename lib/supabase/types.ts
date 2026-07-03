@@ -78,6 +78,23 @@ export type SearchSuggestionRow = {
   url_path: string;
 };
 
+/** Reader profile row (NOA-99, `supabase/migrations/20260703100000_profiles.sql`). */
+export type ProfileRow = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  preferred_country: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProfileInsert = Pick<ProfileRow, "id"> &
+  Partial<Pick<ProfileRow, "display_name" | "avatar_url" | "preferred_country">>;
+
+export type ProfileUpdate = Partial<
+  Pick<ProfileRow, "display_name" | "avatar_url" | "preferred_country">
+>;
+
 export type MostReadRow = {
   id: string;
   country: string;
@@ -104,6 +121,12 @@ export type Database = {
         Row: ContentSyncCursorRow;
         Insert: Partial<ContentSyncCursorRow> & Pick<ContentSyncCursorRow, "country">;
         Update: Partial<ContentSyncCursorRow>;
+        Relationships: [];
+      };
+      profiles: {
+        Row: ProfileRow;
+        Insert: ProfileInsert;
+        Update: ProfileUpdate;
         Relationships: [];
       };
     };

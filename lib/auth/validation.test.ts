@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   forgotPasswordSchema,
   loginSchema,
+  profileSchema,
   registerSchema,
   resetPasswordSchema,
   safeNextPath,
@@ -71,6 +72,43 @@ describe("forgotPasswordSchema / resetPasswordSchema", () => {
     expect(resetPasswordSchema.safeParse({ password: "short", confirmPassword: "short" }).success).toBe(
       false,
     );
+  });
+});
+
+describe("profileSchema", () => {
+  it("requires a display name and trims it", () => {
+    expect(profileSchema.safeParse({ displayName: "   " }).success).toBe(false);
+    const result = profileSchema.safeParse({ displayName: "  Thandi N.  " });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.displayName).toBe("Thandi N.");
+  });
+
+  it("normalizes preferred country and rejects unsupported codes", () => {
+    const valid = profileSchema.safeParse({ displayName: "Reader", preferredCountry: "SZ" });
+    expect(valid.success).toBe(true);
+    if (valid.success) expect(valid.data.preferredCountry).toBe("sz");
+
+    expect(profileSchema.safeParse({ displayName: "Reader", preferredCountry: "xx" }).success).toBe(false);
+  });
+
+  it("maps missing/empty preferred country and avatar to null", () => {
+    const result = profileSchema.safeParse({ displayName: "Reader", preferredCountry: "", avatarUrl: "" });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.preferredCountry).toBeNull();
+      expect(result.data.avatarUrl).toBeNull();
+    }
+
+    const omitted = profileSchema.safeParse({ displayName: "Reader" });
+    expect(omitted.success).toBe(true);
+    if (omitted.success) {
+      expect(omitted.data.preferredCountry).toBeNull();
+      expect(omitted.data.avatarUrl).toBeNull();
+    }
+  });
+
+  it("rejects a non-URL avatar value", () => {
+    expect(profileSchema.safeParse({ displayName: "Reader", avatarUrl: "not-a-url" }).success).toBe(false);
   });
 });
 

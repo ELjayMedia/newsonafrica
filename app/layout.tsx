@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
 import { publicEnv } from "@/lib/env";
 
 export const metadata: Metadata = {
@@ -20,7 +22,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="flex min-h-screen flex-col">
         <ThemeProvider>
-          <SiteHeader />
+          <SiteHeader
+            accountSlot={
+              <Suspense fallback={<AccountMenuFallback />}>
+                <AccountMenu />
+              </Suspense>
+            }
+          />
           <main className="flex-1">{children}</main>
           <SiteFooter />
         </ThemeProvider>
