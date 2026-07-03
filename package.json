@@ -16,7 +16,8 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "content-sync:backfill": "tsx scripts/backfill-content-index.ts"
+    "content-sync:backfill": "tsx scripts/backfill-content-index.ts",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -37,6 +38,7 @@
     "@types/node": "^22.10.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "@vitest/coverage-v8": "^3.0.5",
     "eslint": "^9.18.0",
     "eslint-config-next": "15.5.4",
     "eslint-config-prettier": "^9.1.0",
