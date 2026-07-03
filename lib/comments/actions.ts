@@ -4,6 +4,7 @@
  * (owner checks, status pinning, the status-transition guard trigger)
  * backs up the explicit checks here. All actions return `AuthFormState`
  * for React 19 `useActionState` forms, per the auth-form conventions.
+ * Writes are throttled per user via the token-bucket limiter (NOA-103).
  */
 "use server";
 
@@ -17,12 +18,23 @@ import {
   postCommentSchema,
 } from "@/lib/comments/validation";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
+import { getRateLimiter, rateLimitMessage, type RateLimitAction } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 const SIGN_IN_REQUIRED: AuthFormState = {
   status: "error",
   message: "Sign in to join the discussion.",
 };
+
+/**
+ * Per-user throttle (NOA-103). Returns the form-state error to show, or
+ * null when the action may proceed.
+ */
+function checkCommentRateLimit(action: RateLimitAction, userId: string): AuthFormState | null {
+  const decision = getRateLimiter().consume(action, userId);
+  if (decision.ok) return null;
+  return { status: "error", message: rateLimitMessage(decision) };
+}
 
 const INVALID_FIELDS = (fieldErrors: Record<string, string[] | undefined>): AuthFormState => ({
   status: "error",
@@ -48,6 +60,9 @@ export async function postCommentAction(_prev: AuthFormState, formData: FormData
   }
 
   const { country, wpPostId, slug, parentId, body } = parsed.data;
+
+  const limited = checkCommentRateLimit("comments:post", user.id);
+  if (limited) return limited;
 
   const supabase = await createClient();
   const { error } = await supabase.from("comments").insert({
@@ -87,6 +102,9 @@ export async function updateCommentAction(_prev: AuthFormState, formData: FormDa
     return INVALID_FIELDS(parsed.error.flatten().fieldErrors);
   }
 
+  const limited = checkCommentRateLimit("comments:edit", user.id);
+  if (limited) return limited;
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("comments")
@@ -125,6 +143,10 @@ export async function deleteCommentAction(_prev: AuthFormState, formData: FormDa
   if (!parsed.success) {
     return { status: "error", message: "Could not delete this comment." };
   }
+
+  // Deletes share the edit bucket: both are mutations of an existing comment.
+  const limited = checkCommentRateLimit("comments:edit", user.id);
+  if (limited) return limited;
 
   const supabase = await createClient();
   const { data, error } = await supabase

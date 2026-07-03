@@ -2,7 +2,8 @@
  * Bookmark server actions (NOA-100): toggle from the article page's
  * bookmark button and remove from the saved-articles list. All writes go
  * through the cookie-bound server client, so RLS enforces ownership on top
- * of the explicit user checks here.
+ * of the explicit user checks here. Writes are throttled per user via the
+ * token-bucket limiter (NOA-103).
  */
 "use server";
 
@@ -12,6 +13,7 @@ import { z } from "zod";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { isValidCountry } from "@/lib/countries";
+import { getRateLimiter, rateLimitMessage } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
 
 const articleRef = z.object({
@@ -50,6 +52,11 @@ export async function toggleBookmarkAction(input: {
     return { ok: false, requiresAuth: false, message: "This article can't be saved." };
   }
   const { country, wpPostId, slug } = parsed.data;
+
+  const decision = getRateLimiter().consume("bookmarks:mutate", user.id);
+  if (!decision.ok) {
+    return { ok: false, requiresAuth: false, message: rateLimitMessage(decision) };
+  }
 
   const supabase = await createClient();
 
@@ -92,6 +99,14 @@ export async function removeBookmarkAction(formData: FormData): Promise<void> {
 
   const parsed = z.string().uuid().safeParse(formData.get("bookmarkId"));
   if (!parsed.success) return;
+
+  // Void form action (no error channel): a rate-limited remove is skipped;
+  // the revalidated list still showing the item is the feedback.
+  const decision = getRateLimiter().consume("bookmarks:mutate", user.id);
+  if (!decision.ok) {
+    console.warn(`Bookmark removal rate-limited for ${user.id}`);
+    return;
+  }
 
   const supabase = await createClient();
   const { error } = await supabase
