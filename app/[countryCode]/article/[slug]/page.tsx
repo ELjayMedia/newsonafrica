@@ -8,6 +8,7 @@ import { ArticleBody } from "@/components/article/article-body";
 import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
 import { BookmarkButton } from "@/components/bookmark-button";
+import { CommentSection, COMMENTS_CURSOR_PARAM } from "@/components/comments/comment-section";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { getPostBySlug, isValidCountry, listPosts } from "@/lib/dal";
@@ -17,6 +18,8 @@ import { formatDate } from "@/lib/format";
 
 interface ArticlePageProps {
   params: Promise<{ countryCode: string; slug: string }>;
+  /** `comments` carries the comment-pagination cursor (COMMENTS_CURSOR_PARAM). */
+  searchParams: Promise<{ comments?: string }>;
 }
 
 const RELATED_COUNT = 3;
@@ -55,8 +58,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   };
 }
 
-export default async function ArticlePage({ params }: ArticlePageProps) {
+export default async function ArticlePage({ params, searchParams }: ArticlePageProps) {
   const { countryCode, slug } = await params;
+  const { [COMMENTS_CURSOR_PARAM]: commentsCursor } = await searchParams;
 
   if (!isValidCountry(countryCode)) {
     notFound();
@@ -149,6 +153,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           ))}
         </div>
       ) : null}
+
+      <CommentSection country={countryCode} slug={slug} wpPostId={post.id} cursorParam={commentsCursor} />
 
       <RelatedArticles posts={related} />
     </Container>

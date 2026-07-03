@@ -1,0 +1,147 @@
+/**
+ * Comment server actions (NOA-101): post, edit and soft-delete your own
+ * comments. Everything runs through the cookie-bound server client, so RLS
+ * (owner checks, status pinning, the status-transition guard trigger)
+ * backs up the explicit checks here. All actions return `AuthFormState`
+ * for React 19 `useActionState` forms, per the auth-form conventions.
+ */
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { getUser } from "@/lib/auth/session";
+import type { AuthFormState } from "@/lib/auth/validation";
+import {
+  deleteCommentSchema,
+  editCommentSchema,
+  postCommentSchema,
+} from "@/lib/comments/validation";
+import { getArticleUrl } from "@/lib/content-sync/article-url";
+import { createClient } from "@/lib/supabase/server";
+
+const SIGN_IN_REQUIRED: AuthFormState = {
+  status: "error",
+  message: "Sign in to join the discussion.",
+};
+
+const INVALID_FIELDS = (fieldErrors: Record<string, string[] | undefined>): AuthFormState => ({
+  status: "error",
+  message: "Please fix the highlighted fields.",
+  fieldErrors,
+});
+
+/** Posts a new comment or reply on an article. */
+export async function postCommentAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const user = await getUser();
+  if (!user) return SIGN_IN_REQUIRED;
+
+  const parsed = postCommentSchema.safeParse({
+    country: formData.get("country"),
+    wpPostId: formData.get("wpPostId"),
+    slug: formData.get("slug"),
+    parentId: formData.get("parentId"),
+    body: formData.get("body"),
+  });
+
+  if (!parsed.success) {
+    return INVALID_FIELDS(parsed.error.flatten().fieldErrors);
+  }
+
+  const { country, wpPostId, slug, parentId, body } = parsed.data;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("comments").insert({
+    country,
+    wp_post_id: wpPostId,
+    user_id: user.id,
+    parent_id: parentId,
+    body,
+  });
+
+  if (error) {
+    console.warn(`Comment insert failed for ${country}/${wpPostId}: ${error.message}`);
+    // The thread-integrity trigger raises for missing/deleted/cross-article parents.
+    if (error.code === "P0001") {
+      return { status: "error", message: "That comment can no longer be replied to." };
+    }
+    return { status: "error", message: "Could not post your comment. Please try again." };
+  }
+
+  revalidatePath(getArticleUrl(country, slug));
+  return { status: "success", message: "Comment posted." };
+}
+
+/** Edits the body of the signed-in user's own comment. */
+export async function updateCommentAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const user = await getUser();
+  if (!user) return SIGN_IN_REQUIRED;
+
+  const parsed = editCommentSchema.safeParse({
+    commentId: formData.get("commentId"),
+    country: formData.get("country"),
+    slug: formData.get("slug"),
+    body: formData.get("body"),
+  });
+
+  if (!parsed.success) {
+    return INVALID_FIELDS(parsed.error.flatten().fieldErrors);
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("comments")
+    .update({ body: parsed.data.body, edited_at: new Date().toISOString() })
+    .eq("id", parsed.data.commentId)
+    .eq("user_id", user.id)
+    .select("id");
+
+  if (error) {
+    console.warn(`Comment update failed for ${parsed.data.commentId}: ${error.message}`);
+    return { status: "error", message: "Could not save your changes. Please try again." };
+  }
+  if (!data || data.length === 0) {
+    // RLS filtered the row out: not the author, or already deleted.
+    return { status: "error", message: "This comment can no longer be edited." };
+  }
+
+  revalidatePath(getArticleUrl(parsed.data.country, parsed.data.slug));
+  return { status: "success", message: "Comment updated." };
+}
+
+/**
+ * Soft-deletes the signed-in user's own comment: status → 'deleted' with
+ * the body cleared, keeping a stub so threads with replies stay intact.
+ */
+export async function deleteCommentAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const user = await getUser();
+  if (!user) return SIGN_IN_REQUIRED;
+
+  const parsed = deleteCommentSchema.safeParse({
+    commentId: formData.get("commentId"),
+    country: formData.get("country"),
+    slug: formData.get("slug"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: "Could not delete this comment." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("comments")
+    .update({ status: "deleted", body: "" })
+    .eq("id", parsed.data.commentId)
+    .eq("user_id", user.id)
+    .select("id");
+
+  if (error) {
+    console.warn(`Comment delete failed for ${parsed.data.commentId}: ${error.message}`);
+    return { status: "error", message: "Could not delete this comment. Please try again." };
+  }
+  if (!data || data.length === 0) {
+    return { status: "error", message: "This comment can no longer be deleted." };
+  }
+
+  revalidatePath(getArticleUrl(parsed.data.country, parsed.data.slug));
+  return { status: "success", message: "Comment deleted." };
+}
