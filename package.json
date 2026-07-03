@@ -17,7 +17,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "content-sync:backfill": "tsx scripts/backfill-content-index.ts",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -34,6 +36,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "^4.1.13",
     "@types/node": "^22.10.0",
     "@types/react": "^19.1.0",

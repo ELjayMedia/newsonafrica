@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Build output directory override (NOA-117): the Playwright webServer
+  // builds into its own dist dir (`.next-e2e`) so an E2E run never races a
+  // concurrent `pnpm build`/`pnpm dev` sharing `.next`. Defaults to `.next`.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   // Integrations (Supabase, headless WordPress images, Paystack) are added in
   // later phases. Remote image patterns / rewrites belong here when wired up.
 
