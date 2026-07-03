@@ -6,8 +6,11 @@
  */
 import "server-only";
 
+import { createLogger } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import type { ProfileRow } from "@/lib/supabase/types";
+
+const log = createLogger("dal:profiles");
 
 export async function getProfile(userId: string): Promise<ProfileRow | null> {
   try {
@@ -19,12 +22,12 @@ export async function getProfile(userId: string): Promise<ProfileRow | null> {
       .maybeSingle();
 
     if (error) {
-      console.warn(`Failed to load profile ${userId}: ${error.message}`);
+      log.warn("Failed to load profile", { userId, error: error.message });
       return null;
     }
     return data;
   } catch (error) {
-    console.warn("Profile lookup skipped:", error);
+    log.warn("Profile lookup skipped", { err: error });
     return null;
   }
 }

@@ -18,8 +18,11 @@ import {
   postCommentSchema,
 } from "@/lib/comments/validation";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
+import { createLogger } from "@/lib/log";
 import { getRateLimiter, rateLimitMessage, type RateLimitAction } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+
+const log = createLogger("comments:actions");
 
 const SIGN_IN_REQUIRED: AuthFormState = {
   status: "error",
@@ -74,7 +77,7 @@ export async function postCommentAction(_prev: AuthFormState, formData: FormData
   });
 
   if (error) {
-    console.warn(`Comment insert failed for ${country}/${wpPostId}: ${error.message}`);
+    log.warn("Comment insert failed", { country, wpPostId, error: error.message });
     // The thread-integrity trigger raises for missing/deleted/cross-article parents.
     if (error.code === "P0001") {
       return { status: "error", message: "That comment can no longer be replied to." };
@@ -114,7 +117,7 @@ export async function updateCommentAction(_prev: AuthFormState, formData: FormDa
     .select("id");
 
   if (error) {
-    console.warn(`Comment update failed for ${parsed.data.commentId}: ${error.message}`);
+    log.warn("Comment update failed", { commentId: parsed.data.commentId, error: error.message });
     return { status: "error", message: "Could not save your changes. Please try again." };
   }
   if (!data || data.length === 0) {
@@ -157,7 +160,7 @@ export async function deleteCommentAction(_prev: AuthFormState, formData: FormDa
     .select("id");
 
   if (error) {
-    console.warn(`Comment delete failed for ${parsed.data.commentId}: ${error.message}`);
+    log.warn("Comment delete failed", { commentId: parsed.data.commentId, error: error.message });
     return { status: "error", message: "Could not delete this comment. Please try again." };
   }
   if (!data || data.length === 0) {

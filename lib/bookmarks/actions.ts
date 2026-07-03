@@ -13,8 +13,11 @@ import { z } from "zod";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { isValidCountry } from "@/lib/countries";
+import { createLogger } from "@/lib/log";
 import { getRateLimiter, rateLimitMessage } from "@/lib/rate-limit";
 import { createClient } from "@/lib/supabase/server";
+
+const log = createLogger("bookmarks:actions");
 
 const articleRef = z.object({
   country: z.string().refine(isValidCountry, "Unsupported country"),
@@ -70,7 +73,7 @@ export async function toggleBookmarkAction(input: {
 
     // 23505 = unique_violation: already saved — treat as success (idempotent).
     if (error && error.code !== "23505") {
-      console.warn(`Bookmark insert failed for ${country}/${wpPostId}: ${error.message}`);
+      log.warn("Bookmark insert failed", { country, wpPostId, error: error.message });
       return { ok: false, requiresAuth: false, message: "Could not save this article. Please try again." };
     }
   } else {
@@ -82,7 +85,7 @@ export async function toggleBookmarkAction(input: {
       .eq("wp_post_id", wpPostId);
 
     if (error) {
-      console.warn(`Bookmark delete failed for ${country}/${wpPostId}: ${error.message}`);
+      log.warn("Bookmark delete failed", { country, wpPostId, error: error.message });
       return { ok: false, requiresAuth: false, message: "Could not remove this bookmark. Please try again." };
     }
   }
@@ -104,7 +107,7 @@ export async function removeBookmarkAction(formData: FormData): Promise<void> {
   // the revalidated list still showing the item is the feedback.
   const decision = getRateLimiter().consume("bookmarks:mutate", user.id);
   if (!decision.ok) {
-    console.warn(`Bookmark removal rate-limited for ${user.id}`);
+    log.warn("Bookmark removal rate-limited", { userId: user.id });
     return;
   }
 
@@ -116,7 +119,7 @@ export async function removeBookmarkAction(formData: FormData): Promise<void> {
     .eq("user_id", user.id);
 
   if (error) {
-    console.warn(`Bookmark removal failed for ${parsed.data}: ${error.message}`);
+    log.warn("Bookmark removal failed", { bookmarkId: parsed.data, error: error.message });
   }
 
   revalidatePath("/account/bookmarks");

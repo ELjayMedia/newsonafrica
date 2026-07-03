@@ -15,9 +15,12 @@ import {
   type CommentSort,
 } from "@/lib/comments/cursor";
 import { buildCommentTree, type CommentNode } from "@/lib/comments/thread";
+import { createLogger } from "@/lib/log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { CommentRow, CommentStatus } from "@/lib/supabase/types";
+
+const log = createLogger("dal:comments");
 
 export const COMMENTS_PAGE_SIZE = 10;
 export const MODERATION_PAGE_SIZE = 20;
@@ -103,7 +106,7 @@ export async function listComments(params: {
 
     const { data: rootRows, error: rootsError } = await rootsQuery;
     if (rootsError) {
-      console.warn(`Failed to list comments for ${params.country}/${params.wpPostId}: ${rootsError.message}`);
+      log.warn("Failed to list comments", { country: params.country, wpPostId: params.wpPostId, error: rootsError.message });
       return empty;
     }
 
@@ -132,7 +135,7 @@ export async function listComments(params: {
     ]);
 
     if (repliesResult.error) {
-      console.warn(`Failed to load replies for ${params.country}/${params.wpPostId}: ${repliesResult.error.message}`);
+      log.warn("Failed to load replies", { country: params.country, wpPostId: params.wpPostId, error: repliesResult.error.message });
     }
     const replies = repliesResult.error ? [] : (repliesResult.data ?? []);
     const approvedCount = countResult.error ? 0 : (countResult.count ?? 0);
@@ -153,7 +156,7 @@ export async function listComments(params: {
         .in("id", userIds);
 
       if (profilesError) {
-        console.warn(`Failed to load comment authors: ${profilesError.message}`);
+        log.warn("Failed to load comment authors", { error: profilesError.message });
       }
       for (const profile of profileRows ?? []) {
         authors.set(profile.id, {
@@ -177,7 +180,7 @@ export async function listComments(params: {
       approvedCount,
     };
   } catch (error) {
-    console.warn("Comment list skipped:", error);
+    log.warn("Comment list skipped", { err: error });
     return empty;
   }
 }
@@ -255,7 +258,7 @@ export async function listCommentsForModeration(params: {
 
     const { data: rows, error } = await query;
     if (error) {
-      console.warn(`Failed to list comments for moderation: ${error.message}`);
+      log.warn("Failed to list comments for moderation", { error: error.message });
       return empty;
     }
 
@@ -276,10 +279,10 @@ export async function listCommentsForModeration(params: {
     ]);
 
     if (profilesResult.error) {
-      console.warn(`Failed to load moderation authors: ${profilesResult.error.message}`);
+      log.warn("Failed to load moderation authors", { error: profilesResult.error.message });
     }
     if (articlesResult.error) {
-      console.warn(`Failed to load moderation article titles: ${articlesResult.error.message}`);
+      log.warn("Failed to load moderation article titles", { error: articlesResult.error.message });
     }
 
     const authors = new Map<string, CommentAuthor>();
@@ -321,7 +324,7 @@ export async function listCommentsForModeration(params: {
       hasMore,
     };
   } catch (error) {
-    console.warn("Moderation comment list skipped:", error);
+    log.warn("Moderation comment list skipped", { err: error });
     return empty;
   }
 }

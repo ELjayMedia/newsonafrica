@@ -11,9 +11,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/admin";
+import { createLogger } from "@/lib/log";
 import type { AuthFormState } from "@/lib/auth/validation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { CommentStatus } from "@/lib/supabase/types";
+
+const log = createLogger("comments:moderation");
 
 const ADMIN_COMMENTS_PATH = "/account/admin/comments";
 
@@ -61,7 +64,7 @@ export async function moderateCommentAction(
     .maybeSingle();
 
   if (error) {
-    console.warn(`Moderation ${intent} failed for ${commentId}: ${error.message}`);
+    log.warn("Moderation action failed", { intent, commentId, error: error.message });
     // 23514 = check_violation: a deleted stub's body was cleared, so the
     // comments_body_present constraint blocks restoring it to public view.
     if (error.code === "23514" && intent === "approve") {

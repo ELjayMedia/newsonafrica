@@ -12,6 +12,8 @@ import "server-only";
 
 import { mapPost } from "@/lib/dal/mappers";
 import { getPostById } from "@/lib/dal/posts";
+import { createLogger } from "@/lib/log";
+import { getMetrics } from "@/lib/metrics";
 import { mapPostToContentIndexRow } from "@/lib/content-sync/map-to-content-index";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ContentSyncStatus } from "@/lib/supabase/types";
@@ -37,6 +39,8 @@ export interface SyncPageResult {
 }
 
 const DEFAULT_PER_PAGE = 50;
+
+const log = createLogger("content-sync");
 
 async function upsertRows(rows: ReturnType<typeof mapPostToContentIndexRow>[]): Promise<SyncError[]> {
   if (rows.length === 0) return [];
@@ -65,6 +69,10 @@ export async function syncPostsPage(
 
   const rows = items.map((raw) => mapPostToContentIndexRow(mapPost(raw, country)));
   const errors = await upsertRows(rows);
+
+  if (errors.length > 0) {
+    log.error("Page upsert failed", { country, page, perPage, errors });
+  }
 
   return {
     country,
@@ -146,6 +154,8 @@ export async function runBackfillForCountry(
   country: CountryCode | string,
   { perPage = DEFAULT_PER_PAGE, startPage = 1, maxPages }: { perPage?: number; startPage?: number; maxPages?: number } = {},
 ): Promise<BackfillCountryResult> {
+  const startedAt = Date.now();
+  log.info("Backfill started", { country, perPage, startPage, maxPages });
   await updateSyncCursor(country, "running");
 
   let page = startPage;
@@ -171,10 +181,19 @@ export async function runBackfillForCountry(
     const status: ContentSyncStatus = errors.length > 0 ? "failed" : "completed";
     await updateSyncCursor(country, status, errors.length > 0 ? `${errors.length} page(s) failed during sync` : undefined);
 
+    const durationMs = Date.now() - startedAt;
+    getMetrics().observe("content_sync.backfill_ms", durationMs, { country: String(country), status });
+    log.info("Backfill finished", { country, status, pagesProcessed, synced, total, errorCount: errors.length, durationMs });
+
     return { country, pagesProcessed, synced, total, errors, status };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown content sync error";
     await updateSyncCursor(country, "failed", message);
+
+    const durationMs = Date.now() - startedAt;
+    getMetrics().observe("content_sync.backfill_ms", durationMs, { country: String(country), status: "failed" });
+    log.error("Backfill aborted", { country, pagesProcessed, synced, total, durationMs, err: error });
+
     return { country, pagesProcessed, synced, total, errors: [...errors, { message }], status: "failed" };
   }
 }

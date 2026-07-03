@@ -17,8 +17,11 @@ import "server-only";
 import { notFound } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 
+import { createLogger } from "@/lib/log";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+
+const log = createLogger("auth:admin");
 
 /** Whether the given user is an admin. Errors degrade to false. */
 export async function isAdmin(userId: string): Promise<boolean> {
@@ -31,12 +34,12 @@ export async function isAdmin(userId: string): Promise<boolean> {
       .maybeSingle();
 
     if (error) {
-      console.warn(`Admin check failed for ${userId}: ${error.message}`);
+      log.warn("Admin check failed", { userId, error: error.message });
       return false;
     }
     return data?.is_admin === true;
   } catch (error) {
-    console.warn("Admin check skipped:", error);
+    log.warn("Admin check skipped", { err: error });
     return false;
   }
 }

@@ -6,11 +6,14 @@
  */
 import "server-only";
 
+import { createLogger } from "@/lib/log";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { CountryCode } from "@/lib/wordpress/countries";
 import type { MostReadPost } from "@/lib/dal/types";
 
 const DEFAULT_LIMIT = 6;
+
+const log = createLogger("most-read");
 
 /**
  * Fetch the most-read posts for a country edition. Resilient to Supabase
@@ -29,7 +32,7 @@ export async function getMostReadPosts(
     });
 
     if (error) {
-      console.error("[most-read] Supabase RPC failed", error);
+      log.error("Supabase RPC failed", { err: error });
       return [];
     }
 
@@ -46,7 +49,7 @@ export async function getMostReadPosts(
       publishedAt: row.published_at,
     }));
   } catch (error) {
-    console.error("[most-read] Failed to fetch most-read posts", error);
+    log.error("Failed to fetch most-read posts", { err: error });
     return [];
   }
 }

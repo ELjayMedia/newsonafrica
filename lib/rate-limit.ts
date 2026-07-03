@@ -16,6 +16,8 @@
  * validation could share the types; actual enforcement happens in server
  * actions.
  */
+import { createLogger } from "@/lib/log";
+import { getMetrics } from "@/lib/metrics";
 
 export interface TokenBucketConfig {
   /** Maximum burst: tokens available after a quiet period. */
@@ -135,13 +137,33 @@ function maxFullRefillMs(limits: Record<RateLimitAction, TokenBucketConfig>): nu
   return Math.max(...Object.values(limits).map((config) => config.capacity * config.refillIntervalMs));
 }
 
+/**
+ * Observability decorator (NOA-118): counts denials per action and logs
+ * them at debug (denials are normal operation, not incidents — dashboards
+ * watch the `rate_limit.denied` counter instead). Kept out of
+ * `createInMemoryRateLimiter` so the algorithm stays pure for tests.
+ */
+export function withRateLimitObservability(limiter: RateLimiter): RateLimiter {
+  const log = createLogger("rate-limit");
+  return {
+    consume(action, subject) {
+      const decision = limiter.consume(action, subject);
+      if (!decision.ok) {
+        getMetrics().increment("rate_limit.denied", 1, { action });
+        log.debug("Denied", { action, subject, retryAfterMs: decision.retryAfterMs });
+      }
+      return decision;
+    },
+  };
+}
+
 // Singleton stored on globalThis so dev-mode HMR / route-level module
 // re-evaluation doesn't reset everyone's buckets.
 const globalScope = globalThis as typeof globalThis & { __noaRateLimiter?: RateLimiter };
 
 /** The process-wide limiter used by server actions. */
 export function getRateLimiter(): RateLimiter {
-  globalScope.__noaRateLimiter ??= createInMemoryRateLimiter();
+  globalScope.__noaRateLimiter ??= withRateLimitObservability(createInMemoryRateLimiter());
   return globalScope.__noaRateLimiter;
 }
 

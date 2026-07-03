@@ -7,8 +7,11 @@
 import "server-only";
 
 import { getArticleUrl } from "@/lib/content-sync/article-url";
+import { createLogger } from "@/lib/log";
 import { createClient } from "@/lib/supabase/server";
 import type { BookmarkRow } from "@/lib/supabase/types";
+
+const log = createLogger("dal:bookmarks");
 
 /** A saved article hydrated against `content_index` (title etc. when indexed). */
 export interface BookmarkedArticle {
@@ -39,12 +42,12 @@ export async function isBookmarked(country: string, wpPostId: number): Promise<b
       .maybeSingle();
 
     if (error) {
-      console.warn(`Failed to read bookmark state for ${country}/${wpPostId}: ${error.message}`);
+      log.warn("Failed to read bookmark state", { country, wpPostId, error: error.message });
       return false;
     }
     return data !== null;
   } catch (error) {
-    console.warn("Bookmark state lookup skipped:", error);
+    log.warn("Bookmark state lookup skipped", { err: error });
     return false;
   }
 }
@@ -63,7 +66,7 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.warn(`Failed to list bookmarks: ${error.message}`);
+      log.warn("Failed to list bookmarks", { error: error.message });
       return [];
     }
 
@@ -94,7 +97,7 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
           .in("wp_post_id", wpPostIds);
 
         if (indexError) {
-          console.warn(`Failed to hydrate bookmarks for ${country}: ${indexError.message}`);
+          log.warn("Failed to hydrate bookmarks", { country, error: indexError.message });
           return;
         }
         for (const row of rows ?? []) {
@@ -119,7 +122,7 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
       };
     });
   } catch (error) {
-    console.warn("Bookmark list skipped:", error);
+    log.warn("Bookmark list skipped", { err: error });
     return [];
   }
 }

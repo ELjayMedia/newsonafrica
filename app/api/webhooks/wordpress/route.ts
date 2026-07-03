@@ -17,9 +17,13 @@ import { revalidateTag } from "next/cache";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { serverEnv } from "@/lib/env";
+import { createLogger } from "@/lib/log";
+import { getMetrics } from "@/lib/metrics";
 import { cacheTags } from "@/lib/wordpress/cache-tags";
 import { isValidCountry, SUPPORTED_COUNTRY_CODES } from "@/lib/wordpress/countries";
 import { deletePostFromIndex, syncPostById } from "@/lib/content-sync/sync";
+
+const log = createLogger("webhook:wordpress");
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -115,9 +119,12 @@ function revalidateTaxonomy(countries: string[], kind: "category" | "tag", slug:
 }
 
 export async function POST(request: NextRequest) {
+  const metrics = getMetrics();
   const rawBody = await request.text();
 
   if (!isAuthorized(request, rawBody)) {
+    metrics.increment("webhook.wordpress.unauthorized");
+    log.warn("Rejected webhook call with missing/invalid credentials");
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -125,6 +132,8 @@ export async function POST(request: NextRequest) {
   try {
     payload = rawBody ? (JSON.parse(rawBody) as WordPressWebhookPayload) : {};
   } catch {
+    metrics.increment("webhook.wordpress.bad_payload");
+    log.warn("Rejected webhook call with a non-JSON body");
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
@@ -134,6 +143,8 @@ export async function POST(request: NextRequest) {
   // resolved one when known, otherwise the default (webhooks should always
   // include `country`; this only matters for the conservative fallback).
   const syncCountry = countries[0]!;
+  const actionLog = log.child({ action, country: syncCountry, slug: post?.slug, wpPostId: post?.id });
+  metrics.increment("webhook.wordpress.received", 1, { action: String(action) });
 
   switch (action) {
     case "post_published":
@@ -143,8 +154,17 @@ export async function POST(request: NextRequest) {
       }
 
       const wpPostId = typeof post.id === "number" ? post.id : Number.parseInt(post.id, 10);
-      const syncResult = Number.isFinite(wpPostId) ? await syncPostById(syncCountry, wpPostId) : { success: false, error: "invalid post id" };
+      const syncResult = Number.isFinite(wpPostId)
+        ? await metrics.time("webhook.wordpress.sync_ms", () => syncPostById(syncCountry, wpPostId), { action })
+        : { success: false, error: "invalid post id" };
       const revalidated = revalidatePost(countries, post);
+
+      if (syncResult.success) {
+        actionLog.info("Synced post and revalidated cache tags", { revalidated: revalidated.length });
+      } else {
+        metrics.increment("webhook.wordpress.sync_failed", 1, { action });
+        actionLog.error("Content-index sync failed; cache tags still revalidated", { error: syncResult.error });
+      }
 
       return NextResponse.json({ success: true, action, revalidated, sync: syncResult });
     }
@@ -158,20 +178,30 @@ export async function POST(request: NextRequest) {
       const syncResult = Number.isFinite(wpPostId) ? await deletePostFromIndex(syncCountry, wpPostId) : { success: false, error: "invalid post id" };
       const revalidated = revalidatePost(countries, post);
 
+      if (syncResult.success) {
+        actionLog.info("Removed post from content index and revalidated cache tags", { revalidated: revalidated.length });
+      } else {
+        metrics.increment("webhook.wordpress.sync_failed", 1, { action });
+        actionLog.error("Content-index delete failed; cache tags still revalidated", { error: syncResult.error });
+      }
+
       return NextResponse.json({ success: true, action, revalidated, sync: syncResult });
     }
 
     case "category_updated": {
       const revalidated = revalidateTaxonomy(countries, "category", post?.slug);
+      actionLog.info("Revalidated category cache tags", { revalidated: revalidated.length });
       return NextResponse.json({ success: true, action, revalidated });
     }
 
     case "tag_updated": {
       const revalidated = revalidateTaxonomy(countries, "tag", post?.slug);
+      actionLog.info("Revalidated tag cache tags", { revalidated: revalidated.length });
       return NextResponse.json({ success: true, action, revalidated });
     }
 
     default:
+      actionLog.warn("Ignored webhook with unhandled action");
       return NextResponse.json({ error: `Unhandled action: ${String(action)}` }, { status: 400 });
   }
 }

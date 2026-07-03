@@ -13,6 +13,7 @@
  */
 import "server-only";
 
+import { createLogger } from "@/lib/log";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { CountryCode } from "@/lib/countries";
 import {
@@ -26,6 +27,8 @@ import {
 import type { SearchResult, SearchResultPage, SearchSuggestion } from "@/lib/search/types";
 
 export type { SearchResult, SearchResultPage, SearchSuggestion } from "@/lib/search/types";
+
+const log = createLogger("search");
 
 export interface SearchContentParams {
   query: string;
@@ -67,7 +70,7 @@ export async function searchContent(params: SearchContentParams): Promise<Search
     });
 
     if (error) {
-      console.error("[search] search_content RPC failed", error);
+      log.error("search_content RPC failed", { err: error });
       return emptyPage(query, country, page, perPage);
     }
 
@@ -93,7 +96,7 @@ export async function searchContent(params: SearchContentParams): Promise<Search
 
     return { items, query, country, page, perPage, total, totalPages, hasNextPage: page < totalPages };
   } catch (error) {
-    console.error("[search] searchContent failed", error);
+    log.error("searchContent failed", { err: error });
     return emptyPage(query, country, page, perPage);
   }
 }
@@ -119,7 +122,7 @@ export async function searchSuggestions(params: SearchSuggestionsParams): Promis
     });
 
     if (error) {
-      console.error("[search] search_suggestions RPC failed", error);
+      log.error("search_suggestions RPC failed", { err: error });
       return [];
     }
 
@@ -130,7 +133,7 @@ export async function searchSuggestions(params: SearchSuggestionsParams): Promis
       url: row.url_path,
     }));
   } catch (error) {
-    console.error("[search] searchSuggestions failed", error);
+    log.error("searchSuggestions failed", { err: error });
     return [];
   }
 }

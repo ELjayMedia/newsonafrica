@@ -12,10 +12,13 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
 import { publicEnv } from "@/lib/env";
+import { createLogger } from "@/lib/log";
 import { requireUser } from "@/lib/auth/session";
 import { profileSchema, type AuthFormState } from "@/lib/auth/validation";
 import { createClient } from "@/lib/supabase/server";
 import { DEFAULT_COUNTRY, isValidCountry } from "@/lib/countries";
+
+const log = createLogger("auth:profile");
 
 /** Mirrors app/api/set-country/route.ts — one preferred-country mechanism. */
 const COUNTRY_COOKIE = "country";
@@ -68,7 +71,7 @@ export async function updateProfileAction(
   });
 
   if (error) {
-    console.warn(`Profile update failed for ${user.id}: ${error.message}`);
+    log.warn("Profile update failed", { userId: user.id, error: error.message });
     return { status: "error", message: "Could not save your profile. Please try again." };
   }
 
