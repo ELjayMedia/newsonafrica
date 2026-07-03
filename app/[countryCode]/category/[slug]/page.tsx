@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/ui/container";
 import { NewsGrid } from "@/components/home/news-grid";
 import { Pagination } from "@/components/pagination";
+import { BreadcrumbJsonLd } from "@/components/seo/json-ld";
+import { COUNTRIES } from "@/lib/countries";
 import { getCategoryBySlug, isValidCountry, listPosts } from "@/lib/dal";
 
 interface CategoryPageProps {
@@ -45,6 +47,10 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   return (
     <Container className="space-y-8 py-8">
+      {/* BreadcrumbList structured data (NOA-114). */}
+      <BreadcrumbJsonLd
+        items={[{ name: COUNTRIES[countryCode].name, path: `/${countryCode}` }, { name: category.name }]}
+      />
       <header className="space-y-2 border-b border-border pb-6">
         <p className="ui-sm uppercase tracking-wide text-primary">Category</p>
         <h1 className="display-lg">{category.name}</h1>

@@ -9,8 +9,10 @@ import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { CommentSection, COMMENTS_CURSOR_PARAM } from "@/components/comments/comment-section";
+import { BreadcrumbJsonLd, NewsArticleJsonLd } from "@/components/seo/json-ld";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
+import { COUNTRIES } from "@/lib/countries";
 import { getPostBySlug, isValidCountry, listPosts } from "@/lib/dal";
 import { isBookmarked } from "@/lib/dal/bookmarks";
 import { publicEnv } from "@/lib/env";
@@ -85,6 +87,15 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
 
   return (
     <Container className="max-w-3xl space-y-6 py-8">
+      {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
+      <NewsArticleJsonLd post={post} />
+      <BreadcrumbJsonLd
+        items={[
+          { name: COUNTRIES[countryCode].name, path: `/${countryCode}` },
+          ...(category ? [{ name: category.name, path: `/${countryCode}/category/${category.slug}` }] : []),
+          { name: post.title },
+        ]}
+      />
       <header className="space-y-4">
         {category ? (
           <Link href={`/${countryCode}/category/${category.slug}`} className="w-fit">

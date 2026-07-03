@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 
 import { Container } from "@/components/ui/container";
 import { buttonVariants } from "@/components/ui/button";
+
+// Canonical for the root page (NOA-114); resolved against metadataBase.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function HomePage() {
   return (

@@ -8,6 +8,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { SiteJsonLd } from "@/components/seo/json-ld";
 import { colorTokens } from "@/lib/design-tokens";
 import { publicEnv } from "@/lib/env";
 
@@ -50,6 +51,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           (h-16) + the device safe-area inset so content and the footer are
           never hidden behind it (NOA-111). */}
       <body className="flex min-h-screen flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+        {/* WebSite + Organization structured data (NOA-114). */}
+        <SiteJsonLd />
         <ThemeProvider>
           <SiteHeader
             accountSlot={

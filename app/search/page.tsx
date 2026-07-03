@@ -26,6 +26,8 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   return {
     title: query ? `Search: ${query}` : "Search",
     description: "Search news, articles and stories from across Africa.",
+    // Query/page/country variants all canonicalize to the bare search page.
+    alternates: { canonical: "/search" },
     robots: { index: false },
   };
 }
