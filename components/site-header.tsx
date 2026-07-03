@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { Container } from "@/components/ui/container";
 import { CountrySwitcher } from "@/components/country-switcher";
+import { HeaderSearch } from "@/components/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -40,9 +41,8 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {/* Search phase: slot the search trigger/box here, between the
-              country switcher and the theme toggle. */}
           <CountrySwitcher className="hidden sm:inline-flex" />
+          <HeaderSearch />
           {/* Auth phase: slot the account/profile menu here, next to the
               theme toggle. */}
           <ThemeToggle />
