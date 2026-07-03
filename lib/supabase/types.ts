@@ -84,6 +84,8 @@ export type ProfileRow = {
   display_name: string | null;
   avatar_url: string | null;
   preferred_country: string | null;
+  /** Moderation gate (NOA-102) — set via SQL/service role only. */
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 };

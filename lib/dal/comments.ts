@@ -15,10 +15,12 @@ import {
   type CommentSort,
 } from "@/lib/comments/cursor";
 import { buildCommentTree, type CommentNode } from "@/lib/comments/thread";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { CommentRow, CommentStatus } from "@/lib/supabase/types";
 
 export const COMMENTS_PAGE_SIZE = 10;
+export const MODERATION_PAGE_SIZE = 20;
 
 export interface CommentAuthor {
   id: string;
@@ -176,6 +178,150 @@ export async function listComments(params: {
     };
   } catch (error) {
     console.warn("Comment list skipped:", error);
+    return empty;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Moderation reads (NOA-102)
+// ---------------------------------------------------------------------------
+
+export type ModerationStatusFilter = CommentStatus | "all";
+
+export const MODERATION_STATUS_FILTERS: readonly ModerationStatusFilter[] = [
+  "all",
+  "approved",
+  "pending",
+  "hidden",
+  "deleted",
+];
+
+export function isModerationStatusFilter(value: string): value is ModerationStatusFilter {
+  return (MODERATION_STATUS_FILTERS as readonly string[]).includes(value);
+}
+
+export interface ModerationCommentItem {
+  id: string;
+  country: string;
+  wpPostId: number;
+  body: string;
+  status: CommentStatus;
+  isReply: boolean;
+  createdAt: string;
+  editedAt: string | null;
+  author: CommentAuthor | null;
+  /** Article headline from content_index, when the article is indexed. */
+  articleTitle: string | null;
+  /** Canonical article path from content_index, when known. */
+  articleUrl: string | null;
+}
+
+export interface ModerationCommentPage {
+  comments: ModerationCommentItem[];
+  /** 1-based page that was fetched. */
+  page: number;
+  hasMore: boolean;
+}
+
+/**
+ * Site-wide comment list for the moderation admin (NOA-102), newest first,
+ * optionally filtered by status. Uses the service-role client so moderators
+ * see every comment regardless of the viewer-scoped RLS policies — callers
+ * MUST be behind `requireAdmin()`.
+ */
+export async function listCommentsForModeration(params: {
+  status?: ModerationStatusFilter;
+  page?: number;
+}): Promise<ModerationCommentPage> {
+  const status = params.status ?? "all";
+  const page = Math.max(params.page ?? 1, 1);
+  const offset = (page - 1) * MODERATION_PAGE_SIZE;
+  const empty: ModerationCommentPage = { comments: [], page, hasMore: false };
+
+  try {
+    const supabase = createAdminClient();
+
+    let query = supabase
+      .from("comments")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
+      // One extra row to detect a next page.
+      .range(offset, offset + MODERATION_PAGE_SIZE);
+
+    if (status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    const { data: rows, error } = await query;
+    if (error) {
+      console.warn(`Failed to list comments for moderation: ${error.message}`);
+      return empty;
+    }
+
+    const hasMore = (rows ?? []).length > MODERATION_PAGE_SIZE;
+    const comments = (rows ?? []).slice(0, MODERATION_PAGE_SIZE);
+    if (comments.length === 0) {
+      return { comments: [], page, hasMore: false };
+    }
+
+    // Authors + article metadata for this page, fetched concurrently. Both
+    // are decoration — failures degrade to a list without names/titles.
+    const userIds = Array.from(new Set(comments.map((row) => row.user_id)));
+    const postIds = Array.from(new Set(comments.map((row) => row.wp_post_id)));
+
+    const [profilesResult, articlesResult] = await Promise.all([
+      supabase.from("profiles").select("id, display_name, avatar_url").in("id", userIds),
+      supabase.from("content_index").select("country, wp_post_id, title, url_path").in("wp_post_id", postIds),
+    ]);
+
+    if (profilesResult.error) {
+      console.warn(`Failed to load moderation authors: ${profilesResult.error.message}`);
+    }
+    if (articlesResult.error) {
+      console.warn(`Failed to load moderation article titles: ${articlesResult.error.message}`);
+    }
+
+    const authors = new Map<string, CommentAuthor>();
+    for (const profile of profilesResult.data ?? []) {
+      authors.set(profile.id, {
+        id: profile.id,
+        displayName: profile.display_name,
+        avatarUrl: profile.avatar_url,
+      });
+    }
+
+    // wp_post_id is only unique per country, so key articles by the pair.
+    const articles = new Map<string, { title: string; urlPath: string }>();
+    for (const article of articlesResult.data ?? []) {
+      articles.set(`${article.country}:${article.wp_post_id}`, {
+        title: article.title,
+        urlPath: article.url_path,
+      });
+    }
+
+    return {
+      comments: comments.map((row) => {
+        const article = articles.get(`${row.country}:${row.wp_post_id}`) ?? null;
+        return {
+          id: row.id,
+          country: row.country,
+          wpPostId: row.wp_post_id,
+          body: row.status === "deleted" ? "" : row.body,
+          status: row.status,
+          isReply: row.parent_id !== null,
+          createdAt: row.created_at,
+          editedAt: row.edited_at,
+          author: authors.get(row.user_id) ?? null,
+          articleTitle: article?.title ?? null,
+          articleUrl: article?.urlPath ?? null,
+        };
+      }),
+      page,
+      hasMore,
+    };
+  } catch (error) {
+    console.warn("Moderation comment list skipped:", error);
     return empty;
   }
 }

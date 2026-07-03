@@ -14,10 +14,13 @@ export function AccountMenuClient({
   displayName,
   email,
   avatarUrl,
+  isAdmin = false,
 }: {
   displayName: string;
   email: string | null;
   avatarUrl: string | null;
+  /** Shows the moderation link (NOA-102); the page itself re-checks server-side. */
+  isAdmin?: boolean;
 }) {
   const [open, setOpen] = React.useState(false);
   const rootRef = React.useRef<HTMLDivElement>(null);
@@ -91,6 +94,16 @@ export function AccountMenuClient({
         >
           Saved articles
         </Link>
+        {isAdmin ? (
+          <Link
+            role="menuitem"
+            href="/account/admin/comments"
+            onClick={() => setOpen(false)}
+            className="ui-sm block rounded-sm px-3 py-2 transition-colors hover:bg-accent hover:text-accent-foreground"
+          >
+            Comment moderation
+          </Link>
+        ) : null}
         <form action={signOutAction} role="none">
           <button
             role="menuitem"

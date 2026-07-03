@@ -29,6 +29,7 @@ export async function AccountMenu() {
       displayName={displayName}
       email={user.email ?? null}
       avatarUrl={profile?.avatar_url ?? null}
+      isAdmin={profile?.is_admin === true}
     />
   );
 }
