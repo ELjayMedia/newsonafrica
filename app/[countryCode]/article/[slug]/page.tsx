@@ -35,8 +35,10 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
 
   const url = getArticleUrl(countryCode, slug);
   const description = post.excerpt || post.title;
-  const images = post.featuredImage ? [{ url: post.featuredImage.url, alt: post.featuredImage.alt }] : undefined;
 
+  // og:image / twitter:image come from the branded card in
+  // ./opengraph-image.tsx (NOA-115) — file-convention images take
+  // precedence over config-based ones, so none are declared here.
   return {
     title: post.title,
     description,
@@ -49,13 +51,11 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       publishedTime: post.publishedAt,
       modifiedTime: post.updatedAt,
       authors: post.author ? [post.author.name] : undefined,
-      images,
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description,
-      images: images?.map((image) => image.url),
     },
   };
 }

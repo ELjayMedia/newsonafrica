@@ -19,6 +19,17 @@ export const metadata: Metadata = {
     template: "%s | News on Africa",
   },
   description: "Independent African journalism.",
+  // Site-wide social defaults (NOA-115). og:image / twitter:image come from
+  // the file conventions: app/opengraph-image.tsx everywhere, overridden by
+  // the per-article branded card on article pages.
+  openGraph: {
+    type: "website",
+    siteName: "News on Africa",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
   // PWA / installability (NOA-109). The manifest link itself comes from
   // `app/manifest.ts`; these cover favicons and the iOS home-screen icon.
   icons: {
