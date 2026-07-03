@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
+import { BottomNavigation } from "@/components/bottom-navigation";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { colorTokens } from "@/lib/design-tokens";
 import { publicEnv } from "@/lib/env";
@@ -45,7 +46,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="flex min-h-screen flex-col">
+      {/* Mobile bottom padding matches the fixed bottom navigation height
+          (h-16) + the device safe-area inset so content and the footer are
+          never hidden behind it (NOA-111). */}
+      <body className="flex min-h-screen flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         <ThemeProvider>
           <SiteHeader
             accountSlot={
@@ -56,6 +60,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
           <main className="flex-1">{children}</main>
           <SiteFooter />
+          <BottomNavigation />
           <ServiceWorkerRegistration />
         </ThemeProvider>
       </body>
