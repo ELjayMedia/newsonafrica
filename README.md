@@ -33,6 +33,8 @@ pnpm dev                     # http://localhost:3000
 | `pnpm lint`      | ESLint (eslint-config-next) |
 | `pnpm typecheck` | `tsc --noEmit`              |
 | `pnpm format`    | Format with Prettier        |
+| `pnpm test`      | Vitest unit tests           |
+| `pnpm content-sync:backfill` | Backfill the Supabase search/content index from WordPress (see [docs/search.md](./docs/search.md)) |
 
 ## Project layout
 
@@ -62,6 +64,12 @@ legacy/              The previous app, archived for reference & parity
 - **WordPress**: `WORDPRESS_API_URL`.
 - **Paystack**: `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`, `PAYSTACK_SECRET_KEY`.
 - Remote image patterns / rewrites belong in `next.config.ts`.
+
+## Search & content index
+
+Full-text search runs against a Supabase `content_index` mirror of WordPress
+content (never against WordPress at request time). Architecture, sync paths,
+and backfill/rebuild instructions live in [docs/search.md](./docs/search.md).
 
 ## Legacy app
 
