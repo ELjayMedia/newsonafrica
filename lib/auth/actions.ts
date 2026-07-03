@@ -11,8 +11,10 @@ import { redirect } from "next/navigation";
 import { publicEnv } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import {
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resetPasswordSchema,
   safeNextPath,
   type AuthFormState,
 } from "@/lib/auth/validation";
@@ -134,6 +136,91 @@ export async function signInWithGoogleAction(
   }
 
   redirect(data.url);
+}
+
+/**
+ * Password-reset request (NOA-98). Sends a recovery email whose link lands on
+ * /auth/callback and then /reset-password with a recovery session. ALWAYS
+ * returns the same success notice — never reveal whether an email exists.
+ */
+export async function forgotPasswordAction(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Please fix the highlighted fields.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const supabase = await createClient();
+  // Deliberately ignore the result: rate limits or unknown addresses must
+  // produce the same response as a successful send (no account enumeration).
+  await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+    redirectTo: `${siteUrl()}/auth/callback?next=/reset-password`,
+  });
+
+  return {
+    status: "success",
+    message: "If an account exists for that email, a password reset link is on its way. Check your inbox.",
+  };
+}
+
+/**
+ * Sets a new password using the recovery-link session established by
+ * /auth/callback (NOA-98). Fails with a clear message when the link has
+ * expired or was never followed.
+ */
+export async function resetPasswordAction(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = resetPasswordSchema.safeParse({
+    password: formData.get("password"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: "Please fix the highlighted fields.",
+      fieldErrors: parsed.error.flatten().fieldErrors,
+    };
+  }
+
+  const supabase = await createClient();
+
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData.user) {
+    return {
+      status: "error",
+      message: "Your reset link has expired or is invalid. Please request a new one.",
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+
+  if (error) {
+    if (error.code === "same_password") {
+      return {
+        status: "error",
+        message: "Your new password must be different from the current one.",
+      };
+    }
+    if (error.code === "weak_password") {
+      return { status: "error", message: "That password is too weak — try a longer one." };
+    }
+    return { status: "error", message: "Could not update your password. Please try again." };
+  }
+
+  return {
+    status: "success",
+    message: "Your password has been updated. You're signed in with the new password.",
+  };
 }
 
 /** Signs the current user out and returns to the home page. */
