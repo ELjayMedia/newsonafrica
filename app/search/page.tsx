@@ -1,0 +1,141 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import { Container } from "@/components/ui/container";
+import { Input } from "@/components/ui/input";
+import { Pagination } from "@/components/pagination";
+import { SearchResultCard } from "@/components/search/search-result-card";
+import { COUNTRY_LIST, type CountryCode } from "@/lib/countries";
+import { searchContent } from "@/lib/search";
+import {
+  buildSearchUrl,
+  normalizeCountryFilter,
+  normalizeSearchPage,
+  normalizeSearchQuery,
+} from "@/lib/search/params";
+import { cn } from "@/lib/utils";
+
+interface SearchPageProps {
+  searchParams: Promise<{ q?: string; page?: string; country?: string }>;
+}
+
+export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
+  const { q } = await searchParams;
+  const query = normalizeSearchQuery(q);
+
+  return {
+    title: query ? `Search: ${query}` : "Search",
+    description: "Search news, articles and stories from across Africa.",
+    robots: { index: false },
+  };
+}
+
+/** Country filter pills: "All countries" plus one per supported edition. */
+function CountryFilter({ query, active }: { query: string; active: CountryCode | null }) {
+  const pillClass = (isActive: boolean) =>
+    cn(
+      "inline-flex h-8 items-center rounded-full border px-3 ui-sm transition-colors",
+      isActive
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-input hover:bg-accent hover:text-accent-foreground",
+    );
+
+  return (
+    <nav aria-label="Filter results by country" className="flex flex-wrap items-center gap-2">
+      <Link href={buildSearchUrl({ query })} className={pillClass(active === null)} aria-current={active === null ? "true" : undefined}>
+        All countries
+      </Link>
+      {COUNTRY_LIST.map((country) => (
+        <Link
+          key={country.code}
+          href={buildSearchUrl({ query, country: country.code })}
+          className={pillClass(active === country.code)}
+          aria-current={active === country.code ? "true" : undefined}
+        >
+          {country.name}
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
+/**
+ * Search results page (NOA-94): `?q=` full-text query, `?country=` edition
+ * filter, `?page=` pagination — all normalized by the NOA-93 param helpers
+ * and served by the `search_content` RPC (ranked, with total counts).
+ * The query form is a plain GET form so it works without client JS; the
+ * header search box (NOA-95) navigates here too.
+ */
+export default async function SearchPage({ searchParams }: SearchPageProps) {
+  const params = await searchParams;
+  const query = normalizeSearchQuery(params.q);
+  const country = normalizeCountryFilter(params.country);
+  const page = normalizeSearchPage(params.page);
+
+  const result = query ? await searchContent({ query, country, page }) : null;
+
+  return (
+    <Container className="space-y-8 py-8">
+      <header className="space-y-4 border-b border-border pb-6">
+        <h1 className="display-lg">Search</h1>
+
+        <form action="/search" method="get" role="search" className="flex max-w-2xl gap-2">
+          <label htmlFor="search-query" className="sr-only">
+            Search query
+          </label>
+          <Input
+            id="search-query"
+            type="search"
+            name="q"
+            defaultValue={query}
+            placeholder="Search news, articles and stories…"
+            autoComplete="off"
+          />
+          {country ? <input type="hidden" name="country" value={country} /> : null}
+          <button
+            type="submit"
+            className="ui-md inline-flex h-10 flex-shrink-0 items-center rounded-md bg-primary px-4 text-primary-foreground transition-opacity hover:opacity-90"
+          >
+            Search
+          </button>
+        </form>
+
+        {query ? <CountryFilter query={query} active={country} /> : null}
+      </header>
+
+      {!query ? (
+        <p className="body-lg text-muted-foreground">Enter a search term to find stories from across our editions.</p>
+      ) : result && result.items.length > 0 ? (
+        <>
+          <p className="ui-sm text-muted-foreground" role="status">
+            {result.total.toLocaleString("en")} {result.total === 1 ? "result" : "results"} for &ldquo;{query}&rdquo;
+            {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}
+          </p>
+
+          <div className="flex flex-col gap-6">
+            {result.items.map((item) => (
+              <SearchResultCard key={item.id} result={item} />
+            ))}
+          </div>
+
+          <Pagination
+            basePath="/search"
+            page={result.page}
+            totalPages={result.totalPages}
+            extraParams={{ q: query, ...(country ? { country } : {}) }}
+          />
+        </>
+      ) : (
+        <div className="space-y-2">
+          <p className="body-lg text-muted-foreground" role="status">
+            No results for &ldquo;{query}&rdquo;
+            {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}.
+          </p>
+          <p className="body-sm text-muted-foreground">
+            Try a different search term{country ? ", or search all countries" : ""}.
+          </p>
+        </div>
+      )}
+    </Container>
+  );
+}

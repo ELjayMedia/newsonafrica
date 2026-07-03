@@ -8,17 +8,22 @@ export interface PaginationProps {
   basePath: string;
   page: number;
   totalPages: number;
+  /** Extra query params to preserve on every page link (e.g. `q`/`country` on `/search`, NOA-94). */
+  extraParams?: Record<string, string>;
 }
 
-function hrefForPage(basePath: string, page: number): string {
-  return page <= 1 ? basePath : `${basePath}?page=${page}`;
+function hrefForPage(basePath: string, page: number, extraParams?: Record<string, string>): string {
+  const params = new URLSearchParams(extraParams);
+  if (page > 1) params.set("page", String(page));
+  const queryString = params.toString();
+  return queryString ? `${basePath}?${queryString}` : basePath;
 }
 
 const PAGE_LINK_CLASS =
   "inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 ui-sm transition-colors";
 
-/** Page-number pagination control for category/tag/author listings (NOA-91). */
-export function Pagination({ basePath, page, totalPages }: PaginationProps) {
+/** Page-number pagination control for category/tag/author listings (NOA-91) and search results (NOA-94). */
+export function Pagination({ basePath, page, totalPages, extraParams }: PaginationProps) {
   if (totalPages <= 1) return null;
 
   const items = buildPageRange(page, totalPages);
@@ -28,7 +33,7 @@ export function Pagination({ basePath, page, totalPages }: PaginationProps) {
   return (
     <nav aria-label="Pagination" className="flex flex-wrap items-center justify-center gap-1.5 pt-8">
       <Link
-        href={hrefForPage(basePath, Math.max(1, page - 1))}
+        href={hrefForPage(basePath, Math.max(1, page - 1), extraParams)}
         aria-disabled={!hasPrev}
         tabIndex={hasPrev ? undefined : -1}
         className={cn(
@@ -48,7 +53,7 @@ export function Pagination({ basePath, page, totalPages }: PaginationProps) {
         ) : (
           <Link
             key={item}
-            href={hrefForPage(basePath, item)}
+            href={hrefForPage(basePath, item, extraParams)}
             aria-current={item === page ? "page" : undefined}
             className={cn(
               PAGE_LINK_CLASS,
@@ -63,7 +68,7 @@ export function Pagination({ basePath, page, totalPages }: PaginationProps) {
       )}
 
       <Link
-        href={hrefForPage(basePath, Math.min(totalPages, page + 1))}
+        href={hrefForPage(basePath, Math.min(totalPages, page + 1), extraParams)}
         aria-disabled={!hasNext}
         tabIndex={hasNext ? undefined : -1}
         className={cn(

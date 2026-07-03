@@ -1,0 +1,63 @@
+import Link from "next/link";
+
+import { Badge } from "@/components/ui/badge";
+import { COUNTRIES } from "@/lib/countries";
+import { formatDate } from "@/lib/format";
+import type { SearchResult } from "@/lib/search/types";
+
+/**
+ * One ranked hit on the search results page (NOA-94). Adapted from
+ * `components/article/article-card.tsx`'s list variant, but rendering the
+ * NOA-93 `SearchResult` shape (flat category/tag names, pre-built URL) and
+ * showing which country edition the story belongs to — search spans all
+ * editions unless filtered.
+ */
+export function SearchResultCard({ result }: { result: SearchResult }) {
+  const category = result.categories[0];
+  const countryName = COUNTRIES[result.country]?.name ?? result.country;
+
+  return (
+    <article className="group flex gap-4 border-b border-border pb-6 sm:gap-6">
+      <Link
+        href={result.url}
+        tabIndex={-1}
+        aria-hidden
+        className="relative block aspect-[4/3] w-28 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:w-40 md:w-48"
+      >
+        {result.featuredImageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted images; see components/article/article-card.tsx header
+          <img
+            src={result.featuredImageUrl}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" aria-hidden />
+        )}
+      </Link>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant="outline">{countryName}</Badge>
+          {category ? <Badge variant="secondary">{category}</Badge> : null}
+        </div>
+
+        <h3 className="heading-sm">
+          <Link href={result.url} className="transition-colors hover:text-primary">
+            {result.title}
+          </Link>
+        </h3>
+
+        {result.excerpt ? <p className="body-sm line-clamp-2 text-muted-foreground">{result.excerpt}</p> : null}
+
+        <div className="mt-auto flex items-center gap-2 ui-sm text-muted-foreground">
+          {result.author ? <span>{result.author}</span> : null}
+          {result.author ? <span aria-hidden>&middot;</span> : null}
+          <time dateTime={result.publishedAt}>{formatDate(result.publishedAt)}</time>
+        </div>
+      </div>
+    </article>
+  );
+}
