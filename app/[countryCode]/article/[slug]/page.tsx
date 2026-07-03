@@ -7,8 +7,11 @@ import { Container } from "@/components/ui/container";
 import { ArticleBody } from "@/components/article/article-body";
 import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
+import { BookmarkButton } from "@/components/bookmark-button";
+import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { getPostBySlug, isValidCountry, listPosts } from "@/lib/dal";
+import { isBookmarked } from "@/lib/dal/bookmarks";
 import { publicEnv } from "@/lib/env";
 import { formatDate } from "@/lib/format";
 
@@ -73,6 +76,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
 
   const shareUrl = `${publicEnv.SITE_URL}${getArticleUrl(countryCode, slug)}`;
 
+  const user = await getUser();
+  const bookmarked = user ? await isBookmarked(countryCode, post.id) : false;
+
   return (
     <Container className="max-w-3xl space-y-6 py-8">
       <header className="space-y-4">
@@ -106,7 +112,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             </div>
           </div>
 
-          <ShareButtons title={post.title} url={shareUrl} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ShareButtons title={post.title} url={shareUrl} />
+            <BookmarkButton
+              country={countryCode}
+              slug={slug}
+              wpPostId={post.id}
+              initialBookmarked={bookmarked}
+              signedIn={user !== null}
+            />
+          </div>
         </div>
       </header>
 

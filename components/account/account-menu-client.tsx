@@ -83,6 +83,14 @@ export function AccountMenuClient({
         >
           Profile
         </Link>
+        <Link
+          role="menuitem"
+          href="/account/bookmarks"
+          onClick={() => setOpen(false)}
+          className="ui-sm block rounded-sm px-3 py-2 transition-colors hover:bg-accent hover:text-accent-foreground"
+        >
+          Saved articles
+        </Link>
         <form action={signOutAction} role="none">
           <button
             role="menuitem"

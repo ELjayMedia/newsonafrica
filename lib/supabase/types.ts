@@ -95,6 +95,19 @@ export type ProfileUpdate = Partial<
   Pick<ProfileRow, "display_name" | "avatar_url" | "preferred_country">
 >;
 
+/** Saved article (NOA-100, `supabase/migrations/20260703110000_bookmarks.sql`). */
+export type BookmarkRow = {
+  id: string;
+  user_id: string;
+  country: string;
+  wp_post_id: number;
+  slug: string;
+  created_at: string;
+};
+
+export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "country" | "wp_post_id" | "slug"> &
+  Partial<Pick<BookmarkRow, "id" | "created_at">>;
+
 export type MostReadRow = {
   id: string;
   country: string;
@@ -127,6 +140,12 @@ export type Database = {
         Row: ProfileRow;
         Insert: ProfileInsert;
         Update: ProfileUpdate;
+        Relationships: [];
+      };
+      bookmarks: {
+        Row: BookmarkRow;
+        Insert: BookmarkInsert;
+        Update: Partial<BookmarkInsert>;
         Relationships: [];
       };
     };
