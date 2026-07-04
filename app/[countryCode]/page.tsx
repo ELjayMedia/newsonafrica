@@ -6,7 +6,8 @@ import { FeaturedHero } from "@/components/home/featured-hero";
 import { NewsGrid } from "@/components/home/news-grid";
 import { SecondaryStories } from "@/components/home/secondary-stories";
 import { MostReadRail } from "@/components/home/most-read-rail";
-import { getCountry, getMostReadPosts, isValidCountry, listPosts } from "@/lib/dal";
+import { getCountry, getMostReadPosts, isValidCountry, listPosts, type MostReadPost, type PostSummary } from "@/lib/dal";
+import { createLogger } from "@/lib/log";
 
 interface CountryHomePageProps {
   params: Promise<{ countryCode: string }>;
@@ -36,6 +37,28 @@ export async function generateMetadata({ params }: CountryHomePageProps): Promis
 const HOME_POST_COUNT = 13;
 const MOST_READ_COUNT = 6;
 
+const log = createLogger("country-home-page");
+
+async function loadCountryHomeData(countryCode: string): Promise<{ posts: PostSummary[]; mostRead: MostReadPost[] }> {
+  const [postsResult, mostReadResult] = await Promise.allSettled([
+    listPosts({ country: countryCode, perPage: HOME_POST_COUNT }),
+    getMostReadPosts(countryCode, MOST_READ_COUNT),
+  ]);
+
+  if (postsResult.status === "rejected") {
+    log.warn("Country home posts feed unavailable", { country: countryCode, err: postsResult.reason });
+  }
+
+  if (mostReadResult.status === "rejected") {
+    log.warn("Country home most-read feed unavailable", { country: countryCode, err: mostReadResult.reason });
+  }
+
+  return {
+    posts: postsResult.status === "fulfilled" ? postsResult.value.items : [],
+    mostRead: mostReadResult.status === "fulfilled" ? mostReadResult.value : [],
+  };
+}
+
 export default async function CountryHomePage({ params }: CountryHomePageProps) {
   const { countryCode } = await params;
 
@@ -43,10 +66,7 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
     notFound();
   }
 
-  const [{ items: posts }, mostRead] = await Promise.all([
-    listPosts({ country: countryCode, perPage: HOME_POST_COUNT }),
-    getMostReadPosts(countryCode, MOST_READ_COUNT),
-  ]);
+  const { posts, mostRead } = await loadCountryHomeData(countryCode);
 
   const [hero, ...rest] = posts;
   const secondary = rest.slice(0, 3);
@@ -60,7 +80,12 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
           <SecondaryStories posts={secondary} />
         </div>
       ) : (
-        <p className="body-lg text-muted-foreground">No stories published yet for this edition.</p>
+        <section className="rounded-xl border border-border bg-muted/30 p-6">
+          <h1 className="heading-lg">No stories available yet</h1>
+          <p className="body-md mt-2 text-muted-foreground">
+            We could not load this edition’s latest stories just now. Please check back shortly.
+          </p>
+        </section>
       )}
 
       <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
