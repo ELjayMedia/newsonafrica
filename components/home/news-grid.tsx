@@ -12,7 +12,7 @@ export function NewsGrid({ posts }: NewsGridProps) {
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {posts.map((post) => (
-        <ArticleCard key={post.id} post={post} variant="grid" />
+        <ArticleCard key={`${post.country}-${post.id}`} post={post} variant="grid" />
       ))}
     </div>
   );
