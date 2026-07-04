@@ -102,7 +102,8 @@ describe("fetchWithRetry", () => {
   });
 
   it("retries undici socket errors from the underlying fetch", async () => {
-    const socketError = new TypeError("fetch failed", { cause: { code: "UND_ERR_SOCKET" } });
+    const socketError = new TypeError("fetch failed") as TypeError & { cause?: { code: string } };
+    socketError.cause = { code: "UND_ERR_SOCKET" };
     const fetchMock = vi.fn().mockRejectedValueOnce(socketError).mockResolvedValueOnce(new Response("ok", { status: 200 }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
