@@ -4,7 +4,7 @@ import { getGraphQLEndpoint, getRestBase, isValidCountry, SUPPORTED_COUNTRY_CODE
 
 describe("countries", () => {
   afterEach(() => {
-    vi.unstubAllEnvs();
+    vi.doUnmock("@/lib/env");
     vi.resetModules();
   });
 
@@ -29,8 +29,15 @@ describe("countries", () => {
 
   it("uses explicit Nigeria endpoint overrides when configured", async () => {
     vi.resetModules();
-    vi.stubEnv("NEXT_PUBLIC_WP_NG_REST_BASE", "https://cms-ng.test.example/wp-json/wp/v2/");
-    vi.stubEnv("NEXT_PUBLIC_WP_NG_GRAPHQL", "https://cms-ng.test.example/graphql/");
+    vi.doMock("@/lib/env", () => ({
+      publicEnv: {
+        NEXT_PUBLIC_WP_NG_REST_BASE: "https://cms-ng.test.example/wp-json/wp/v2/",
+        NEXT_PUBLIC_WP_NG_GRAPHQL: "https://cms-ng.test.example/graphql/",
+      },
+      serverEnv: {
+        WORDPRESS_API_URL: "https://cms.test.example",
+      },
+    }));
 
     const countries = await import("@/lib/wordpress/countries");
 
@@ -40,7 +47,14 @@ describe("countries", () => {
 
   it("does not apply Nigeria overrides to other country editions", async () => {
     vi.resetModules();
-    vi.stubEnv("NEXT_PUBLIC_WP_NG_REST_BASE", "https://cms-ng.test.example/wp-json/wp/v2");
+    vi.doMock("@/lib/env", () => ({
+      publicEnv: {
+        NEXT_PUBLIC_WP_NG_REST_BASE: "https://cms-ng.test.example/wp-json/wp/v2",
+      },
+      serverEnv: {
+        WORDPRESS_API_URL: "https://cms.test.example",
+      },
+    }));
 
     const countries = await import("@/lib/wordpress/countries");
 
