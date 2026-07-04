@@ -1,59 +1,36 @@
-import { createServerClient as createSupabaseServerClient } from "@supabase/ssr"
-import type { SupabaseClient } from "@supabase/supabase-js"
-import { cookies } from "next/headers"
+/**
+ * Supabase client for Server Components, Route Handlers and Server Actions
+ * (NOA-87). Uses the public anon key + the request's cookies, so it
+ * respects RLS and any authenticated user session. For privileged writes
+ * (content sync), use `@/lib/supabase/admin` instead.
+ */
+import "server-only";
 
-import { getSupabaseBrowserEnvOrNull, SUPABASE_UNAVAILABLE_ERROR } from "@/config/supabase-env"
-import type { Database } from "@/types/supabase"
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
-export { SUPABASE_UNAVAILABLE_ERROR }
+import { publicEnv } from "@/lib/env";
+import type { Database } from "@/lib/supabase/types";
 
-export interface SupabaseConfig {
-  supabaseUrl: string
-  supabaseKey: string
-}
+export async function createClient() {
+  const cookieStore = await cookies();
 
-export function getSupabaseConfig(): SupabaseConfig | null {
-  const env = getSupabaseBrowserEnvOrNull()
-
-  if (!env) {
-    return null
-  }
-
-  return {
-    supabaseUrl: env.supabaseUrl,
-    supabaseKey: env.supabaseAnonKey,
-  }
-}
-
-export async function createServerClient(): Promise<SupabaseClient<Database> | null> {
-  const config = getSupabaseConfig()
-
-  if (!config) {
-    console.error(SUPABASE_UNAVAILABLE_ERROR)
-    return null
-  }
-
-  try {
-    const cookieStore = await cookies()
-
-    return createSupabaseServerClient<Database>(config.supabaseUrl, config.supabaseKey, {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            )
-          } catch {
-            // setAll can throw in Server Components — safe to ignore
-          }
-        },
+  return createServerClient<Database>(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
       },
-    })
-  } catch (error) {
-    console.error("Failed to create Supabase server client", error)
-    return null
-  }
+      setAll(cookiesToSet) {
+        try {
+          for (const { name, value, options } of cookiesToSet) {
+            cookieStore.set(name, value, options);
+          }
+        } catch {
+          // `setAll` is called from a Server Component in some code paths,
+          // where cookie mutation isn't allowed — safe to ignore as long as
+          // middleware refreshes the session.
+        }
+      },
+    },
+  });
 }

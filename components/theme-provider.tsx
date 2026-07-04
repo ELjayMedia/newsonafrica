@@ -1,22 +1,25 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
+import { ThemeProvider as NextThemesProvider } from "next-themes";
 
-interface ThemeProviderProps {
-  children: React.ReactNode
-  defaultTheme?: "light" | "dark"
-  attribute?: string
-}
-
-const STORAGE_KEY = "noa-theme"
-
-export function ThemeProvider({ children, defaultTheme = "light" }: ThemeProviderProps) {
-  React.useEffect(() => {
-    const root = document.documentElement
-    const stored = window.localStorage.getItem(STORAGE_KEY)
-    const theme = stored === "dark" || stored === "light" ? stored : defaultTheme
-    root.classList.toggle("dark", theme === "dark")
-  }, [defaultTheme])
-
-  return <>{children}</>
+/**
+ * App-wide theme provider (NOA-84). Uses class-based dark mode, persisted to
+ * localStorage by next-themes, and respects the OS preference by default.
+ */
+export function ThemeProvider({
+  children,
+  ...props
+}: React.ComponentProps<typeof NextThemesProvider>) {
+  return (
+    <NextThemesProvider
+      attribute="class"
+      defaultTheme="system"
+      enableSystem
+      disableTransitionOnChange
+      {...props}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

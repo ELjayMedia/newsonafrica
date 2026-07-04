@@ -1,185 +1,83 @@
 /**
- * Design System Tokens
- * Centralized design tokens for the News On Africa application
+ * Design tokens (NOA-82) — documentation + programmatic reference.
+ *
+ * The CSS custom properties in `app/globals.css` are the runtime source of
+ * truth (they support light/dark theming and are consumed by Tailwind v4
+ * utilities). This module mirrors those tokens as typed constants for use in
+ * non-CSS contexts (charts, canvas, emails, docs, the /design-system route).
+ *
+ * Colours are stored as raw HSL channel triples ("H S% L%") so they can be
+ * composed as `hsl(<value>)` and match the `--token` CSS variables exactly.
  */
 
-export const designTokens = {
-  // Color Tokens
-  colors: {
-    // Brand Colors
-    brand: {
-      primary: "hsl(var(--primary))",
-      "primary-foreground": "hsl(var(--primary-foreground))",
-      secondary: "hsl(var(--secondary))",
-      "secondary-foreground": "hsl(var(--secondary-foreground))",
-    },
-
-    // Semantic Colors
-    success: {
-      DEFAULT: "hsl(142 76% 36%)", // Green-600
-      foreground: "hsl(0 0% 98%)",
-      light: "hsl(142 69% 58%)", // Green-500
-      dark: "hsl(142 72% 29%)", // Green-700
-    },
-
-    warning: {
-      DEFAULT: "hsl(38 92% 50%)", // Amber-500
-      foreground: "hsl(0 0% 9%)",
-      light: "hsl(43 96% 56%)", // Amber-400
-      dark: "hsl(32 95% 44%)", // Amber-600
-    },
-
-    info: {
-      DEFAULT: "hsl(217 91% 60%)", // Blue-500
-      foreground: "hsl(0 0% 98%)",
-      light: "hsl(213 93% 68%)", // Blue-400
-      dark: "hsl(221 83% 53%)", // Blue-600
-    },
-
-    // Surface Colors
-    surface: {
-      DEFAULT: "hsl(var(--card))",
-      foreground: "hsl(var(--card-foreground))",
-      elevated: "hsl(var(--popover))",
-      "elevated-foreground": "hsl(var(--popover-foreground))",
-      muted: "hsl(var(--muted))",
-      "muted-foreground": "hsl(var(--muted-foreground))",
-    },
-
-    // State Colors
-    states: {
-      hover: "hsl(var(--accent))",
-      "hover-foreground": "hsl(var(--accent-foreground))",
-      focus: "hsl(var(--ring))",
-      disabled: "hsl(var(--muted))",
-      "disabled-foreground": "hsl(var(--muted-foreground))",
-    },
+export const colorTokens = {
+  light: {
+    background: "0 0% 100%",
+    foreground: "240 10% 3.9%",
+    card: "0 0% 100%",
+    primary: "142.1 76.2% 36.3%",
+    secondary: "240 4.8% 95.9%",
+    muted: "240 4.8% 95.9%",
+    mutedForeground: "240 7% 40%",
+    accent: "240 4.8% 95.9%",
+    destructive: "0 84.2% 60.2%",
+    success: "142 76% 36%",
+    warning: "38 92% 50%",
+    info: "217 91% 60%",
+    border: "240 5.9% 90%",
+    ring: "142.1 76.2% 36.3%",
   },
-
-  // Spacing Scale (based on 4px grid)
-  spacing: {
-    "0": "0px",
-    px: "1px",
-    "0.5": "2px",
-    "1": "4px",
-    "1.5": "6px",
-    "2": "8px",
-    "2.5": "10px",
-    "3": "12px",
-    "3.5": "14px",
-    "4": "16px",
-    "5": "20px",
-    "6": "24px",
-    "7": "28px",
-    "8": "32px",
-    "9": "36px",
-    "10": "40px",
-    "11": "44px",
-    "12": "48px",
-    "14": "56px",
-    "16": "64px",
-    "20": "80px",
-    "24": "96px",
-    "28": "112px",
-    "32": "128px",
-    "36": "144px",
-    "40": "160px",
-    "44": "176px",
-    "48": "192px",
-    "52": "208px",
-    "56": "224px",
-    "60": "240px",
-    "64": "256px",
-    "72": "288px",
-    "80": "320px",
-    "96": "384px",
+  dark: {
+    background: "240 10% 3.9%",
+    foreground: "0 0% 98%",
+    card: "240 10% 3.9%",
+    primary: "142.1 70.6% 45.3%",
+    secondary: "240 5% 26%",
+    muted: "240 5% 26%",
+    mutedForeground: "240 5% 65%",
+    accent: "240 5% 26%",
+    destructive: "0 62.8% 50.6%",
+    success: "142 69% 58%",
+    warning: "43 96% 56%",
+    info: "213 93% 68%",
+    border: "240 5% 26%",
+    ring: "142.1 70.6% 45.3%",
   },
+} as const;
 
-  // Typography Scale
-  typography: {
-    fontSizes: {
-      xs: ["12px", { lineHeight: "16px" }],
-      sm: ["14px", { lineHeight: "20px" }],
-      base: ["16px", { lineHeight: "24px" }],
-      lg: ["18px", { lineHeight: "28px" }],
-      xl: ["20px", { lineHeight: "28px" }],
-      "2xl": ["24px", { lineHeight: "32px" }],
-      "3xl": ["30px", { lineHeight: "36px" }],
-      "4xl": ["36px", { lineHeight: "40px" }],
-      "5xl": ["48px", { lineHeight: "1" }],
-      "6xl": ["60px", { lineHeight: "1" }],
-      "7xl": ["72px", { lineHeight: "1" }],
-      "8xl": ["96px", { lineHeight: "1" }],
-      "9xl": ["128px", { lineHeight: "1" }],
-    },
+/** Semantic typography scale. Each maps to a helper class in globals.css. */
+export const typographyScale = {
+  "display-2xl": { size: "clamp(3rem, 8vw, 4.5rem)", weight: 800 },
+  "display-xl": { size: "clamp(2.25rem, 6vw, 3.75rem)", weight: 700 },
+  "display-lg": { size: "clamp(1.875rem, 5vw, 3rem)", weight: 700 },
+  "heading-lg": { size: "1.5rem", weight: 600 },
+  "heading-md": { size: "1.25rem", weight: 600 },
+  "heading-sm": { size: "1.125rem", weight: 600 },
+  "body-lg": { size: "1rem", weight: 400 },
+  "body-md": { size: "0.9375rem", weight: 400 },
+  "body-sm": { size: "0.875rem", weight: 400 },
+  "ui-md": { size: "0.875rem", weight: 500 },
+  "ui-sm": { size: "0.75rem", weight: 500 },
+} as const;
 
-    fontWeights: {
-      thin: "100",
-      extralight: "200",
-      light: "300",
-      normal: "400",
-      medium: "500",
-      semibold: "600",
-      bold: "700",
-      extrabold: "800",
-      black: "900",
-    },
+/** Spacing scale (rem) — aligns with the default Tailwind 4px-based scale. */
+export const spacingScale = {
+  xs: "0.25rem",
+  sm: "0.5rem",
+  md: "1rem",
+  lg: "1.5rem",
+  xl: "2rem",
+  "2xl": "3rem",
+  "3xl": "4rem",
+} as const;
 
-    letterSpacing: {
-      tighter: "-0.05em",
-      tight: "-0.025em",
-      normal: "0em",
-      wide: "0.025em",
-      wider: "0.05em",
-      widest: "0.1em",
-    },
-  },
+/** Border radius scale — derived from the --radius base token (0.625rem). */
+export const radiusScale = {
+  sm: "calc(0.625rem - 4px)",
+  md: "calc(0.625rem - 2px)",
+  lg: "0.625rem",
+  xl: "calc(0.625rem + 4px)",
+} as const;
 
-  // Border Radius Scale
-  radii: {
-    none: "0px",
-    sm: "calc(var(--radius) - 4px)",
-    DEFAULT: "var(--radius)",
-    md: "calc(var(--radius) - 2px)",
-    lg: "var(--radius)",
-    xl: "calc(var(--radius) + 4px)",
-    "2xl": "calc(var(--radius) + 8px)",
-    "3xl": "calc(var(--radius) + 12px)",
-    full: "9999px",
-  },
-
-  // Shadow Scale
-  shadows: {
-    sm: "0 1px 2px 0 rgb(0 0 0 / 0.05)",
-    DEFAULT: "0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)",
-    md: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
-    lg: "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
-    xl: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)",
-    "2xl": "0 25px 50px -12px rgb(0 0 0 / 0.25)",
-    inner: "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)",
-    none: "0 0 #0000",
-  },
-
-  // Animation Tokens
-  animations: {
-    durations: {
-      fast: "150ms",
-      normal: "300ms",
-      slow: "500ms",
-    },
-
-    easings: {
-      linear: "linear",
-      in: "cubic-bezier(0.4, 0, 1, 1)",
-      out: "cubic-bezier(0, 0, 0.2, 1)",
-      "in-out": "cubic-bezier(0.4, 0, 0.2, 1)",
-    },
-  },
-} as const
-
-// Type exports for TypeScript support
-export type ColorToken = keyof typeof designTokens.colors
-export type SpacingToken = keyof typeof designTokens.spacing
-export type TypographyToken = keyof typeof designTokens.typography.fontSizes
-export type RadiusToken = keyof typeof designTokens.radii
-export type ShadowToken = keyof typeof designTokens.shadows
+export type ColorTokenName = keyof typeof colorTokens.light;
+export type TypographyTokenName = keyof typeof typographyScale;

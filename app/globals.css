@@ -1,40 +1,32 @@
 /**
- * Global Styles & Design System
- * 
- * News On Africa - Unified CSS Architecture
- * 
- * This file provides:
- * - CSS Custom Properties (Design Tokens) for colors, spacing, and radius
- * - Semantic typography classes using Tailwind fontSize utilities
- * - Reusable component utilities for common patterns
- * - Consistent hover/focus states across the application
- * 
- * Typography Strategy:
- * Use semantic classes (display-*, heading-*, body-*, ui-*) instead of hard-coded sizes.
- * Example: Use "heading-lg" instead of "text-2xl font-bold"
- * This ensures consistency and makes global changes easier.
- * 
- * Color Strategy:
- * Use CSS variables defined in :root (--primary, --foreground, etc.)
- * Never use hard-coded colors like "text-blue-600" or "bg-gray-100"
- * Reference: hsl(var(--primary)), text-foreground, bg-muted
- * 
- * Layout Strategy:
- * Prefer flexbox over floats: Use flex, gap, items-center, justify-between
- * Use Tailwind spacing scale: px-4, py-6, gap-3 (not arbitrary values)
- * Mobile-first: sm:, md:, lg: prefixes for responsive adjustments
+ * News on Africa - Design Tokens & Global Styles
+ * (NOA-82)
+ *
+ * Single source of truth for the visual language of the site. Tokens are
+ * declared as CSS custom properties on :root (light) and .dark, then exposed
+ * to Tailwind v4 utilities through the @theme inline block below. Components
+ * should reference semantic tokens (bg-primary, text-foreground, ...) and the
+ * typography utility classes defined here rather than hard-coded colours/sizes.
+ *
+ * Colour direction is carried over from the previous app: a green editorial
+ * brand (primary ~142deg) on a neutral grey scale, with full dark-mode parity.
  */
 
 @import "tailwindcss";
-@config "../tailwind.config.ts";
+
+/* Enable class-based dark mode (used by next-themes) */
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  /* Surfaces & text */
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;
   --card-foreground: 240 10% 3.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 240 10% 3.9%;
+
+  /* Brand & semantic colours */
   --primary: 142.1 76.2% 36.3%;
   --primary-foreground: 0 0% 98%;
   --secondary: 240 4.8% 95.9%;
@@ -45,23 +37,20 @@
   --accent-foreground: 240 10% 3.9%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 98%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 0 0% 9%;
+  --info: 217 91% 60%;
+  --info-foreground: 0 0% 98%;
+
+  /* Lines & focus */
   --border: 240 5.9% 90%;
   --input: 240 5.9% 90%;
   --ring: 142.1 76.2% 36.3%;
-  --chart-1: 142.1 76.2% 36.3%;
-  --chart-2: 159 84% 45%;
-  --chart-3: 134 61% 41%;
-  --chart-4: 120 100% 25%;
-  --chart-5: 103 43% 50%;
+
+  /* Radius scale */
   --radius: 0.625rem;
-  --sidebar: 0 0% 98%;
-  --sidebar-foreground: 240 10% 3.9%;
-  --sidebar-primary: 240 10% 3.9%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 0 0% 97%;
-  --sidebar-accent-foreground: 240 10% 3.9%;
-  --sidebar-border: 240 5.9% 92%;
-  --sidebar-ring: 240 5.9% 70%;
 }
 
 .dark {
@@ -71,8 +60,8 @@
   --card-foreground: 0 0% 98%;
   --popover: 240 10% 3.9%;
   --popover-foreground: 0 0% 98%;
-  --primary: 0 0% 98%;
-  --primary-foreground: 240 10% 3.9%;
+  --primary: 142.1 70.6% 45.3%;
+  --primary-foreground: 144 80% 10%;
   --secondary: 240 5% 26%;
   --secondary-foreground: 0 0% 98%;
   --muted: 240 5% 26%;
@@ -81,24 +70,23 @@
   --accent-foreground: 0 0% 98%;
   --destructive: 0 62.8% 50.6%;
   --destructive-foreground: 0 0% 98%;
+  --success: 142 69% 58%;
+  --success-foreground: 144 80% 10%;
+  --warning: 43 96% 56%;
+  --warning-foreground: 0 0% 9%;
+  --info: 213 93% 68%;
+  --info-foreground: 0 0% 9%;
   --border: 240 5% 26%;
   --input: 240 5% 26%;
-  --ring: 240 5.9% 56%;
-  --chart-1: 240 5.9% 56%;
-  --chart-2: 159 68% 45%;
-  --chart-3: 134 70% 41%;
-  --chart-4: 120 100% 25%;
-  --chart-5: 103 43% 50%;
-  --sidebar: 240 10% 3.9%;
-  --sidebar-foreground: 0 0% 98%;
-  --sidebar-primary: 240 5.9% 56%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 240 5% 26%;
-  --sidebar-accent-foreground: 0 0% 98%;
-  --sidebar-border: 240 5% 26%;
-  --sidebar-ring: 240 5.9% 56%;
+  --ring: 142.1 70.6% 45.3%;
 }
 
+/**
+ * Tailwind v4 theme mapping. Exposes the tokens above as utilities, e.g.
+ * `bg-background`, `text-foreground`, `border-border`, `rounded-lg`,
+ * `font-sans`, plus the typography scale used by the .display-* / .heading-*
+ * helper classes.
+ */
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -116,164 +104,169 @@
   --color-accent-foreground: hsl(var(--accent-foreground));
   --color-destructive: hsl(var(--destructive));
   --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-info: hsl(var(--info));
+  --color-info-foreground: hsl(var(--info-foreground));
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans:
+    "Funnel Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
 @layer base {
   * {
     border-color: hsl(var(--border));
-    outline-color: hsl(var(--ring) / 0.5);
   }
+
   body {
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
-    font-family: var(--font-inter), Inter, system-ui, sans-serif;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 }
 
+/**
+ * Semantic typography scale (NOA-82).
+ * Prefer these helper classes over ad-hoc text-* sizing so headings stay
+ * consistent across the news site.
+ */
 @layer components {
-  /* ==========================================
-     DISPLAY TYPOGRAPHY - Hero sections
-     ========================================== */
   .display-2xl {
-    @apply text-display-2xl font-bold tracking-tight text-balance;
+    font-size: clamp(3rem, 8vw, 4.5rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    font-weight: 800;
   }
-
   .display-xl {
-    @apply text-display-xl font-bold tracking-tight text-balance;
+    font-size: clamp(2.25rem, 6vw, 3.75rem);
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    font-weight: 700;
   }
-
   .display-lg {
-    @apply text-display-lg font-bold tracking-tight text-balance;
+    font-size: clamp(1.875rem, 5vw, 3rem);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+    font-weight: 700;
   }
-
-  /* ==========================================
-     HEADING TYPOGRAPHY - Titles & subtitles
-     ========================================== */
   .heading-lg {
-    @apply text-heading-lg font-semibold text-foreground leading-snug;
+    font-size: 1.5rem;
+    line-height: 1.4;
+    letter-spacing: -0.015em;
+    font-weight: 600;
   }
-
   .heading-md {
-    @apply text-heading-md font-semibold text-foreground leading-snug;
+    font-size: 1.25rem;
+    line-height: 1.4;
+    font-weight: 600;
   }
-
   .heading-sm {
-    @apply text-heading-sm font-semibold text-foreground leading-snug;
+    font-size: 1.125rem;
+    line-height: 1.4;
+    font-weight: 600;
   }
-
-  /* ==========================================
-     BODY TYPOGRAPHY - Main content text
-     ========================================== */
   .body-lg {
-    @apply text-body-lg font-normal text-foreground leading-relaxed;
+    font-size: 1rem;
+    line-height: 1.6;
   }
-
   .body-md {
-    @apply text-body-md font-normal text-foreground leading-relaxed;
+    font-size: 0.9375rem;
+    line-height: 1.6;
   }
-
   .body-sm {
-    @apply text-body-sm font-normal text-foreground leading-relaxed;
+    font-size: 0.875rem;
+    line-height: 1.6;
   }
-
-  /* ==========================================
-     UI TYPOGRAPHY - Labels, captions, badges
-     ========================================== */
   .ui-md {
-    @apply text-ui-md font-medium text-foreground;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    font-weight: 500;
   }
-
   .ui-sm {
-    @apply text-ui-sm font-medium text-muted-foreground;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    letter-spacing: 0.025em;
+    font-weight: 500;
   }
 
-  /* ==========================================
-     INTERACTIVE ELEMENTS
-     ========================================== */
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
+  /**
+   * Article body typography (NOA-90). Applied to sanitized WordPress post
+   * HTML (see lib/sanitize-html.ts + components/article/article-body.tsx).
+   * Hand-rolled rather than @tailwindcss/typography since that plugin isn't
+   * part of this stack.
+   */
+  .prose-article {
+    color: hsl(var(--foreground));
+    font-size: 1.0625rem;
+    line-height: 1.75;
   }
-
-  .focus-ring-subtle {
-    @apply focus:outline-none focus:ring-2 focus:ring-primary/50;
+  .prose-article > * + * {
+    margin-top: 1.25em;
   }
-
-  /* ==========================================
-     TEXT UTILITIES
-     ========================================== */
-  .truncate-1 {
-    @apply line-clamp-1;
+  .prose-article h2 {
+    margin-top: 2em;
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.3;
   }
-
-  .truncate-2 {
-    @apply line-clamp-2;
+  .prose-article h3 {
+    margin-top: 1.75em;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.3;
   }
-
-  .truncate-3 {
-    @apply line-clamp-3;
+  .prose-article a {
+    color: hsl(var(--primary));
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
-
-  .text-balance-responsive {
-    @apply text-balance;
+  .prose-article img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-lg);
   }
-
-  /* ==========================================
-     IMAGE & MEDIA EFFECTS
-     ========================================== */
-  .image-overlay {
-    @apply pointer-events-none;
-    background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0, 0, 0, 0.1) 100%);
-  }
-
-  /* ==========================================
-     HOVER & INTERACTION EFFECTS
-     ========================================== */
-  .hover-lift {
-    @apply transition-shadow duration-200 hover:shadow-lg;
-  }
-
-  .hover-lift:hover {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  }
-
-  /* Smooth elevation transition */
-  .card-hover {
-    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
-  }
-}
-
-/* Custom scrollbar styles for carousel */
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-/* Focus styles for carousel navigation buttons */
-.carousel-nav-button:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary));
-}
-
-/* Responsive carousel adjustments */
-@media (max-width: 640px) {
-  .related-posts-carousel .carousel-container {
+  .prose-article blockquote {
+    border-left: 3px solid hsl(var(--primary));
     padding-left: 1rem;
-    padding-right: 1rem;
+    font-style: italic;
+    color: hsl(var(--muted-foreground));
   }
-}
-
-/* Print styles */
-@media print {
-  .related-posts-carousel,
-  .carousel-nav-button,
-  .scroll-to-top {
-    display: none !important;
+  .prose-article ul,
+  .prose-article ol {
+    padding-left: 1.5rem;
+  }
+  .prose-article ul {
+    list-style-type: disc;
+  }
+  .prose-article ol {
+    list-style-type: decimal;
+  }
+  .prose-article li + li {
+    margin-top: 0.5em;
+  }
+  .prose-article iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-lg);
+  }
+  .prose-article figcaption {
+    font-size: 0.875rem;
+    color: hsl(var(--muted-foreground));
   }
 }

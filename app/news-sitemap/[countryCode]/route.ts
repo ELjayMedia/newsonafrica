@@ -1,69 +1,52 @@
-import { NextResponse } from "next/server"
-
-import { siteConfig } from "@/config/site"
-import { fetchPosts } from "@/lib/wordpress/service"
-import { SUPPORTED_COUNTRIES } from "@/lib/editions"
-
-import {
-  CACHE_CONTROL_HEADER,
-  NEWS_NAMESPACE,
-  NEWS_SITEMAP_WINDOW_MS,
-  SITEMAP_NAMESPACE,
-  XML_DECLARATION,
-  buildNewsUrlElement,
-  deriveLanguageFromHreflang,
-  filterPostsByCutoff,
-} from "../utils"
+/**
+ * Google News sitemap per country edition (NOA-113), served at
+ * `/news-sitemap/{country}` and referenced from the sitemap index
+ * (NOA-112). Mirrors `legacy/app/news-sitemap/[countryCode]/route.ts`.
+ *
+ * Per the News sitemap spec: only articles published in the last 48 hours
+ * (`NEWS_SITEMAP_WINDOW_MS`), max 1,000 URLs, with `<news:publication>`
+ * name/language, `<news:publication_date>` and `<news:title>`; category
+ * names become `<news:keywords>`. Articles come from the Supabase
+ * `content_index` and degrade to an empty (still valid) urlset when it is
+ * unreachable.
+ */
+import { isValidCountry } from "@/lib/countries";
+import { absoluteUrl, PUBLICATION_LANGUAGE, PUBLICATION_NAME } from "@/lib/seo/config";
+import { listRecentNewsArticles } from "@/lib/seo/sitemap-data";
+import { buildNewsSitemapXml, xmlResponse } from "@/lib/seo/sitemap-xml";
 
 interface RouteContext {
-  params: { countryCode: string }
+  params: Promise<{ countryCode: string }>;
 }
 
-export async function GET(_request: Request, { params }: RouteContext) {
-  const countryCode = params.countryCode?.toLowerCase()
-  const edition = SUPPORTED_COUNTRIES.find((country) => country.code === countryCode)
+// The 48h window is relative to "now" — always render per request and let
+// the CDN cache via the Cache-Control header from `xmlResponse`.
+export const dynamic = "force-dynamic";
 
-  if (!edition) {
-    return NextResponse.json({ error: "Country not supported" }, { status: 404 })
+export async function GET(_request: Request, { params }: RouteContext): Promise<Response> {
+  const { countryCode } = await params;
+  const country = countryCode.toLowerCase();
+
+  if (!isValidCountry(country)) {
+    return new Response("Not found", { status: 404 });
   }
 
-  const baseUrl = siteConfig.url || "https://app.newsonafrica.com"
-  const publicationName = siteConfig.name || "News On Africa"
+  const articles = await listRecentNewsArticles(country);
 
-  let result
-  try {
-    result = await fetchPosts({ perPage: 100, countryCode: edition.code })
-  } catch (error) {
-    console.error(`Error fetching posts for ${edition.code} news sitemap:`, error)
-    return NextResponse.json({ error: "Failed to fetch posts" }, { status: 502 })
-  }
-
-  const posts = Array.isArray(result) ? result : result?.data ?? []
-  const cutoff = Date.now() - NEWS_SITEMAP_WINDOW_MS
-  const recentPosts = filterPostsByCutoff(posts, cutoff)
-  const language = deriveLanguageFromHreflang(edition.hreflang)
-
-  const urlEntries = recentPosts
-    .map((post) =>
-      buildNewsUrlElement(post, {
-        baseUrl,
-        publicationName,
-        language,
-        fallbackCountry: edition.code,
-      }),
-    )
-    .filter((entry) => entry.length > 0)
-    .join("\n")
-
-  const sitemap = `${XML_DECLARATION}
-<urlset xmlns="${SITEMAP_NAMESPACE}" xmlns:news="${NEWS_NAMESPACE}">
-${urlEntries}
-</urlset>`
-
-  return new NextResponse(sitemap, {
-    headers: {
-      "Content-Type": "application/xml",
-      "Cache-Control": CACHE_CONTROL_HEADER,
+  const xml = buildNewsSitemapXml(
+    articles.map((article) => ({
+      loc: absoluteUrl(article.path),
+      title: article.title,
+      publicationDate: article.publishedAt,
+      keywords: article.categories,
+    })),
+    {
+      // Must exactly match the publication name in Google Publisher Center;
+      // country editions share the single "News on Africa" publication.
+      name: PUBLICATION_NAME,
+      language: PUBLICATION_LANGUAGE,
     },
-  })
+  );
+
+  return xmlResponse(xml);
 }

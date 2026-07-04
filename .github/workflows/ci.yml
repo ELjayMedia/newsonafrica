@@ -1,0 +1,107 @@
+# CI pipeline (NOA-119), adapted from legacy/.github/workflows/{test,e2e}.yml.
+#
+# Two jobs:
+#   checks — typecheck, lint, unit tests + coverage thresholds, production
+#            build. Build/tests run against dummy env vars (no live Supabase
+#            or WordPress is ever contacted in CI; lib/env.ts only validates
+#            shape). Deploys themselves are done by Vercel's Git integration,
+#            not from here — see docs/deployment.md.
+#   e2e    — Playwright smoke suite in its own job so browser install and the
+#            production build+serve don't slow the fast feedback loop; the
+#            HTML report uploads on failure.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Superseded runs of the same PR/branch are cancelled to save minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Dummy-but-shape-valid env for lib/env.ts (zod). Values mirror
+  # vitest.config.ts / playwright.config.ts; nothing is contacted in CI.
+  SITE_URL: http://localhost:3000
+  NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
+  SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+  WORDPRESS_API_URL: https://cms.test.example
+  WORDPRESS_WEBHOOK_SECRET: test-webhook-secret-0123456789
+  CONTENT_SYNC_SECRET: test-content-sync-secret-0123456789
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # version comes from package.json "packageManager"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Unit tests + coverage thresholds
+        run: pnpm test:coverage
+
+      - name: Upload coverage report
+        if: always() && hashFiles('coverage/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage
+          if-no-files-found: warn
+
+      - name: Build
+        run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      # playwright.config.ts starts the WordPress REST stub and the built app
+      # (pnpm build && pnpm start) itself, with its own dummy env baked in.
+      - name: Run Playwright smoke suite
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: warn

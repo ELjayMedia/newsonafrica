@@ -1,48 +1,31 @@
-import {
-  createClient as createSupabaseAdminClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js"
+/**
+ * Privileged Supabase client for server-only, trusted code paths (NOA-87):
+ * content sync (backfill + webhook-triggered upserts) and the admin
+ * content-sync routes. Uses the service role key and bypasses RLS —
+ * never import this from anything reachable by an end-user request without
+ * an explicit secret check in front of it.
+ */
+import "server-only";
 
-import { getSupabaseServerEnv } from "@/config/supabase-env"
-import type { Database } from "@/types/supabase"
+import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 
-export type AdminSupabaseClient = SupabaseClient<Database>
+import { publicEnv, serverEnv } from "@/lib/env";
+import type { Database } from "@/lib/supabase/types";
 
-let adminClient: AdminSupabaseClient | null = null
-let hasWarnedAboutAdminConfig = false
+let adminClient: SupabaseClient<Database> | undefined;
 
-export function createAdminClient(): AdminSupabaseClient {
-  if (adminClient) {
-    return adminClient
-  }
-
-  let supabaseUrl: string
-  let supabaseServiceRoleKey: string
-
-  try {
-    const env = getSupabaseServerEnv()
-    supabaseUrl = env.supabaseUrl
-    supabaseServiceRoleKey = env.supabaseServiceRoleKey
-  } catch (error) {
-    if (!hasWarnedAboutAdminConfig) {
-      hasWarnedAboutAdminConfig = true
-      console.warn("Supabase admin environment variables are not fully configured. Falling back is not supported.")
-    }
-
-    throw error
-  }
-
-  adminClient = createSupabaseAdminClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
+export function createAdminClient(): SupabaseClient<Database> {
+  adminClient ??= createSupabaseClient<Database>(publicEnv.NEXT_PUBLIC_SUPABASE_URL, serverEnv.SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
     },
     global: {
       headers: {
-        "x-application-name": "news-on-africa-admin",
+        "x-application-name": "news-on-africa-content-sync",
       },
     },
-  }) as AdminSupabaseClient
+  });
 
-  return adminClient
+  return adminClient;
 }

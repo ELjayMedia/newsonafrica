@@ -1,0 +1,129 @@
+{
+  "extends": [
+    "next/core-web-vitals"
+  ],
+  "plugins": [
+    "unused-imports",
+    "@typescript-eslint"
+  ],
+  "rules": {
+    "react/no-unescaped-entities": "off",
+    "@next/next/no-html-link-for-pages": "off",
+    "@next/next/no-img-element": "off",
+    "react/no-children-prop": "off",
+    "no-unused-vars": "off",
+    "unused-imports/no-unused-imports": "error",
+    "@typescript-eslint/no-explicit-any": "off",
+    "unused-imports/no-unused-vars": [
+      "warn",
+      {
+        "vars": "all",
+        "varsIgnorePattern": "^_",
+        "args": "after-used",
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "lodash"
+          },
+          {
+            "name": "moment"
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "ExpressionStatement[directive='use client']",
+        "message": "`use client` directives are restricted to approved client component directories."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "contexts/bookmarks/**/*.{ts,tsx}",
+        "lib/bookmarks/**/*.{ts,tsx}",
+        "types/bookmarks.ts",
+        "app/api/bookmarks/**/*.{ts,tsx}",
+        "components/BookmarkButton.tsx",
+        "components/BookmarksContent.tsx"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": [
+          "error",
+          {
+            "ignoreRestArgs": false
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "app/**/*",
+        "components/**/*",
+        "contexts/**/*",
+        "hooks/**/*",
+        "lib/**/*",
+        "utils/**/*"
+      ],
+      "rules": {
+        "no-restricted-syntax": "off"
+      }
+    },
+    {
+      "files": [
+        "**/*.{ts,tsx}"
+      ],
+      "excludedFiles": [
+        "**/*.test.{ts,tsx}",
+        "**/__tests__/**/*.{ts,tsx}",
+        "lib/**/adapters/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-syntax": [
+          "warn",
+          {
+            "selector": "TSAsExpression > TSAnyKeyword",
+            "message": "Avoid `as any` outside adapter directories. Move unsafe casts into lib/**/adapters and return typed outputs."
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "app/**/*.{ts,tsx}"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/lib/wordpress-api"
+                ],
+                "message": "Import WordPress read APIs from '@/lib/wordpress/service'."
+              },
+              {
+                "group": [
+                  "@/lib/wordpress/posts",
+                  "@/lib/wordpress/categories",
+                  "@/lib/wordpress/authors",
+                  "@/lib/wordpress/frontpage",
+                  "@/lib/wordpress/countries"
+                ],
+                "message": "App-layer WordPress reads must use '@/lib/wordpress/service'."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
