@@ -8,6 +8,7 @@ describe("fetchWithTimeout", () => {
   afterEach(() => {
     global.fetch = originalFetch;
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("aborts the request once the timeout elapses", async () => {
@@ -37,17 +38,16 @@ describe("fetchWithTimeout", () => {
 
 describe("fetchWithRetry", () => {
   const originalFetch = global.fetch;
-  const originalRandom = Math.random;
 
   beforeEach(() => {
     vi.useFakeTimers();
-    Math.random = vi.fn(() => 0) as unknown as typeof Math.random;
+    vi.spyOn(Math, "random").mockReturnValue(0);
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
-    Math.random = originalRandom;
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("retries a 500 response and eventually succeeds", async () => {
@@ -101,13 +101,15 @@ describe("fetchWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("retries undici socket errors from the underlying fetch", async () => {
-    const socketError = new TypeError("fetch failed") as TypeError & { cause?: { code: string } };
-    socketError.cause = { code: "UND_ERR_SOCKET" };
-    const fetchMock = vi.fn().mockRejectedValueOnce(socketError).mockResolvedValueOnce(new Response("ok", { status: 200 }));
+  it("retries thrown fetch errors from the underlying network request", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
     global.fetch = fetchMock as unknown as typeof fetch;
 
     const promise = fetchWithRetry("https://example.com", { attempts: 2, backoffMs: 25 });
+    await Promise.resolve();
     await vi.advanceTimersByTimeAsync(25);
     const response = await promise;
 
