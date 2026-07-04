@@ -103,7 +103,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         const isRecent = Date.now() - postDate.getTime() < 2 * 24 * 60 * 60 * 1000
 
         return {
-          url: `${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post))}`,
+          url: `${baseUrl}${getArticleUrl(post.slug, toSitemapCountry(post), post.databaseId)}`,
           lastModified: postDate,
           changeFrequency: isRecent ? "daily" : "weekly",
           priority: isRecent ? 0.9 : 0.7,
