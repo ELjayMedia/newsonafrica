@@ -6,6 +6,7 @@ import { FeaturedHero } from "@/components/home/featured-hero";
 import { NewsGrid } from "@/components/home/news-grid";
 import { SecondaryStories } from "@/components/home/secondary-stories";
 import { MostReadRail } from "@/components/home/most-read-rail";
+import { RailLayout } from "@/components/ui/rail-layout";
 import { getCountry, getMostReadPosts, isValidCountry, listPosts, type MostReadPost, type PostSummary } from "@/lib/dal";
 import { createLogger } from "@/lib/log";
 
@@ -88,10 +89,9 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
         </section>
       )}
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
         <NewsGrid posts={grid} />
-        <MostReadRail posts={mostRead} />
-      </div>
+      </RailLayout>
     </Container>
   );
 }
