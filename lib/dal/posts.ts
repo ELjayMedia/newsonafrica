@@ -61,7 +61,6 @@ export async function listPosts(params: PostListParams): Promise<PaginatedResult
       tags: tagId ?? undefined,
       author: authorId ?? undefined,
       search: params.search,
-      sticky: params.sticky ? true : undefined,
       orderby: "date",
       order: "desc",
     },
