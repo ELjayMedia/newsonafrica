@@ -1,24 +1,32 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
+import { useEffect } from "react";
 
+import { Container } from "@/components/ui/container";
+import { Button } from "@/components/ui/button";
+
+/** Route-level error UI (NOA-84). Catches render errors below the layout. */
 export default function Error({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
-  // Log error details for debugging
-  if (typeof window !== "undefined") {
-    console.error("[v0] Error boundary caught:", error)
-  }
+  useEffect(() => {
+    // Hook for error reporting (Sentry, etc.) in a later phase.
+    console.error(error);
+  }, [error]);
 
   return (
-    <div className="container mx-auto px-4 py-16 text-center">
-      <h2 className="text-2xl font-bold mb-4">Something went wrong!</h2>
-      <p className="text-gray-600 mb-4">{error.message || "An unexpected error occurred"}</p>
-      <Button onClick={reset}>Try again</Button>
-    </div>
-  )
+    <Container className="py-24 text-center">
+      <h1 className="heading-lg">Something went wrong</h1>
+      <p className="body-md mt-2 text-muted-foreground">
+        An unexpected error occurred while loading this page.
+      </p>
+      <div className="mt-6">
+        <Button onClick={reset}>Try again</Button>
+      </div>
+    </Container>
+  );
 }

@@ -1,19 +1,19 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
     "lib": [
       "dom",
       "dom.iterable",
-      "esnext"
+      "ES2022"
     ],
     "allowJs": true,
-    "target": "ES6",
     "skipLibCheck": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
-    "baseUrl": ".",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -30,33 +30,14 @@
     }
   },
   "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
     "next-env.d.ts",
-    "app/**/*",
-    "components/**/*",
-    "config/**/*",
-    "contexts/**/*",
-    "docs/**/*",
-    "hooks/**/*",
-    "lib/**/*",
-    "services/**/*",
-    "types/**/*",
-    "utils/**/*",
-    "middleware.ts",
-    "middleware.test.ts",
-    "codegen.ts",
-    "vitest.config.ts",
-    "vitest.setup.ts",
-    "next.config.js",
-    ".next/types/**/*.ts"
+    ".next-e2e/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
-    ".next",
-    "out",
-    "scripts",
-    "@v0/scripts",
-    "supabase/functions/**",
-    "e2e/**",
-    "playwright.config.ts"
+    "legacy"
   ]
 }

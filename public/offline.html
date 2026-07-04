@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>You are offline | News on Africa</title>
+    <!--
+      Offline fallback (NOA-108). Static and fully self-contained (inline
+      styles + inline SVG, no external requests) so it renders reliably from
+      the service worker precache with zero network. Served by public/sw.js
+      when an HTML navigation fails while offline.
+    -->
+    <style>
+      :root {
+        --background: hsl(0 0% 100%);
+        --foreground: hsl(240 10% 3.9%);
+        --muted-foreground: hsl(240 7% 40%);
+        --primary: hsl(142.1 76.2% 36.3%);
+        --primary-foreground: hsl(0 0% 100%);
+        --border: hsl(240 5.9% 90%);
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: hsl(240 10% 3.9%);
+          --foreground: hsl(0 0% 98%);
+          --muted-foreground: hsl(240 5% 65%);
+          --primary: hsl(142.1 70.6% 45.3%);
+          --primary-foreground: hsl(240 10% 3.9%);
+          --border: hsl(240 5% 26%);
+        }
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--background);
+        color: var(--foreground);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        padding: 1.5rem;
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom));
+        text-align: center;
+      }
+      main {
+        max-width: 26rem;
+      }
+      .logo {
+        width: 4rem;
+        height: 4rem;
+        border-radius: 0.875rem;
+        margin: 0 auto 1.5rem;
+        display: block;
+      }
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+      }
+      p {
+        margin-top: 0.75rem;
+        font-size: 0.9375rem;
+        line-height: 1.6;
+        color: var(--muted-foreground);
+      }
+      button {
+        margin-top: 1.75rem;
+        padding: 0.625rem 1.5rem;
+        font: inherit;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--primary-foreground);
+        background: var(--primary);
+        border: none;
+        border-radius: 0.625rem;
+        cursor: pointer;
+      }
+      button:hover {
+        opacity: 0.9;
+      }
+      .hint {
+        margin-top: 1.25rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.8125rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg class="logo" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <rect width="512" height="512" rx="112" fill="#16a34a" />
+        <polygon
+          fill="#ffffff"
+          points="146,376 146,136 198,136 314,306 314,136 366,136 366,376 314,376 198,206 198,376"
+        />
+        <circle cx="404" cy="350" r="26" fill="#ffffff" fill-opacity="0.9" />
+      </svg>
+      <h1>You&rsquo;re offline</h1>
+      <p>
+        News on Africa can&rsquo;t reach the network right now. Check your connection and try
+        again &mdash; pages you visited recently may still load from cache.
+      </p>
+      <button type="button" onclick="window.location.reload()">Try again</button>
+      <p class="hint">This page works without a connection. It will refresh once you&rsquo;re back online.</p>
+    </main>
+    <script>
+      // Auto-retry the original navigation as soon as connectivity returns.
+      window.addEventListener("online", function () {
+        window.location.reload();
+      });
+    </script>
+  </body>
+</html>

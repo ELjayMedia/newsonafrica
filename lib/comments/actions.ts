@@ -1,136 +1,172 @@
-import type { SupabaseClient } from "@supabase/supabase-js"
-import type { Database } from "@/types/supabase"
-import { cacheTags } from "@/lib/cache/cacheTags"
-import { AFRICAN_EDITION } from "@/lib/editions"
-import { normalizeEditionCode, type CommentAction } from "./validators"
+/**
+ * Comment server actions (NOA-101): post, edit and soft-delete your own
+ * comments. Everything runs through the cookie-bound server client, so RLS
+ * (owner checks, status pinning, the status-transition guard trigger)
+ * backs up the explicit checks here. All actions return `AuthFormState`
+ * for React 19 `useActionState` forms, per the auth-form conventions.
+ * Writes are throttled per user via the token-bucket limiter (NOA-103).
+ */
+"use server";
 
-interface CreateCommentParams {
-  wpPostId: string
-  editionCode: string
-  userId: string
-  body: string
-  parentId: string | null
+import { revalidatePath } from "next/cache";
+
+import { getUser } from "@/lib/auth/session";
+import type { AuthFormState } from "@/lib/auth/validation";
+import {
+  deleteCommentSchema,
+  editCommentSchema,
+  postCommentSchema,
+} from "@/lib/comments/validation";
+import { getArticleUrl } from "@/lib/content-sync/article-url";
+import { createLogger } from "@/lib/log";
+import { getRateLimiter, rateLimitMessage, type RateLimitAction } from "@/lib/rate-limit";
+import { createClient } from "@/lib/supabase/server";
+
+const log = createLogger("comments:actions");
+
+const SIGN_IN_REQUIRED: AuthFormState = {
+  status: "error",
+  message: "Sign in to join the discussion.",
+};
+
+/**
+ * Per-user throttle (NOA-103). Returns the form-state error to show, or
+ * null when the action may proceed.
+ */
+function checkCommentRateLimit(action: RateLimitAction, userId: string): AuthFormState | null {
+  const decision = getRateLimiter().consume(action, userId);
+  if (decision.ok) return null;
+  return { status: "error", message: rateLimitMessage(decision) };
 }
 
-function parseWpPostId(value: string): number {
-  const normalized = value.trim()
-  if (!/^\d+$/.test(normalized)) {
-    throw new Error("Post ID must be a numeric WordPress post ID")
+const INVALID_FIELDS = (fieldErrors: Record<string, string[] | undefined>): AuthFormState => ({
+  status: "error",
+  message: "Please fix the highlighted fields.",
+  fieldErrors,
+});
+
+/** Posts a new comment or reply on an article. */
+export async function postCommentAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const user = await getUser();
+  if (!user) return SIGN_IN_REQUIRED;
+
+  const parsed = postCommentSchema.safeParse({
+    country: formData.get("country"),
+    wpPostId: formData.get("wpPostId"),
+    slug: formData.get("slug"),
+    parentId: formData.get("parentId"),
+    body: formData.get("body"),
+  });
+
+  if (!parsed.success) {
+    return INVALID_FIELDS(parsed.error.flatten().fieldErrors);
   }
 
-  const parsed = Number(normalized)
-  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
-    throw new Error("Post ID must be a valid WordPress post ID")
-  }
+  const { country, wpPostId, slug, parentId, body } = parsed.data;
 
-  return parsed
-}
+  const limited = checkCommentRateLimit("comments:post", user.id);
+  if (limited) return limited;
 
-export async function createComment(supabase: SupabaseClient<Database>, params: CreateCommentParams) {
-  const { wpPostId, editionCode, userId, body, parentId } = params
-
-  const newComment: Database["public"]["Tables"]["comments"]["Insert"] = {
-    wp_post_id: parseWpPostId(wpPostId),
-    edition_code: editionCode,
-    user_id: userId,
-    body,
+  const supabase = await createClient();
+  const { error } = await supabase.from("comments").insert({
+    country,
+    wp_post_id: wpPostId,
+    user_id: user.id,
     parent_id: parentId,
-    status: "active",
-  }
-
-  const { data: comment, error } = await supabase.from("comments").insert(newComment).select().single()
+    body,
+  });
 
   if (error) {
-    throw new Error(`Failed to create comment: ${error.message}`)
+    log.warn("Comment insert failed", { country, wpPostId, error: error.message });
+    // The thread-integrity trigger raises for missing/deleted/cross-article parents.
+    if (error.code === "P0001") {
+      return { status: "error", message: "That comment can no longer be replied to." };
+    }
+    return { status: "error", message: "Could not post your comment. Please try again." };
   }
 
-  return comment
+  revalidatePath(getArticleUrl(country, slug));
+  return { status: "success", message: "Comment posted." };
 }
 
-interface UpdateCommentActionParams {
-  id: string
-  action: CommentAction
-  reason?: string
-  userId: string
-}
+/** Edits the body of the signed-in user's own comment. */
+export async function updateCommentAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const user = await getUser();
+  if (!user) return SIGN_IN_REQUIRED;
 
-type ActionHandler = (params: UpdateCommentActionParams) => {
-  updateData: Record<string, unknown>
-  requireOwner: boolean
-  requireModerator: boolean
-}
+  const parsed = editCommentSchema.safeParse({
+    commentId: formData.get("commentId"),
+    country: formData.get("country"),
+    slug: formData.get("slug"),
+    body: formData.get("body"),
+  });
 
-const actionHandlers: Record<CommentAction, ActionHandler> = {
-  report: ({ userId, reason }) => ({
-    updateData: {
-      status: "flagged",
-      reported_by: userId,
-      report_reason: reason,
-    },
-    requireOwner: false,
-    requireModerator: false,
-  }),
-  delete: () => ({
-    updateData: { status: "deleted" },
-    requireOwner: true,
-    requireModerator: false,
-  }),
-  approve: ({ userId }) => ({
-    updateData: {
-      status: "active",
-      reviewed_at: new Date().toISOString(),
-      reviewed_by: userId,
-    },
-    requireOwner: false,
-    requireModerator: true,
-  }),
-}
-
-export async function updateCommentAction(
-  supabase: SupabaseClient<Database>,
-  params: UpdateCommentActionParams,
-): Promise<{ success: boolean; tagToRevalidate?: string }> {
-  const { id, action, userId } = params
-
-  // Fetch the comment
-  const { data: comment, error: fetchError } = await supabase.from("comments").select("*").eq("id", id).single()
-
-  if (fetchError || !comment) {
-    throw new Error("Comment not found")
+  if (!parsed.success) {
+    return INVALID_FIELDS(parsed.error.flatten().fieldErrors);
   }
 
-  const commentRecord = comment as {
-    user_id?: string | null
-    wp_post_id?: string | number | null
-    edition_code?: string | null
-  }
+  const limited = checkCommentRateLimit("comments:edit", user.id);
+  if (limited) return limited;
 
-  const handler = actionHandlers[action]
-  const { updateData, requireOwner, requireModerator } = handler(params)
-
-  // Check permissions
-  if (requireOwner && commentRecord.user_id !== userId) {
-    throw new Error("You can only delete your own comments")
-  }
-
-  if (requireModerator && commentRecord.user_id !== userId) {
-    // For now, only allow the author to approve their own comments
-    // In the future, implement moderator check
-    throw new Error("You don't have permission to approve this comment")
-  }
-
-  // Update the comment
-  const { error } = await supabase.from("comments").update(updateData).eq("id", id)
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("comments")
+    .update({ body: parsed.data.body, edited_at: new Date().toISOString() })
+    .eq("id", parsed.data.commentId)
+    .eq("user_id", user.id)
+    .select("id");
 
   if (error) {
-    throw new Error(`Failed to ${action} comment: ${error.message}`)
+    log.warn("Comment update failed", { commentId: parsed.data.commentId, error: error.message });
+    return { status: "error", message: "Could not save your changes. Please try again." };
+  }
+  if (!data || data.length === 0) {
+    // RLS filtered the row out: not the author, or already deleted.
+    return { status: "error", message: "This comment can no longer be edited." };
   }
 
-  const targetEdition = normalizeEditionCode(commentRecord.edition_code ?? null) ?? AFRICAN_EDITION.code
-  const targetPostId = commentRecord.wp_post_id != null ? String(commentRecord.wp_post_id) : null
+  revalidatePath(getArticleUrl(parsed.data.country, parsed.data.slug));
+  return { status: "success", message: "Comment updated." };
+}
 
-  return {
-    success: true,
-    tagToRevalidate: targetPostId ? cacheTags.comments(targetEdition, targetPostId) : undefined,
+/**
+ * Soft-deletes the signed-in user's own comment: status → 'deleted' with
+ * the body cleared, keeping a stub so threads with replies stay intact.
+ */
+export async function deleteCommentAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const user = await getUser();
+  if (!user) return SIGN_IN_REQUIRED;
+
+  const parsed = deleteCommentSchema.safeParse({
+    commentId: formData.get("commentId"),
+    country: formData.get("country"),
+    slug: formData.get("slug"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: "Could not delete this comment." };
   }
+
+  // Deletes share the edit bucket: both are mutations of an existing comment.
+  const limited = checkCommentRateLimit("comments:edit", user.id);
+  if (limited) return limited;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("comments")
+    .update({ status: "deleted", body: "" })
+    .eq("id", parsed.data.commentId)
+    .eq("user_id", user.id)
+    .select("id");
+
+  if (error) {
+    log.warn("Comment delete failed", { commentId: parsed.data.commentId, error: error.message });
+    return { status: "error", message: "Could not delete this comment. Please try again." };
+  }
+  if (!data || data.length === 0) {
+    return { status: "error", message: "This comment can no longer be deleted." };
+  }
+
+  revalidatePath(getArticleUrl(parsed.data.country, parsed.data.slug));
+  return { status: "success", message: "Comment deleted." };
 }

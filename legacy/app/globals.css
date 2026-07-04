@@ -1,0 +1,279 @@
+/**
+ * Global Styles & Design System
+ * 
+ * News On Africa - Unified CSS Architecture
+ * 
+ * This file provides:
+ * - CSS Custom Properties (Design Tokens) for colors, spacing, and radius
+ * - Semantic typography classes using Tailwind fontSize utilities
+ * - Reusable component utilities for common patterns
+ * - Consistent hover/focus states across the application
+ * 
+ * Typography Strategy:
+ * Use semantic classes (display-*, heading-*, body-*, ui-*) instead of hard-coded sizes.
+ * Example: Use "heading-lg" instead of "text-2xl font-bold"
+ * This ensures consistency and makes global changes easier.
+ * 
+ * Color Strategy:
+ * Use CSS variables defined in :root (--primary, --foreground, etc.)
+ * Never use hard-coded colors like "text-blue-600" or "bg-gray-100"
+ * Reference: hsl(var(--primary)), text-foreground, bg-muted
+ * 
+ * Layout Strategy:
+ * Prefer flexbox over floats: Use flex, gap, items-center, justify-between
+ * Use Tailwind spacing scale: px-4, py-6, gap-3 (not arbitrary values)
+ * Mobile-first: sm:, md:, lg: prefixes for responsive adjustments
+ */
+
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 142.1 76.2% 36.3%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 10% 3.9%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 7% 40%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 10% 3.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 142.1 76.2% 36.3%;
+  --chart-1: 142.1 76.2% 36.3%;
+  --chart-2: 159 84% 45%;
+  --chart-3: 134 61% 41%;
+  --chart-4: 120 100% 25%;
+  --chart-5: 103 43% 50%;
+  --radius: 0.625rem;
+  --sidebar: 0 0% 98%;
+  --sidebar-foreground: 240 10% 3.9%;
+  --sidebar-primary: 240 10% 3.9%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 0 0% 97%;
+  --sidebar-accent-foreground: 240 10% 3.9%;
+  --sidebar-border: 240 5.9% 92%;
+  --sidebar-ring: 240 5.9% 70%;
+}
+
+.dark {
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 10% 3.9%;
+  --secondary: 240 5% 26%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 5% 26%;
+  --muted-foreground: 240 5% 65%;
+  --accent: 240 5% 26%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 50.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5% 26%;
+  --input: 240 5% 26%;
+  --ring: 240 5.9% 56%;
+  --chart-1: 240 5.9% 56%;
+  --chart-2: 159 68% 45%;
+  --chart-3: 134 70% 41%;
+  --chart-4: 120 100% 25%;
+  --chart-5: 103 43% 50%;
+  --sidebar: 240 10% 3.9%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 240 5.9% 56%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 240 5% 26%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 240 5% 26%;
+  --sidebar-ring: 240 5.9% 56%;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+    outline-color: hsl(var(--ring) / 0.5);
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-inter), Inter, system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* ==========================================
+     DISPLAY TYPOGRAPHY - Hero sections
+     ========================================== */
+  .display-2xl {
+    @apply text-display-2xl font-bold tracking-tight text-balance;
+  }
+
+  .display-xl {
+    @apply text-display-xl font-bold tracking-tight text-balance;
+  }
+
+  .display-lg {
+    @apply text-display-lg font-bold tracking-tight text-balance;
+  }
+
+  /* ==========================================
+     HEADING TYPOGRAPHY - Titles & subtitles
+     ========================================== */
+  .heading-lg {
+    @apply text-heading-lg font-semibold text-foreground leading-snug;
+  }
+
+  .heading-md {
+    @apply text-heading-md font-semibold text-foreground leading-snug;
+  }
+
+  .heading-sm {
+    @apply text-heading-sm font-semibold text-foreground leading-snug;
+  }
+
+  /* ==========================================
+     BODY TYPOGRAPHY - Main content text
+     ========================================== */
+  .body-lg {
+    @apply text-body-lg font-normal text-foreground leading-relaxed;
+  }
+
+  .body-md {
+    @apply text-body-md font-normal text-foreground leading-relaxed;
+  }
+
+  .body-sm {
+    @apply text-body-sm font-normal text-foreground leading-relaxed;
+  }
+
+  /* ==========================================
+     UI TYPOGRAPHY - Labels, captions, badges
+     ========================================== */
+  .ui-md {
+    @apply text-ui-md font-medium text-foreground;
+  }
+
+  .ui-sm {
+    @apply text-ui-sm font-medium text-muted-foreground;
+  }
+
+  /* ==========================================
+     INTERACTIVE ELEMENTS
+     ========================================== */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary;
+  }
+
+  .focus-ring-subtle {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary/50;
+  }
+
+  /* ==========================================
+     TEXT UTILITIES
+     ========================================== */
+  .truncate-1 {
+    @apply line-clamp-1;
+  }
+
+  .truncate-2 {
+    @apply line-clamp-2;
+  }
+
+  .truncate-3 {
+    @apply line-clamp-3;
+  }
+
+  .text-balance-responsive {
+    @apply text-balance;
+  }
+
+  /* ==========================================
+     IMAGE & MEDIA EFFECTS
+     ========================================== */
+  .image-overlay {
+    @apply pointer-events-none;
+    background: linear-gradient(to bottom, transparent 0%, transparent 60%, rgba(0, 0, 0, 0.1) 100%);
+  }
+
+  /* ==========================================
+     HOVER & INTERACTION EFFECTS
+     ========================================== */
+  .hover-lift {
+    @apply transition-shadow duration-200 hover:shadow-lg;
+  }
+
+  .hover-lift:hover {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  /* Smooth elevation transition */
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+  }
+}
+
+/* Custom scrollbar styles for carousel */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Focus styles for carousel navigation buttons */
+.carousel-nav-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary));
+}
+
+/* Responsive carousel adjustments */
+@media (max-width: 640px) {
+  .related-posts-carousel .carousel-container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Print styles */
+@media print {
+  .related-posts-carousel,
+  .carousel-nav-button,
+  .scroll-to-top {
+    display: none !important;
+  }
+}

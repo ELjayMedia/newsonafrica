@@ -1,0 +1,17 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    Maskable variant of the News on Africa app icon (NOA-109).
+    Full-bleed background; the monogram sits inside the maskable "safe zone"
+    (a centred circle with radius 40% of the icon) so any platform mask
+    (circle, squircle, rounded square) never clips it.
+    Regenerate PNGs with: node scripts/generate-pwa-icons.mjs
+  -->
+  <rect width="512" height="512" fill="#16a34a" />
+  <g transform="translate(256 256) scale(0.78) translate(-256 -256)">
+    <polygon
+      fill="#ffffff"
+      points="146,376 146,136 198,136 314,306 314,136 366,136 366,376 314,376 198,206 198,376"
+    />
+    <circle cx="404" cy="350" r="26" fill="#ffffff" fill-opacity="0.9" />
+  </g>
+</svg>

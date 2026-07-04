@@ -1,371 +1,211 @@
-import type { NextRequest } from "next/server"
-import { createHmac, timingSafeEqual } from "node:crypto"
-import { SUPPORTED_COUNTRIES, getArticleUrl } from "@/lib/utils/routing"
-import { cacheTags } from "@/lib/cache/cacheTags"
-import { revalidateByTag } from "@/lib/server-cache-utils"
-import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { syncPostToIndex, deletePostFromIndex } from "@/lib/supabase/search"
-import { stripHtml } from "@/lib/search"
+/**
+ * WordPress webhook (NOA-88): on publish/update/delete, revalidate the
+ * relevant Next.js fetch-cache tags and sync the content index.
+ *
+ * WordPress should call this via a plugin (e.g. a `save_post` /
+ * `before_delete_post` hook posting JSON) with:
+ *   { "action": "post_published" | "post_updated" | "post_deleted" | "category_updated",
+ *     "country": "sz" | "za" | "ng",
+ *     "post": { "id": number, "slug": string, "categorySlugs"?: string[], "tagSlugs"?: string[] } }
+ *
+ * Auth: either header `x-webhook-secret: <WORDPRESS_WEBHOOK_SECRET>`, or an
+ * HMAC-SHA256 signature of the raw body in `x-wp-signature: sha256=<hex>`
+ * (optionally prefixed `sha256=`), keyed with the same secret.
+ */
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { revalidateTag } from "next/cache";
+import { NextResponse, type NextRequest } from "next/server";
 
-export const runtime = "nodejs"
+import { serverEnv } from "@/lib/env";
+import { createLogger } from "@/lib/log";
+import { getMetrics } from "@/lib/metrics";
+import { cacheTags } from "@/lib/wordpress/cache-tags";
+import { isValidCountry, SUPPORTED_COUNTRY_CODES } from "@/lib/wordpress/countries";
+import { deletePostFromIndex, syncPostById } from "@/lib/content-sync/sync";
 
-// Cache policy: none (webhook endpoint)
-export const revalidate = 0
+const log = createLogger("webhook:wordpress");
 
-const WEBHOOK_SECRET = process.env.WORDPRESS_WEBHOOK_SECRET
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const extractTermSlugs = (value: unknown): string[] => {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  const slugs = new Set<string>()
-  for (const item of value) {
-    if (item && typeof item === "object" && "slug" in item) {
-      const slug = (item as { slug?: string }).slug
-      if (typeof slug === "string" && slug.trim()) {
-        slugs.add(slug.trim().toLowerCase())
-      }
-    } else if (typeof item === "string" && item.trim()) {
-      slugs.add(item.trim().toLowerCase())
-    }
-  }
-
-  return Array.from(slugs)
+interface WordPressWebhookPost {
+  id?: number | string;
+  slug?: string;
+  categorySlugs?: string[];
+  tagSlugs?: string[];
+  authorSlug?: string;
 }
 
-const extractCategorySlugs = (post: any): string[] => {
-  const slugs = new Set<string>()
-
-  extractTermSlugs(post?.terms?.category).forEach((slug) => slugs.add(slug))
-
-  const embeddedTerms = post?._embedded?.["wp:term"]
-  if (Array.isArray(embeddedTerms)) {
-    for (const group of embeddedTerms) {
-      if (!Array.isArray(group)) continue
-      for (const term of group) {
-        if (term && typeof term === "object" && term.taxonomy === "category") {
-          const slug = typeof term.slug === "string" ? term.slug.trim().toLowerCase() : null
-          if (slug) {
-            slugs.add(slug)
-          }
-        }
-      }
-    }
-  }
-
-  return Array.from(slugs)
+interface WordPressWebhookPayload {
+  action?: "post_published" | "post_updated" | "post_deleted" | "category_updated" | "tag_updated" | string;
+  country?: string;
+  post?: WordPressWebhookPost;
 }
 
-const extractTagSlugs = (post: any): string[] => {
-  const slugs = new Set<string>()
-
-  extractTermSlugs(post?.terms?.post_tag).forEach((slug) => slugs.add(slug))
-
-  const embeddedTerms = post?._embedded?.["wp:term"]
-  if (Array.isArray(embeddedTerms)) {
-    for (const group of embeddedTerms) {
-      if (!Array.isArray(group)) continue
-      for (const term of group) {
-        if (term && typeof term === "object" && term.taxonomy === "post_tag") {
-          const slug = typeof term.slug === "string" ? term.slug.trim().toLowerCase() : null
-          if (slug) {
-            slugs.add(slug)
-          }
-        }
-      }
-    }
-  }
-
-  return Array.from(slugs)
+function safeEqual(a: string, b: string): boolean {
+  const bufferA = Buffer.from(a);
+  const bufferB = Buffer.from(b);
+  if (bufferA.length !== bufferB.length) return false;
+  return timingSafeEqual(bufferA, bufferB);
 }
 
-const normalizeCountry = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null
-  }
-
-  const normalized = value.trim().toLowerCase()
-  if (!normalized) {
-    return null
-  }
-
-  return SUPPORTED_COUNTRIES.includes(normalized) ? normalized : null
+function verifySignature(rawBody: string, signatureHeader: string): boolean {
+  const provided = signatureHeader.replace(/^sha256=/i, "").trim();
+  const expected = createHmac("sha256", serverEnv.WORDPRESS_WEBHOOK_SECRET).update(rawBody).digest("hex");
+  return safeEqual(provided, expected);
 }
 
-const deriveCountryFromPost = (post: any): string | null => {
-  const candidates: unknown[] = [
-    post?.meta?.country,
-    post?.meta?.Country,
-    post?.meta?._country,
-    post?.meta?._nc_country,
-    post?.meta?._nc_default_country,
-    post?.meta?.country_code,
-    post?.country,
-    post?.Country,
-    post?.country_code,
-    post?.primary_country,
-  ]
-
-  for (const candidate of candidates) {
-    const normalized = normalizeCountry(candidate)
-    if (normalized) {
-      return normalized
-    }
+function isAuthorized(request: NextRequest, rawBody: string): boolean {
+  const secretHeader = request.headers.get("x-webhook-secret")?.trim();
+  if (secretHeader) {
+    return safeEqual(secretHeader, serverEnv.WORDPRESS_WEBHOOK_SECRET);
   }
 
-  const linkCandidates = [post?.link, post?.permalink, post?.guid?.rendered]
-  for (const link of linkCandidates) {
-    if (typeof link !== "string" || !link.trim()) {
-      continue
-    }
-
-    try {
-      const parsed = new URL(link, "https://placeholder.local")
-      const segments = parsed.pathname.split("/").filter(Boolean)
-      if (segments.length > 0) {
-        const normalized = normalizeCountry(segments[0])
-        if (normalized) {
-          return normalized
-        }
-      }
-    } catch {
-      // ignore parsing errors and continue
-    }
+  const signatureHeader = request.headers.get("x-wp-signature")?.trim();
+  if (signatureHeader) {
+    return verifySignature(rawBody, signatureHeader);
   }
 
-  return null
+  return false;
 }
 
-const normalizeSlug = (value: unknown): string | null => {
-  if (typeof value !== "string") {
-    return null
+function normalizeCountry(country: string | undefined): string[] {
+  if (country && isValidCountry(country.trim().toLowerCase())) {
+    return [country.trim().toLowerCase()];
   }
-
-  const normalized = value.trim().toLowerCase()
-  return normalized || null
+  // Unknown/missing country: be conservative and revalidate every edition
+  // rather than silently leaving stale pages cached.
+  return Array.from(SUPPORTED_COUNTRY_CODES);
 }
 
-const derivePrimaryCategorySlug = (post: any, categorySlugs: string[]): string | null => {
-  const candidates: unknown[] = [
-    post?.primary_category,
-    post?.primaryCategory,
-    post?.primary_category_slug,
-    post?.primaryCategorySlug,
-    post?.yoast_head_json?.primary_category,
-    post?.yoast_head_json?.primary_category_slug,
-    post?.meta?._primary_category,
-    post?.meta?._primary_category_slug,
-    post?.meta?._yoast_wpseo_primary_category_slug,
-  ]
+/**
+ * Revalidate every fetch-cache tag a changed post could affect, across the
+ * resolved countries. See docs/caching-strategy.md for what each tag covers.
+ */
+function revalidatePost(countries: string[], post: WordPressWebhookPost) {
+  const postId = post.id !== undefined ? String(post.id) : undefined;
+  const tags = new Set<string>();
 
-  for (const candidate of candidates) {
-    if (candidate && typeof candidate === "object" && "slug" in candidate) {
-      const normalized = normalizeSlug((candidate as { slug?: string }).slug)
-      if (normalized) {
-        return normalized
-      }
-    }
+  for (const country of countries) {
+    tags.add(cacheTags.country(country));
+    tags.add(cacheTags.home(country));
+    tags.add(cacheTags.posts(country));
 
-    const normalized = normalizeSlug(candidate)
-    if (normalized) {
-      return normalized
+    if (postId) tags.add(cacheTags.post(country, postId));
+    if (post.slug) tags.add(cacheTags.postSlug(country, post.slug));
+
+    for (const slug of post.categorySlugs ?? []) {
+      tags.add(cacheTags.category(country, slug));
     }
+    for (const slug of post.tagSlugs ?? []) {
+      tags.add(cacheTags.tag(country, slug));
+    }
+    if (post.authorSlug) tags.add(cacheTags.author(country, post.authorSlug));
   }
 
-  if (categorySlugs.length > 0) {
-    return categorySlugs[0]
+  for (const tag of tags) {
+    revalidateTag(tag);
   }
 
-  return null
+  return Array.from(tags);
 }
 
-function verifyWebhookSignature(body: string, signature: string): boolean {
-  if (!WEBHOOK_SECRET) {
-    console.warn("WORDPRESS_WEBHOOK_SECRET not configured")
-    return false
-  }
+function revalidateTaxonomy(countries: string[], kind: "category" | "tag", slug: string | undefined) {
+  if (!slug) return [];
 
-  const expectedSignature = createHmac("sha256", WEBHOOK_SECRET).update(body).digest("hex")
-  const providedBuffer = Buffer.from(signature, "hex")
-  const expectedBuffer = Buffer.from(expectedSignature, "hex")
-
-  return timingSafeEqual(providedBuffer, expectedBuffer)
+  const tags = countries.map((country) => (kind === "category" ? cacheTags.category(country, slug) : cacheTags.tag(country, slug)));
+  for (const tag of tags) revalidateTag(tag);
+  return tags;
 }
 
 export async function POST(request: NextRequest) {
-  logRequest(request)
+  const metrics = getMetrics();
+  const rawBody = await request.text();
+
+  if (!isAuthorized(request, rawBody)) {
+    metrics.increment("webhook.wordpress.unauthorized");
+    log.warn("Rejected webhook call with missing/invalid credentials");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  let payload: WordPressWebhookPayload;
   try {
-    const body = await request.text()
-    const signature = request.headers.get("x-wp-signature")
+    payload = rawBody ? (JSON.parse(rawBody) as WordPressWebhookPayload) : {};
+  } catch {
+    metrics.increment("webhook.wordpress.bad_payload");
+    log.warn("Rejected webhook call with a non-JSON body");
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
 
-    // Verify webhook signature if secret is configured
-    if (WEBHOOK_SECRET && signature) {
-      const isValid = verifyWebhookSignature(body, signature.replace("sha256=", ""))
-      if (!isValid) {
-        console.error("Invalid webhook signature")
-        return jsonWithCors(request, { error: "Invalid signature" }, { status: 401 })
+  const { action, post } = payload;
+  const countries = normalizeCountry(payload.country);
+  // Content sync targets a single country's WordPress instance — pick the
+  // resolved one when known, otherwise the default (webhooks should always
+  // include `country`; this only matters for the conservative fallback).
+  const syncCountry = countries[0]!;
+  const actionLog = log.child({ action, country: syncCountry, slug: post?.slug, wpPostId: post?.id });
+  metrics.increment("webhook.wordpress.received", 1, { action: String(action) });
+
+  switch (action) {
+    case "post_published":
+    case "post_updated": {
+      if (!post?.slug || post.id === undefined) {
+        return NextResponse.json({ error: "post_published/post_updated requires post.id and post.slug" }, { status: 400 });
       }
+
+      const wpPostId = typeof post.id === "number" ? post.id : Number.parseInt(post.id, 10);
+      const syncResult = Number.isFinite(wpPostId)
+        ? await metrics.time("webhook.wordpress.sync_ms", () => syncPostById(syncCountry, wpPostId), { action })
+        : { success: false, error: "invalid post id" };
+      const revalidated = revalidatePost(countries, post);
+
+      if (syncResult.success) {
+        actionLog.info("Synced post and revalidated cache tags", { revalidated: revalidated.length });
+      } else {
+        metrics.increment("webhook.wordpress.sync_failed", 1, { action });
+        actionLog.error("Content-index sync failed; cache tags still revalidated", { error: syncResult.error });
+      }
+
+      return NextResponse.json({ success: true, action, revalidated, sync: syncResult });
     }
 
-    const data = JSON.parse(body)
-    const { action, post } = data
+    case "post_deleted": {
+      if (!post?.slug || post.id === undefined) {
+        return NextResponse.json({ error: "post_deleted requires post.id and post.slug" }, { status: 400 });
+      }
 
-    console.log(`WordPress webhook received: ${action}`, {
-      postId: post?.id,
-      postTitle: post?.title?.rendered ?? post?.title,
-      postSlug: post?.slug,
-    })
+      const wpPostId = typeof post.id === "number" ? post.id : Number.parseInt(post.id, 10);
+      const syncResult = Number.isFinite(wpPostId) ? await deletePostFromIndex(syncCountry, wpPostId) : { success: false, error: "invalid post id" };
+      const revalidated = revalidatePost(countries, post);
 
-    // Handle different webhook actions
-    switch (action) {
-      case "post_published":
-      case "post_updated":
-        if (post?.slug) {
-          const categorySlugs = extractCategorySlugs(post)
-          const tagSlugs = extractTagSlugs(post)
-          const tagsToRevalidate = new Set<string>()
-          const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
-          const postIdentifier = postId ?? post.slug
+      if (syncResult.success) {
+        actionLog.info("Removed post from content index and revalidated cache tags", { revalidated: revalidated.length });
+      } else {
+        metrics.increment("webhook.wordpress.sync_failed", 1, { action });
+        actionLog.error("Content-index delete failed; cache tags still revalidated", { error: syncResult.error });
+      }
 
-          const resolvedCountry = deriveCountryFromPost(post)
-          const primaryCategorySlug = derivePrimaryCategorySlug(post, categorySlugs)
-
-          if (resolvedCountry && postId) {
-            const title = post?.title?.rendered || post?.title || "Untitled"
-            const excerpt = post?.excerpt?.rendered || post?.excerpt || ""
-            const content = post?.content?.rendered || post?.content || ""
-            const publishedAt = post?.date || post?.date_gmt || new Date().toISOString()
-            const author = post?.author?.name || post?.author || ""
-            const featuredImageUrl =
-              post?.featured_image_url || post?._embedded?.["wp:featuredmedia"]?.[0]?.source_url || null
-
-            await syncPostToIndex({
-              edition_code: resolvedCountry,
-              wp_post_id: Number.parseInt(postId, 10),
-              slug: post.slug,
-              title: stripHtml(title),
-              excerpt: stripHtml(excerpt),
-              content_plain: stripHtml(content).slice(0, 5000), // Limit content to 5000 chars
-              tags: tagSlugs,
-              categories: categorySlugs,
-              author: stripHtml(author),
-              published_at: publishedAt,
-              url_path: getArticleUrl(post.slug, resolvedCountry, Number.parseInt(postId, 10)),
-              featured_image_url: featuredImageUrl,
-            })
-
-            console.log(`[v0] Synced post ${postId} to search index for ${resolvedCountry}`)
-          }
-
-          const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
-
-          // Revalidate the specific post tags for all supported countries
-          for (const country of revalidationCountries) {
-            tagsToRevalidate.add(cacheTags.edition(country))
-            tagsToRevalidate.add(cacheTags.home(country))
-            tagsToRevalidate.add(`wp:${country}:latest`)
-            if (postIdentifier) {
-              tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
-              tagsToRevalidate.add(`wp:${country}:post:id:${postIdentifier}`)
-            }
-            tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
-            tagsToRevalidate.add(`wp:${country}:post:slug:${String(post.slug).toLowerCase()}`)
-
-            categorySlugs.forEach((slug) => {
-              tagsToRevalidate.add(cacheTags.category(country, slug))
-            })
-
-            tagSlugs.forEach((slug) => {
-              tagsToRevalidate.add(cacheTags.tag(country, slug))
-            })
-          }
-
-          // Revalidate home page to show latest posts
-          tagsToRevalidate.add(cacheTags.home("all"))
-
-          tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
-
-          console.log(`Revalidated post: ${post.slug}`)
-        }
-        break
-
-      case "post_deleted":
-        if (post?.slug) {
-          const categorySlugs = extractCategorySlugs(post)
-          const tagSlugs = extractTagSlugs(post)
-          const tagsToRevalidate = new Set<string>()
-          const postId = typeof post.id === "number" || typeof post.id === "string" ? String(post.id) : null
-          const postIdentifier = postId ?? post.slug
-          const resolvedCountry = deriveCountryFromPost(post)
-          const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
-
-          if (resolvedCountry && postId) {
-            await deletePostFromIndex(resolvedCountry, Number.parseInt(postId, 10))
-            console.log(`[v0] Deleted post ${postId} from search index for ${resolvedCountry}`)
-          }
-
-          // Revalidate pages that might have referenced this post
-          for (const country of revalidationCountries) {
-            tagsToRevalidate.add(cacheTags.edition(country))
-            tagsToRevalidate.add(cacheTags.home(country))
-            tagsToRevalidate.add(`wp:${country}:latest`)
-            if (postIdentifier) {
-              tagsToRevalidate.add(cacheTags.post(country, postIdentifier))
-              tagsToRevalidate.add(`wp:${country}:post:id:${postIdentifier}`)
-            }
-            tagsToRevalidate.add(cacheTags.postSlug(country, post.slug))
-            tagsToRevalidate.add(`wp:${country}:post:slug:${String(post.slug).toLowerCase()}`)
-
-            categorySlugs.forEach((slug) => {
-              tagsToRevalidate.add(cacheTags.category(country, slug))
-            })
-
-            tagSlugs.forEach((slug) => {
-              tagsToRevalidate.add(cacheTags.tag(country, slug))
-            })
-          }
-          tagsToRevalidate.add(cacheTags.home("all"))
-
-          tagsToRevalidate.forEach((tag) => revalidateByTag(tag))
-
-          console.log(`Revalidated after deletion: ${post.slug}`)
-        }
-        break
-
-      case "category_updated":
-        if (post?.slug) {
-          const resolvedCountry = deriveCountryFromPost(post)
-          const revalidationCountries = resolvedCountry ? [resolvedCountry] : SUPPORTED_COUNTRIES
-
-          for (const country of revalidationCountries) {
-            revalidateByTag(cacheTags.category(country, post.slug))
-          }
-
-          console.log(`Revalidated category: ${post.slug}`)
-        }
-        break
-
-      default:
-        console.log(`Unhandled webhook action: ${action}`)
+      return NextResponse.json({ success: true, action, revalidated, sync: syncResult });
     }
 
-    return jsonWithCors(request, {
-      success: true,
-      message: "Webhook processed successfully",
-      action,
-      postId: post?.id,
-    })
-  } catch (error) {
-    console.error("Webhook processing error:", error)
-    return jsonWithCors(request, { error: "Failed to process webhook" }, { status: 500 })
+    case "category_updated": {
+      const revalidated = revalidateTaxonomy(countries, "category", post?.slug);
+      actionLog.info("Revalidated category cache tags", { revalidated: revalidated.length });
+      return NextResponse.json({ success: true, action, revalidated });
+    }
+
+    case "tag_updated": {
+      const revalidated = revalidateTaxonomy(countries, "tag", post?.slug);
+      actionLog.info("Revalidated tag cache tags", { revalidated: revalidated.length });
+      return NextResponse.json({ success: true, action, revalidated });
+    }
+
+    default:
+      actionLog.warn("Ignored webhook with unhandled action");
+      return NextResponse.json({ error: `Unhandled action: ${String(action)}` }, { status: 400 });
   }
 }
 
-export async function GET(request: NextRequest) {
-  logRequest(request)
-  return jsonWithCors(request, {
-    message: "WordPress webhook endpoint is active",
-    timestamp: new Date().toISOString(),
-  })
+export async function GET() {
+  return NextResponse.json({ message: "WordPress webhook endpoint is active", timestamp: new Date().toISOString() });
 }

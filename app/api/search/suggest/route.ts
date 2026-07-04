@@ -1,59 +1,37 @@
-import type { NextRequest } from "next/server"
+/**
+ * GET /api/search/suggest?q=…&country=…&limit=… (NOA-95)
+ *
+ * Type-ahead title suggestions for the search box, backed by the NOA-93
+ * `search_suggestions` RPC (trigram substring match, prefix hits first).
+ * Input is trimmed/validated and the limit capped by the shared param
+ * helpers; responses are `no-store` since they track a live index.
+ */
+import { NextResponse, type NextRequest } from "next/server";
 
-import { jsonWithCors, logRequest } from "@/lib/api-utils"
-import { getSearchSuggestions } from "@/lib/wordpress-search"
+import { searchSuggestions } from "@/lib/search";
+import {
+  MIN_SUGGESTION_QUERY_LENGTH,
+  normalizeCountryFilter,
+  normalizeSearchQuery,
+  normalizeSuggestionLimit,
+} from "@/lib/search/params";
 
-import { DEFAULT_COUNTRY, normalizeBaseSearchParams } from "../shared"
-import { executeWordPressSearchForScope } from "../wordpress-fallback"
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export const runtime = "edge"
-export const revalidate = 30
-
-const SUGGEST_CACHE_HEADER = "public, s-maxage=30, stale-while-revalidate=60"
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" } as const;
 
 export async function GET(request: NextRequest) {
-  logRequest(request)
-  const startTime = Date.now()
-  const { searchParams } = new URL(request.url)
-  const normalizedParams = normalizeBaseSearchParams(searchParams)
+  const params = request.nextUrl.searchParams;
+  const query = normalizeSearchQuery(params.get("q"));
+  const country = normalizeCountryFilter(params.get("country"));
+  const limit = normalizeSuggestionLimit(params.get("limit"));
 
-  if (!normalizedParams.query) {
-    const response = jsonWithCors(request, { suggestions: [] }, { status: 400 })
-    response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
-    return response
+  if (query.length < MIN_SUGGESTION_QUERY_LENGTH) {
+    return NextResponse.json({ query, suggestions: [] }, { headers: NO_STORE_HEADERS });
   }
 
-  try {
-    if (normalizedParams.scope.type === "panAfrican") {
-      const result = await executeWordPressSearchForScope(normalizedParams.query, normalizedParams.scope, 1, 10)
-      const response = jsonWithCors(request, {
-        suggestions: result.suggestions,
-        performance: {
-          responseTime: Date.now() - startTime,
-          source: "graphql",
-          ...result.performance,
-        },
-      })
-      response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
-      return response
-    }
+  const suggestions = await searchSuggestions({ query, country, limit });
 
-    const country = normalizedParams.scope.type === "country" ? normalizedParams.scope.country : DEFAULT_COUNTRY
-    const suggestions = await getSearchSuggestions(normalizedParams.query, 10, country)
-
-    const response = jsonWithCors(request, {
-      suggestions,
-      performance: {
-        responseTime: Date.now() - startTime,
-        source: "graphql",
-      },
-    })
-    response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
-    return response
-  } catch (error) {
-    console.error("[v0] Suggestion error:", error)
-    const response = jsonWithCors(request, { suggestions: [] })
-    response.headers.set("Cache-Control", SUGGEST_CACHE_HEADER)
-    return response
-  }
+  return NextResponse.json({ query, suggestions }, { headers: NO_STORE_HEADERS });
 }

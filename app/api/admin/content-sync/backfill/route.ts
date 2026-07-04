@@ -1,202 +1,77 @@
-import { NextResponse, type NextRequest } from "next/server"
+import { NextResponse, type NextRequest } from "next/server";
 
-import { stripHtml } from "@/lib/search"
-import { createAdminClient } from "@/lib/supabase/admin"
-import type { Database } from "@/types/supabase"
-import { isEditionCode } from "@/lib/wordpress/editions-registry"
-import { searchWordPressPosts } from "@/lib/wordpress-search"
+import { isAuthorizedContentSyncRequest } from "@/lib/content-sync/admin-auth";
+import { syncPostsPage } from "@/lib/content-sync/sync";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { DEFAULT_COUNTRY, isValidCountry } from "@/lib/wordpress/countries";
 
-export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-type BackfillRequestBody = {
-  country?: string
-  limit?: number
-  offset?: number
+interface BackfillRequestBody {
+  country?: string;
+  page?: number;
+  perPage?: number;
 }
 
-type SyncError = {
-  wpPostId?: number
-  slug?: string
-  message: string
+const MAX_PER_PAGE = 100;
+
+function normalizePositiveInt(value: unknown, fallback: number, max?: number): number {
+  const parsed = typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return fallback;
+  return max ? Math.min(Math.floor(parsed), max) : Math.floor(parsed);
 }
 
-type ContentIndexInsert = Database["public"]["Tables"]["content_index"]["Insert"]
-
-const MAX_LIMIT = 100
-
-const getSyncSecret = () => process.env.CONTENT_SYNC_SECRET?.trim() || process.env.REVALIDATION_SECRET?.trim() || ""
-
-const readAuthToken = (request: NextRequest) => {
-  const headerToken = request.headers.get("x-content-sync-secret")?.trim()
-  if (headerToken) return headerToken
-
-  const authorization = request.headers.get("authorization")?.trim()
-  if (authorization?.toLowerCase().startsWith("bearer ")) {
-    return authorization.slice("bearer ".length).trim()
-  }
-
-  return ""
-}
-
-const normalizeLimit = (value: unknown) => {
-  const parsed = typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10)
-  if (!Number.isFinite(parsed) || parsed <= 0) return MAX_LIMIT
-  return Math.min(parsed, MAX_LIMIT)
-}
-
-const normalizeOffset = (value: unknown) => {
-  const parsed = typeof value === "number" ? value : Number.parseInt(String(value ?? ""), 10)
-  if (!Number.isFinite(parsed) || parsed < 0) return 0
-  return parsed
-}
-
-const updateCursor = async (
-  supabase: ReturnType<typeof createAdminClient>,
-  editionCode: string,
-  status: "running" | "completed" | "failed",
-  errorMessage?: string,
-) => {
-  const payload: {
-    edition_code: string
-    sync_status: string
-    error_message: string | null
-    updated_at: string
-    last_synced_at?: string
-  } = {
-    edition_code: editionCode,
-    sync_status: status,
-    error_message: errorMessage ?? null,
-    updated_at: new Date().toISOString(),
-  }
-
-  if (status === "completed") {
-    payload.last_synced_at = new Date().toISOString()
-  }
-
-  await supabase.from("content_sync_cursor").upsert(payload)
-}
-
+/**
+ * POST /api/admin/content-sync/backfill
+ *
+ * Syncs a single page of a country's WordPress posts into the content
+ * index — safe to call repeatedly (e.g. from a cron job) to page through an
+ * entire site without risking a serverless function timeout. For a
+ * one-shot full backfill from the command line, use
+ * `pnpm content-sync:backfill` (scripts/backfill-content-index.ts) instead,
+ * which loops through every page for every country.
+ *
+ * Requires `x-content-sync-secret` (or `Authorization: Bearer`) matching
+ * `CONTENT_SYNC_SECRET`.
+ */
 export async function POST(request: NextRequest) {
-  const expectedSecret = getSyncSecret()
-
-  if (!expectedSecret) {
-    return NextResponse.json(
-      { error: "Content sync secret is not configured" },
-      { status: 500 },
-    )
+  if (!isAuthorizedContentSyncRequest(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (readAuthToken(request) !== expectedSecret) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const body = (await request.json().catch(() => ({}))) as BackfillRequestBody;
+  const country = (body.country || DEFAULT_COUNTRY).trim().toLowerCase();
+
+  if (!isValidCountry(country)) {
+    return NextResponse.json({ error: `Unsupported country: ${country}` }, { status: 400 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as BackfillRequestBody
-  const country = (body.country || "sz").trim().toLowerCase()
+  const page = normalizePositiveInt(body.page, 1);
+  const perPage = normalizePositiveInt(body.perPage, 50, MAX_PER_PAGE);
 
-  if (!isEditionCode(country)) {
-    return NextResponse.json({ error: `Unsupported edition: ${country}` }, { status: 400 })
-  }
-
-  const limit = normalizeLimit(body.limit)
-  const offset = normalizeOffset(body.offset)
-  const page = Math.floor(offset / limit) + 1
-  const errors: SyncError[] = []
-  let synced = 0
-
-  const supabase = createAdminClient()
-
-  await updateCursor(supabase, country, "running")
+  const supabase = createAdminClient();
+  await supabase.from("content_sync_cursor").upsert({ country, sync_status: "running", updated_at: new Date().toISOString() });
 
   try {
-    const response = await searchWordPressPosts("*", {
+    const result = await syncPostsPage(country, { page, perPage });
+    const status = result.errors.length > 0 ? "failed" : "completed";
+
+    await supabase.from("content_sync_cursor").upsert({
       country,
-      page,
-      perPage: limit,
-      orderBy: "date",
-      order: "desc",
-    })
+      sync_status: status,
+      error_message: result.errors.length > 0 ? `${result.errors.length} post(s) failed during sync` : null,
+      updated_at: new Date().toISOString(),
+      ...(status === "completed" ? { last_synced_at: new Date().toISOString() } : {}),
+    });
 
-    for (const post of response.results) {
-      const wpPostId = post.databaseId || Number.parseInt(post.id || "0", 10)
-
-      if (!wpPostId) {
-        errors.push({ slug: post.slug, message: "Missing WordPress post ID" })
-        continue
-      }
-
-      const safeSlug = post.slug || `post-${wpPostId}`
-      const title = stripHtml(post.title || "Untitled")
-      const excerpt = stripHtml(post.excerpt || "")
-      const contentPlain = stripHtml(post.content || "").slice(0, 5000)
-      const categories = post.categories?.nodes?.map((category) => category?.name).filter((name): name is string => Boolean(name)) || []
-      const tags = post.tags?.nodes?.map((tag) => tag?.name).filter((name): name is string => Boolean(name)) || []
-      const author = post.author?.node?.name || ""
-      const publishedAt = post.date || new Date().toISOString()
-      const featuredImageUrl = post.featuredImage?.node?.sourceUrl || null
-
-      const contentIndexPayload: ContentIndexInsert = {
-        edition_code: country,
-        wp_post_id: wpPostId,
-        slug: safeSlug,
-        title,
-        excerpt,
-        content_plain: contentPlain,
-        tags,
-        categories,
-        author,
-        published_at: publishedAt,
-        url_path: `/${country}/article/${safeSlug}`,
-        featured_image_url: featuredImageUrl,
-      }
-
-      const { error } = await supabase.from("content_index").upsert(
-        [contentIndexPayload],
-        { onConflict: "edition_code,wp_post_id" },
-      )
-
-      if (error) {
-        errors.push({ wpPostId, slug: safeSlug, message: error.message })
-      } else {
-        synced += 1
-      }
-    }
-
-    const status = errors.length > 0 ? "failed" : "completed"
-    await updateCursor(
-      supabase,
-      country,
-      status,
-      errors.length > 0 ? `${errors.length} post(s) failed during sync` : undefined,
-    )
-
-    return NextResponse.json({
-      editionCode: country,
-      limit,
-      offset,
-      page,
-      synced,
-      fetched: response.results.length,
-      hasMore: response.hasMore,
-      total: response.total,
-      status,
-      errors,
-    })
+    return NextResponse.json({ ...result, status });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown content sync error"
-    await updateCursor(supabase, country, "failed", message)
+    const message = error instanceof Error ? error.message : "Unknown content sync error";
+    await supabase
+      .from("content_sync_cursor")
+      .upsert({ country, sync_status: "failed", error_message: message, updated_at: new Date().toISOString() });
 
-    return NextResponse.json(
-      {
-        editionCode: country,
-        limit,
-        offset,
-        page,
-        synced,
-        status: "failed",
-        error: message,
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ country, page, perPage, status: "failed", error: message }, { status: 500 });
   }
 }

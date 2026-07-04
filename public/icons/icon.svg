@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    News on Africa brand app icon (NOA-109).
+    Rounded-square tile on the brand primary green (hsl(142.1 76.2% 36.3%)
+    = #16a34a, see lib/design-tokens.ts) with a white "N" monogram and the
+    "on" accent dot from the wordmark (News*on*Africa).
+    Source of truth for the PNG icon set — regenerate with:
+      node scripts/generate-pwa-icons.mjs
+  -->
+  <rect width="512" height="512" rx="112" fill="#16a34a" />
+  <polygon
+    fill="#ffffff"
+    points="146,376 146,136 198,136 314,306 314,136 366,136 366,376 314,376 198,206 198,376"
+  />
+  <circle cx="404" cy="350" r="26" fill="#ffffff" fill-opacity="0.9" />
+</svg>
