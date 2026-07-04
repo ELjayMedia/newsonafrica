@@ -37,13 +37,16 @@ describe("fetchWithTimeout", () => {
 
 describe("fetchWithRetry", () => {
   const originalFetch = global.fetch;
+  const originalRandom = Math.random;
 
   beforeEach(() => {
     vi.useFakeTimers();
+    Math.random = vi.fn(() => 0) as unknown as typeof Math.random;
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
+    Math.random = originalRandom;
     vi.useRealTimers();
   });
 
@@ -96,6 +99,19 @@ describe("fetchWithRetry", () => {
 
     expect(response.status).toBe(404);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("retries undici socket errors from the underlying fetch", async () => {
+    const socketError = new TypeError("fetch failed", { cause: { code: "UND_ERR_SOCKET" } });
+    const fetchMock = vi.fn().mockRejectedValueOnce(socketError).mockResolvedValueOnce(new Response("ok", { status: 200 }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const promise = fetchWithRetry("https://example.com", { attempts: 2, backoffMs: 25 });
+    await vi.advanceTimersByTimeAsync(25);
+    const response = await promise;
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("gives up after exhausting attempts on repeated network errors", async () => {
