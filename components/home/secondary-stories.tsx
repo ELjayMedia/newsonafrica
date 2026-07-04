@@ -12,7 +12,7 @@ export function SecondaryStories({ posts }: SecondaryStoriesProps) {
   return (
     <div className="grid grid-cols-1 gap-4 border-t border-border pt-6 sm:grid-cols-3">
       {posts.map((post) => (
-        <ArticleCard key={post.id} post={post} variant="compact" />
+        <ArticleCard key={`${post.country}-${post.id}`} post={post} variant="compact" />
       ))}
     </div>
   );
