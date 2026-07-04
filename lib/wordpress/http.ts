@@ -57,37 +57,10 @@ const DEFAULT_MAX_BACKOFF_MS = 5_000;
 
 const TRANSIENT_STATUS_CODES = new Set([408, 425, 429]);
 
-function getErrorCode(error: unknown): string | undefined {
-  if (!error || typeof error !== "object") return undefined;
-  const code = (error as { code?: unknown }).code;
-  if (typeof code === "string") return code;
-
-  const cause = (error as { cause?: unknown }).cause;
-  if (cause && typeof cause === "object") {
-    const causeCode = (cause as { code?: unknown }).code;
-    if (typeof causeCode === "string") return causeCode;
-  }
-
-  return undefined;
-}
-
-const defaultRetryOnError = (error: unknown) => {
-  if (error instanceof DOMException && error.name === "AbortError") return true;
-
-  const code = getErrorCode(error);
-  if (!code) return true;
-
-  return [
-    "UND_ERR_SOCKET",
-    "UND_ERR_CONNECT_TIMEOUT",
-    "UND_ERR_HEADERS_TIMEOUT",
-    "UND_ERR_BODY_TIMEOUT",
-    "ECONNRESET",
-    "ETIMEDOUT",
-    "EAI_AGAIN",
-  ].includes(code);
-};
-
+// Fetch only throws for network-level failures (for example UND_ERR_SOCKET,
+// ECONNRESET or abort/timeouts), so retrying thrown errors is intentionally
+// broad. HTTP 4xx handling remains response-based and is not retried below.
+const defaultRetryOnError = () => true;
 const defaultRetryOnResponse = (response: Response) =>
   response.status >= 500 || TRANSIENT_STATUS_CODES.has(response.status);
 
