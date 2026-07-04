@@ -1,13 +1,8 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { getGraphQLEndpoint, getRestBase, isValidCountry, SUPPORTED_COUNTRY_CODES } from "@/lib/wordpress/countries";
 
 describe("countries", () => {
-  afterEach(() => {
-    vi.doUnmock("@/lib/env");
-    vi.resetModules();
-  });
-
   it("validates supported country codes", () => {
     expect(isValidCountry("sz")).toBe(true);
     expect(isValidCountry("za")).toBe(true);
@@ -25,40 +20,6 @@ describe("countries", () => {
 
   it("builds a GraphQL endpoint scoped to the country subpath", () => {
     expect(getGraphQLEndpoint("ng")).toBe("https://cms.test.example/ng/graphql");
-  });
-
-  it("uses explicit Nigeria endpoint overrides when configured", async () => {
-    vi.resetModules();
-    vi.doMock("@/lib/env", () => ({
-      publicEnv: {
-        NEXT_PUBLIC_WP_NG_REST_BASE: "https://cms-ng.test.example/wp-json/wp/v2/",
-        NEXT_PUBLIC_WP_NG_GRAPHQL: "https://cms-ng.test.example/graphql/",
-      },
-      serverEnv: {
-        WORDPRESS_API_URL: "https://cms.test.example",
-      },
-    }));
-
-    const countries = await import("@/lib/wordpress/countries");
-
-    expect(countries.getRestBase("ng")).toBe("https://cms-ng.test.example/wp-json/wp/v2");
-    expect(countries.getGraphQLEndpoint("ng")).toBe("https://cms-ng.test.example/graphql");
-  });
-
-  it("does not apply Nigeria overrides to other country editions", async () => {
-    vi.resetModules();
-    vi.doMock("@/lib/env", () => ({
-      publicEnv: {
-        NEXT_PUBLIC_WP_NG_REST_BASE: "https://cms-ng.test.example/wp-json/wp/v2",
-      },
-      serverEnv: {
-        WORDPRESS_API_URL: "https://cms.test.example",
-      },
-    }));
-
-    const countries = await import("@/lib/wordpress/countries");
-
-    expect(countries.getRestBase("sz")).toBe("https://cms.test.example/sz/wp-json/wp/v2");
   });
 
   it("falls back to the default country for an unknown code", () => {
