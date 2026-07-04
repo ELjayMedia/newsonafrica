@@ -16,6 +16,7 @@ export default defineConfig({
         "**/*.d.ts",
         "lib/testing/**",
         "lib/env.ts",
+        "lib/wordpress/countries.ts",
         "lib/supabase/**",
       ],
       thresholds: {
