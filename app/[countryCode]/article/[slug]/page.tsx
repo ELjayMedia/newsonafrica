@@ -15,7 +15,7 @@ import { BreadcrumbJsonLd, NewsArticleJsonLd } from "@/components/seo/json-ld";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { COUNTRIES } from "@/lib/countries";
-import { getMostReadPosts, getPostBySlug, isValidCountry, listPosts } from "@/lib/dal";
+import { getMostReadPosts, getPostBySlug, getRelatedPosts, isValidCountry } from "@/lib/dal";
 import { isBookmarked } from "@/lib/dal/bookmarks";
 import { publicEnv } from "@/lib/env";
 import { formatDate } from "@/lib/format";
@@ -76,11 +76,8 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
   }
 
   const category = post.categories[0];
-  const related = category
-    ? (await listPosts({ country: countryCode, categorySlug: category.slug, perPage: RELATED_COUNT + 1 })).items
-        .filter((item) => item.slug !== post.slug)
-        .slice(0, RELATED_COUNT)
-    : [];
+  // Related by shared categories + tags (not just the first category).
+  const related = await getRelatedPosts(countryCode, post, RELATED_COUNT);
 
   // Most-read fills the desktop rail beside the article; degrades to [] on error.
   const mostRead = await getMostReadPosts(countryCode, 6);

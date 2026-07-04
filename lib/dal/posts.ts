@@ -60,6 +60,7 @@ export async function listPosts(params: PostListParams): Promise<PaginatedResult
       tags: tagId ?? undefined,
       author: authorId ?? undefined,
       search: params.search,
+      sticky: params.sticky ? true : undefined,
       orderby: "date",
       order: "desc",
     },
@@ -73,6 +74,55 @@ export async function listPosts(params: PostListParams): Promise<PaginatedResult
     perPage,
     pageInfo,
   );
+}
+
+/**
+ * Related posts for an article, matched by shared taxonomy (NOA port of the
+ * legacy relevance logic): categories first, then supplemented by shared tags,
+ * de-duplicated and excluding the article itself. Falls back to an empty list
+ * when the post has no terms. Improves on a naive first-category-only guess.
+ */
+export async function getRelatedPosts(
+  country: CountryCode | string,
+  post: Pick<Post, "id" | "categories" | "tags">,
+  limit = 3,
+): Promise<PostSummary[]> {
+  const categoryIds = post.categories.map((category) => category.id).filter((id) => Number.isFinite(id));
+  const tagIds = post.tags.map((tag) => tag.id).filter((id) => Number.isFinite(id));
+
+  if (categoryIds.length === 0 && tagIds.length === 0) return [];
+
+  const seen = new Set<number>([post.id]);
+  const related: PostSummary[] = [];
+
+  const collect = async (key: "categories" | "tags", ids: number[]) => {
+    if (related.length >= limit || ids.length === 0) return;
+    const { items } = await fetchWordPressRestList<WPRestPost>(country, "posts", {
+      params: {
+        _embed: true,
+        per_page: limit + 4,
+        exclude: post.id,
+        [key]: ids,
+        orderby: "date",
+        order: "desc",
+      },
+      tags: [cacheTags.posts(country)],
+      revalidate: REVALIDATE_SECONDS,
+    });
+
+    for (const raw of items) {
+      const summary = mapPostSummary(raw, country);
+      if (seen.has(summary.id)) continue;
+      seen.add(summary.id);
+      related.push(summary);
+      if (related.length >= limit) break;
+    }
+  };
+
+  await collect("categories", categoryIds);
+  await collect("tags", tagIds);
+
+  return related.slice(0, limit);
 }
 
 export async function getPostBySlug(country: CountryCode | string, slug: string): Promise<Post | null> {

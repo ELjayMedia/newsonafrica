@@ -12,5 +12,6 @@ export * from "@/lib/dal/categories";
 export * from "@/lib/dal/tags";
 export * from "@/lib/dal/authors";
 export * from "@/lib/dal/posts";
+export * from "@/lib/dal/home";
 export * from "@/lib/dal/most-read";
 export { mapAuthor, mapCategory, mapPost, mapPostSummary, mapTag } from "@/lib/dal/mappers";

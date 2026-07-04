@@ -100,6 +100,8 @@ export interface PostListParams {
   tagSlug?: string;
   authorSlug?: string;
   search?: string;
+  /** Limit to editor-pinned (WordPress "sticky") posts — used for hero curation. */
+  sticky?: boolean;
 }
 
 /** A most-read entry (Supabase `most_read_content` RPC, NOA-89/NOA-87). */
