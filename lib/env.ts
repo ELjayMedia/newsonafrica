@@ -6,7 +6,7 @@ function format(error: z.ZodError): string {
     .join("\n");
 }
 
-const optionalUrl = z.string().url().optional().or(z.literal("").transform(() => undefined));
+const optionalUrl = z.string().url().optional();
 
 const publicSchema = z.object({
   SITE_URL: z.string().url().default("http://localhost:3000"),
@@ -21,8 +21,8 @@ const publicParsed = publicSchema.safeParse({
   SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? process.env.SITE_URL,
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  NEXT_PUBLIC_WP_NG_GRAPHQL: process.env.NEXT_PUBLIC_WP_NG_GRAPHQL,
-  NEXT_PUBLIC_WP_NG_REST_BASE: process.env.NEXT_PUBLIC_WP_NG_REST_BASE,
+  NEXT_PUBLIC_WP_NG_GRAPHQL: process.env.NEXT_PUBLIC_WP_NG_GRAPHQL || undefined,
+  NEXT_PUBLIC_WP_NG_REST_BASE: process.env.NEXT_PUBLIC_WP_NG_REST_BASE || undefined,
   NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
 });
 
