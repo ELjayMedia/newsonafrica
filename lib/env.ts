@@ -86,21 +86,34 @@ const serverSchema = z.object({
 // Guard against accidentally reading server secrets in the browser.
 const isServer = typeof window === "undefined";
 
-const serverParsed = isServer
-  ? serverSchema.safeParse({
-      NODE_ENV: process.env.NODE_ENV,
-      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-      WORDPRESS_API_URL: process.env.WORDPRESS_API_URL,
-      WORDPRESS_API_AUTH_HEADER: process.env.WORDPRESS_API_AUTH_HEADER,
-      WORDPRESS_REQUEST_TIMEOUT_MS: process.env.WORDPRESS_REQUEST_TIMEOUT_MS,
-      WORDPRESS_WEBHOOK_SECRET: process.env.WORDPRESS_WEBHOOK_SECRET,
-      CONTENT_SYNC_SECRET: process.env.CONTENT_SYNC_SECRET,
-      PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY,
-    })
-  : null;
+/**
+ * Server vars are validated lazily on first access rather than at module
+ * load. Next.js evaluates module scope during `next build` ("Collecting page
+ * data"), so eager validation forces every build environment — including
+ * Vercel preview builds — to define production secrets before a build can
+ * even complete. Lazy validation keeps builds green while still failing fast
+ * with the same aggregate error the first time a request actually touches
+ * server env.
+ */
+let serverEnvCache: z.infer<typeof serverSchema> | null = null;
 
-if (serverParsed && !serverParsed.success) {
-  throw new Error(`Invalid server environment variables:\n${format(serverParsed.error)}`);
+function loadServerEnv(): z.infer<typeof serverSchema> {
+  if (serverEnvCache) return serverEnvCache;
+  const parsed = serverSchema.safeParse({
+    NODE_ENV: process.env.NODE_ENV,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
+    WORDPRESS_API_URL: process.env.WORDPRESS_API_URL,
+    WORDPRESS_API_AUTH_HEADER: process.env.WORDPRESS_API_AUTH_HEADER,
+    WORDPRESS_REQUEST_TIMEOUT_MS: process.env.WORDPRESS_REQUEST_TIMEOUT_MS,
+    WORDPRESS_WEBHOOK_SECRET: process.env.WORDPRESS_WEBHOOK_SECRET,
+    CONTENT_SYNC_SECRET: process.env.CONTENT_SYNC_SECRET,
+    PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY,
+  });
+  if (!parsed.success) {
+    throw new Error(`Invalid server environment variables:\n${format(parsed.error)}`);
+  }
+  serverEnvCache = parsed.data;
+  return serverEnvCache;
 }
 
 /**
@@ -115,7 +128,7 @@ export const serverEnv = Object.freeze(
           `Attempted to read server env var "${prop}" on the client. Use publicEnv (NEXT_PUBLIC_*) instead.`,
         );
       }
-      return serverParsed!.data[prop as keyof z.infer<typeof serverSchema>];
+      return loadServerEnv()[prop as keyof z.infer<typeof serverSchema>];
     },
   }),
 );
