@@ -71,7 +71,8 @@ function buildRequestInit(options: FetchWordPressRestOptions): FetchWithRetryOpt
     headers,
     timeout: options.timeout ?? serverEnv.WORDPRESS_REQUEST_TIMEOUT_MS,
     signal: options.signal,
-    attempts: options.attempts,
+    attempts: options.attempts ?? serverEnv.WORDPRESS_RETRY_ATTEMPTS,
+    backoffMs: serverEnv.WORDPRESS_RETRY_BACKOFF_MS,
   };
 
   const tags = options.tags && options.tags.length > 0 ? Array.from(new Set(options.tags)) : undefined;
@@ -114,9 +115,6 @@ async function parseJsonOrThrow(response: Response, url: string): Promise<unknow
   }
 }
 
-/**
- * Fetch a single WordPress REST resource (e.g. `posts/123`).
- */
 export async function fetchWordPressRest<T>(
   country: CountryCode | string,
   path: string,
@@ -128,10 +126,6 @@ export async function fetchWordPressRest<T>(
   return (await parseJsonOrThrow(response, url)) as T;
 }
 
-/**
- * Fetch a paginated WordPress REST collection (e.g. `posts`), returning both
- * the items and `X-WP-Total`/`X-WP-TotalPages` pagination metadata.
- */
 export async function fetchWordPressRestList<T>(
   country: CountryCode | string,
   path: string,

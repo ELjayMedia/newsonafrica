@@ -4,10 +4,7 @@
  * Returns a discriminated result (`{ ok: true, data }` or `{ ok: false, ... }`)
  * instead of throwing, so callers can branch on failure kind without a
  * try/catch for expected error paths (HTTP failure vs GraphQL errors vs an
- * unparsable payload). Network-level failures (timeout, DNS, etc.) still
- * reject the promise after retries are exhausted.
- *
- * Simplified/modernized from the legacy app's `lib/wordpress/client.ts`.
+ * unparsable payload). Network-level failures reject after retries are exhausted.
  */
 import "server-only";
 
@@ -80,7 +77,8 @@ function buildRequestInit(
     body,
     timeout: options.timeout ?? serverEnv.WORDPRESS_REQUEST_TIMEOUT_MS,
     signal: options.signal,
-    attempts: options.attempts,
+    attempts: options.attempts ?? serverEnv.WORDPRESS_RETRY_ATTEMPTS,
+    backoffMs: serverEnv.WORDPRESS_RETRY_BACKOFF_MS,
   };
 
   const tags = options.tags && options.tags.length > 0 ? Array.from(new Set(options.tags)) : undefined;
@@ -98,9 +96,6 @@ function buildRequestInit(
   return init;
 }
 
-/**
- * Execute a GraphQL query/mutation against a country's WPGraphQL endpoint.
- */
 export async function fetchWordPressGraphQL<T>(
   country: CountryCode | string,
   query: string,

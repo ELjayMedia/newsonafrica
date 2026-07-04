@@ -21,13 +21,16 @@ describe("fetchWordPressGraphQL", () => {
   });
 
   it("returns an http_error result for a non-OK response", async () => {
-    global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 502, statusText: "Bad Gateway" })) as unknown as typeof fetch;
+    global.fetch = vi.fn().mockResolvedValue(new Response(null, { status: 404, statusText: "Not Found" })) as unknown as typeof fetch;
 
     const result = await fetchWordPressGraphQL("sz", "query { post { slug } }");
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.kind).toBe("http_error");
+      if (result.kind === "http_error") {
+        expect(result.status).toBe(404);
+      }
     }
   });
 

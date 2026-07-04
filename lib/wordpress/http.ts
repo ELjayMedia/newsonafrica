@@ -5,9 +5,6 @@
  * `fetchWithTimeout` aborts a request that takes too long.
  * `fetchWithRetry` layers retry-with-backoff on top, retrying transient
  * network errors and 408/425/429/5xx responses (honoring `Retry-After`).
- *
- * Ported and simplified from the legacy app's
- * `lib/utils/fetchWithTimeout.ts` + `lib/utils/fetchWithRetry.ts`.
  */
 
 export interface FetchWithTimeoutOptions extends RequestInit {
@@ -43,21 +40,26 @@ export async function fetchWithTimeout(
 }
 
 export interface FetchWithRetryOptions extends FetchWithTimeoutOptions {
-  /** Total number of attempts (including the first). Default: 3. */
+  /** Total number of attempts (including the first). Default: 4. */
   attempts?: number;
   /** Base backoff delay in ms, doubled (by default) on each retry. */
   backoffMs?: number;
   backoffFactor?: number;
+  maxBackoffMs?: number;
   retryOnError?: (error: unknown, attempt: number) => boolean;
   retryOnResponse?: (response: Response, attempt: number) => boolean;
 }
 
-const DEFAULT_ATTEMPTS = 3;
-const DEFAULT_BACKOFF_MS = 500;
+const DEFAULT_ATTEMPTS = 4;
+const DEFAULT_BACKOFF_MS = 750;
 const DEFAULT_BACKOFF_FACTOR = 2;
+const DEFAULT_MAX_BACKOFF_MS = 5_000;
 
 const TRANSIENT_STATUS_CODES = new Set([408, 425, 429]);
 
+// Fetch only throws for network-level failures (for example UND_ERR_SOCKET,
+// ECONNRESET or abort/timeouts), so retrying thrown errors is intentionally
+// broad. HTTP 4xx handling remains response-based and is not retried below.
 const defaultRetryOnError = () => true;
 const defaultRetryOnResponse = (response: Response) =>
   response.status >= 500 || TRANSIENT_STATUS_CODES.has(response.status);
@@ -80,6 +82,12 @@ function getRetryAfterDelayMs(response: Response): number | null {
   return null;
 }
 
+function getBackoffDelayMs(attempt: number, backoffMs: number, backoffFactor: number, maxBackoffMs: number): number {
+  const exponentialDelay = backoffMs * Math.pow(backoffFactor, attempt - 1);
+  const jitter = exponentialDelay * 0.2 * Math.random();
+  return Math.min(maxBackoffMs, Math.round(exponentialDelay + jitter));
+}
+
 const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
@@ -95,6 +103,7 @@ export async function fetchWithRetry(
     attempts = DEFAULT_ATTEMPTS,
     backoffMs = DEFAULT_BACKOFF_MS,
     backoffFactor = DEFAULT_BACKOFF_FACTOR,
+    maxBackoffMs = DEFAULT_MAX_BACKOFF_MS,
     retryOnError = defaultRetryOnError,
     retryOnResponse = defaultRetryOnResponse,
     ...rest
@@ -108,7 +117,7 @@ export async function fetchWithRetry(
       const response = await fetchWithTimeout(resource, rest);
 
       if (attempt < maxAttempts && retryOnResponse(response, attempt)) {
-        const baseDelay = backoffMs * Math.pow(backoffFactor, attempt - 1);
+        const baseDelay = getBackoffDelayMs(attempt, backoffMs, backoffFactor, maxBackoffMs);
         const retryAfterDelay = getRetryAfterDelayMs(response);
         const delay = retryAfterDelay === null ? baseDelay : Math.max(baseDelay, retryAfterDelay);
         if (delay > 0) await wait(delay);
@@ -121,7 +130,7 @@ export async function fetchWithRetry(
       if (attempt >= maxAttempts || !retryOnError(error, attempt)) {
         throw error;
       }
-      const delay = backoffMs * Math.pow(backoffFactor, attempt - 1);
+      const delay = getBackoffDelayMs(attempt, backoffMs, backoffFactor, maxBackoffMs);
       await wait(delay);
     }
   }

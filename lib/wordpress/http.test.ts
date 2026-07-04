@@ -8,6 +8,7 @@ describe("fetchWithTimeout", () => {
   afterEach(() => {
     global.fetch = originalFetch;
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("aborts the request once the timeout elapses", async () => {
@@ -40,11 +41,13 @@ describe("fetchWithRetry", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0);
   });
 
   afterEach(() => {
     global.fetch = originalFetch;
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   it("retries a 500 response and eventually succeeds", async () => {
