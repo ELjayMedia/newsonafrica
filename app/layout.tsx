@@ -11,6 +11,7 @@ import { ServiceWorkerRegistration } from "@/components/service-worker-registrat
 import { SiteJsonLd } from "@/components/seo/json-ld";
 import { colorTokens } from "@/lib/design-tokens";
 import { publicEnv } from "@/lib/env";
+import { getNavSections } from "@/lib/nav";
 
 export const metadata: Metadata = {
   metadataBase: new URL(publicEnv.SITE_URL),
@@ -55,7 +56,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // WordPress-driven header sections (default edition; hrefs are edition-aware
+  // in the client header). Cached + degrades to Home-only nav on failure.
+  const navSections = await getNavSections();
+
   return (
     <html lang="en" suppressHydrationWarning>
       {/* Mobile bottom padding matches the fixed bottom navigation height
@@ -66,6 +71,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SiteJsonLd />
         <ThemeProvider>
           <SiteHeader
+            sections={navSections}
             accountSlot={
               <Suspense fallback={<AccountMenuFallback />}>
                 <AccountMenu />

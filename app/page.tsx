@@ -5,6 +5,7 @@ import { FeaturedHero } from "@/components/home/featured-hero";
 import { NewsGrid } from "@/components/home/news-grid";
 import { SecondaryStories } from "@/components/home/secondary-stories";
 import { Container } from "@/components/ui/container";
+import { RailLayout } from "@/components/ui/rail-layout";
 import { createLogger } from "@/lib/log";
 import { listCountries, listPosts, type Country, type PostSummary } from "@/lib/dal";
 
@@ -68,28 +69,30 @@ export default async function HomePage() {
         </section>
       )}
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <RailLayout
+        rail={
+          <div aria-label="Country editions" className="space-y-4">
+            <h2 className="heading-sm border-b-2 border-primary pb-2">Editions</h2>
+            <ul className="space-y-3">
+              {countryFeeds.map(({ country, posts }) => (
+                <li key={country.code}>
+                  <Link
+                    href={`/${country.code}`}
+                    className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:border-primary hover:bg-muted/40"
+                  >
+                    <span className="ui-md font-medium">{country.name}</span>
+                    <span className="ui-sm text-muted-foreground">
+                      {posts.length > 0 ? `${posts.length} stories` : "Open edition"}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        }
+      >
         <NewsGrid posts={grid} />
-
-        <aside aria-label="Country editions" className="space-y-4">
-          <h2 className="heading-sm border-b-2 border-primary pb-2">Editions</h2>
-          <ul className="space-y-3">
-            {countryFeeds.map(({ country, posts }) => (
-              <li key={country.code}>
-                <Link
-                  href={`/${country.code}`}
-                  className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:border-primary hover:bg-muted/40"
-                >
-                  <span className="ui-md font-medium">{country.name}</span>
-                  <span className="ui-sm text-muted-foreground">
-                    {posts.length > 0 ? `${posts.length} stories` : "Open edition"}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </aside>
-      </div>
+      </RailLayout>
     </Container>
   );
 }
