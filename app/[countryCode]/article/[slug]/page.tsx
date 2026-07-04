@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
+import { RailLayout } from "@/components/ui/rail-layout";
+import { MostReadRail } from "@/components/home/most-read-rail";
 import { ArticleBody } from "@/components/article/article-body";
 import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
@@ -13,7 +15,7 @@ import { BreadcrumbJsonLd, NewsArticleJsonLd } from "@/components/seo/json-ld";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { COUNTRIES } from "@/lib/countries";
-import { getPostBySlug, isValidCountry, listPosts } from "@/lib/dal";
+import { getMostReadPosts, getPostBySlugWithFallback, getRelatedPosts, isValidCountry } from "@/lib/dal";
 import { isBookmarked } from "@/lib/dal/bookmarks";
 import { publicEnv } from "@/lib/env";
 import { formatDate } from "@/lib/format";
@@ -30,8 +32,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const { countryCode, slug } = await params;
   if (!isValidCountry(countryCode)) return {};
 
-  const post = await getPostBySlug(countryCode, slug);
-  if (!post) return {};
+  const resolved = await getPostBySlugWithFallback(countryCode, slug);
+  if (!resolved) return {};
+  const { post } = resolved;
 
   const url = getArticleUrl(countryCode, slug);
   const description = post.excerpt || post.title;
@@ -68,17 +71,19 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
     notFound();
   }
 
-  const post = await getPostBySlug(countryCode, slug);
-  if (!post) {
+  const resolved = await getPostBySlugWithFallback(countryCode, slug);
+  if (!resolved) {
     notFound();
   }
+  const { post, sourceCountry } = resolved;
 
   const category = post.categories[0];
-  const related = category
-    ? (await listPosts({ country: countryCode, categorySlug: category.slug, perPage: RELATED_COUNT + 1 })).items
-        .filter((item) => item.slug !== post.slug)
-        .slice(0, RELATED_COUNT)
-    : [];
+  // Related by shared categories + tags, from the edition the post lives in
+  // (term IDs are edition-specific), not just the first category.
+  const related = await getRelatedPosts(sourceCountry, post, RELATED_COUNT);
+
+  // Most-read fills the desktop rail beside the article; degrades to [] on error.
+  const mostRead = await getMostReadPosts(countryCode, 6);
 
   const shareUrl = `${publicEnv.SITE_URL}${getArticleUrl(countryCode, slug)}`;
 
@@ -86,7 +91,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
   const bookmarked = user ? await isBookmarked(countryCode, post.id) : false;
 
   return (
-    <Container className="max-w-3xl space-y-6 py-8">
+    <Container className="py-8">
       {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
       <NewsArticleJsonLd post={post} />
       <BreadcrumbJsonLd
@@ -96,6 +101,10 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
           { name: post.title },
         ]}
       />
+      <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
+        {/* Constrain the article to a comfortable reading measure; on desktop it
+            sits left of the rail instead of centered in an empty container. */}
+        <article className="mx-auto w-full max-w-3xl space-y-6 lg:mx-0">
       <header className="space-y-4">
         {category ? (
           <Link href={`/${countryCode}/category/${category.slug}`} className="w-fit">
@@ -168,6 +177,8 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
       <CommentSection country={countryCode} slug={slug} wpPostId={post.id} cursorParam={commentsCursor} />
 
       <RelatedArticles posts={related} />
+        </article>
+      </RailLayout>
     </Container>
   );
 }

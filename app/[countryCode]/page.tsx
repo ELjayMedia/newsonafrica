@@ -6,7 +6,8 @@ import { FeaturedHero } from "@/components/home/featured-hero";
 import { NewsGrid } from "@/components/home/news-grid";
 import { SecondaryStories } from "@/components/home/secondary-stories";
 import { MostReadRail } from "@/components/home/most-read-rail";
-import { getCountry, getMostReadPosts, isValidCountry, listPosts, type MostReadPost, type PostSummary } from "@/lib/dal";
+import { RailLayout } from "@/components/ui/rail-layout";
+import { getCountry, getHomeFeed, getMostReadPosts, isValidCountry, type HomeFeed, type MostReadPost } from "@/lib/dal";
 import { createLogger } from "@/lib/log";
 
 interface CountryHomePageProps {
@@ -39,14 +40,15 @@ const MOST_READ_COUNT = 6;
 
 const log = createLogger("country-home-page");
 
-async function loadCountryHomeData(countryCode: string): Promise<{ posts: PostSummary[]; mostRead: MostReadPost[] }> {
-  const [postsResult, mostReadResult] = await Promise.allSettled([
-    listPosts({ country: countryCode, perPage: HOME_POST_COUNT }),
+async function loadCountryHomeData(countryCode: string): Promise<{ feed: HomeFeed; mostRead: MostReadPost[] }> {
+  const [feedResult, mostReadResult] = await Promise.allSettled([
+    // Editor-pinned (sticky) posts lead the feed, then the latest fill in.
+    getHomeFeed(countryCode, { total: HOME_POST_COUNT, secondary: 3 }),
     getMostReadPosts(countryCode, MOST_READ_COUNT),
   ]);
 
-  if (postsResult.status === "rejected") {
-    log.warn("Country home posts feed unavailable", { country: countryCode, err: postsResult.reason });
+  if (feedResult.status === "rejected") {
+    log.warn("Country home feed unavailable", { country: countryCode, err: feedResult.reason });
   }
 
   if (mostReadResult.status === "rejected") {
@@ -54,7 +56,7 @@ async function loadCountryHomeData(countryCode: string): Promise<{ posts: PostSu
   }
 
   return {
-    posts: postsResult.status === "fulfilled" ? postsResult.value.items : [],
+    feed: feedResult.status === "fulfilled" ? feedResult.value : { hero: null, secondary: [], grid: [] },
     mostRead: mostReadResult.status === "fulfilled" ? mostReadResult.value : [],
   };
 }
@@ -66,11 +68,8 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
     notFound();
   }
 
-  const { posts, mostRead } = await loadCountryHomeData(countryCode);
-
-  const [hero, ...rest] = posts;
-  const secondary = rest.slice(0, 3);
-  const grid = rest.slice(3);
+  const { feed, mostRead } = await loadCountryHomeData(countryCode);
+  const { hero, secondary, grid } = feed;
 
   return (
     <Container className="space-y-10 py-8">
@@ -88,10 +87,9 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
         </section>
       )}
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
         <NewsGrid posts={grid} />
-        <MostReadRail posts={mostRead} />
-      </div>
+      </RailLayout>
     </Container>
   );
 }

@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { Container } from "@/components/ui/container";
+import { RailLayout } from "@/components/ui/rail-layout";
 import { NewsGrid } from "@/components/home/news-grid";
+import { MostReadRail } from "@/components/home/most-read-rail";
 import { Pagination } from "@/components/pagination";
-import { getAuthorBySlug, isValidCountry, listPosts } from "@/lib/dal";
+import { getAuthorBySlug, getMostReadPosts, isValidCountry, listPosts } from "@/lib/dal";
 
 interface AuthorPageProps {
   params: Promise<{ countryCode: string; slug: string }>;
@@ -41,7 +43,10 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
   }
 
   const page = Number(pageParam) || 1;
-  const result = await listPosts({ country: countryCode, authorSlug: slug, page, perPage: PER_PAGE });
+  const [result, mostRead] = await Promise.all([
+    listPosts({ country: countryCode, authorSlug: slug, page, perPage: PER_PAGE }),
+    getMostReadPosts(countryCode, 6),
+  ]);
 
   return (
     <Container className="space-y-8 py-8">
@@ -57,14 +62,16 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
         </div>
       </header>
 
-      {result.items.length > 0 ? (
-        <>
-          <NewsGrid posts={result.items} />
-          <Pagination basePath={`/${countryCode}/author/${slug}`} page={result.page} totalPages={result.totalPages} />
-        </>
-      ) : (
-        <p className="body-lg text-muted-foreground">No stories from this author yet.</p>
-      )}
+      <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
+        {result.items.length > 0 ? (
+          <div className="space-y-8">
+            <NewsGrid posts={result.items} />
+            <Pagination basePath={`/${countryCode}/author/${slug}`} page={result.page} totalPages={result.totalPages} />
+          </div>
+        ) : (
+          <p className="body-lg text-muted-foreground">No stories from this author yet.</p>
+        )}
+      </RailLayout>
     </Container>
   );
 }

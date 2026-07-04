@@ -7,6 +7,7 @@
 import "server-only";
 
 import { cacheTags } from "@/lib/wordpress/cache-tags";
+import { SUPPORTED_COUNTRY_CODES } from "@/lib/countries";
 import type { CountryCode } from "@/lib/wordpress/countries";
 import { fetchWordPressRest, fetchWordPressRestList } from "@/lib/wordpress/rest-client";
 import type { WPRestPost } from "@/lib/wordpress/types";
@@ -75,6 +76,55 @@ export async function listPosts(params: PostListParams): Promise<PaginatedResult
   );
 }
 
+/**
+ * Related posts for an article, matched by shared taxonomy (NOA port of the
+ * legacy relevance logic): categories first, then supplemented by shared tags,
+ * de-duplicated and excluding the article itself. Falls back to an empty list
+ * when the post has no terms. Improves on a naive first-category-only guess.
+ */
+export async function getRelatedPosts(
+  country: CountryCode | string,
+  post: Pick<Post, "id" | "categories" | "tags">,
+  limit = 3,
+): Promise<PostSummary[]> {
+  const categoryIds = post.categories.map((category) => category.id).filter((id) => Number.isFinite(id));
+  const tagIds = post.tags.map((tag) => tag.id).filter((id) => Number.isFinite(id));
+
+  if (categoryIds.length === 0 && tagIds.length === 0) return [];
+
+  const seen = new Set<number>([post.id]);
+  const related: PostSummary[] = [];
+
+  const collect = async (key: "categories" | "tags", ids: number[]) => {
+    if (related.length >= limit || ids.length === 0) return;
+    const { items } = await fetchWordPressRestList<WPRestPost>(country, "posts", {
+      params: {
+        _embed: true,
+        per_page: limit + 4,
+        exclude: post.id,
+        [key]: ids,
+        orderby: "date",
+        order: "desc",
+      },
+      tags: [cacheTags.posts(country)],
+      revalidate: REVALIDATE_SECONDS,
+    });
+
+    for (const raw of items) {
+      const summary = mapPostSummary(raw, country);
+      if (seen.has(summary.id)) continue;
+      seen.add(summary.id);
+      related.push(summary);
+      if (related.length >= limit) break;
+    }
+  };
+
+  await collect("categories", categoryIds);
+  await collect("tags", tagIds);
+
+  return related.slice(0, limit);
+}
+
 export async function getPostBySlug(country: CountryCode | string, slug: string): Promise<Post | null> {
   const { items } = await fetchWordPressRestList<WPRestPost>(country, "posts", {
     params: { slug, _embed: true, status: "publish" },
@@ -84,6 +134,30 @@ export async function getPostBySlug(country: CountryCode | string, slug: string)
 
   const raw = items[0];
   return raw ? mapPost(raw, country) : null;
+}
+
+/**
+ * Resolve an article by slug, falling back across editions (NOA port of the
+ * legacy cross-country fallback). Tries the requested edition first; on a miss,
+ * looks the slug up in the other editions in parallel and returns the first
+ * match with the edition it was found in. This keeps a story reachable when a
+ * link points at the wrong edition, instead of 404-ing. Returns null only when
+ * no edition has the slug.
+ */
+export async function getPostBySlugWithFallback(
+  country: CountryCode | string,
+  slug: string,
+): Promise<{ post: Post; sourceCountry: CountryCode } | null> {
+  const primary = await getPostBySlug(country, slug).catch(() => null);
+  if (primary) return { post: primary, sourceCountry: primary.country };
+
+  const others = SUPPORTED_COUNTRY_CODES.filter((code) => code !== country);
+  const results = await Promise.all(
+    others.map(async (code) => ({ code, post: await getPostBySlug(code, slug).catch(() => null) })),
+  );
+
+  const hit = results.find((result) => result.post !== null);
+  return hit && hit.post ? { post: hit.post, sourceCountry: hit.code } : null;
 }
 
 export async function getPostById(country: CountryCode | string, id: number): Promise<Post | null> {
