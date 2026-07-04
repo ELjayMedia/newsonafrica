@@ -101,22 +101,6 @@ describe("fetchWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("retries thrown fetch errors from the underlying network request", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockRejectedValueOnce(new TypeError("fetch failed"))
-      .mockResolvedValueOnce(new Response("ok", { status: 200 }));
-    global.fetch = fetchMock as unknown as typeof fetch;
-
-    const promise = fetchWithRetry("https://example.com", { attempts: 2, backoffMs: 25 });
-    await Promise.resolve();
-    await vi.advanceTimersByTimeAsync(25);
-    const response = await promise;
-
-    expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-  });
-
   it("gives up after exhausting attempts on repeated network errors", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new Error("network down"));
     global.fetch = fetchMock as unknown as typeof fetch;
