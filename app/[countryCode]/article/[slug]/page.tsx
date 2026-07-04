@@ -15,7 +15,7 @@ import { BreadcrumbJsonLd, NewsArticleJsonLd } from "@/components/seo/json-ld";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { COUNTRIES } from "@/lib/countries";
-import { getMostReadPosts, getPostBySlug, getRelatedPosts, isValidCountry } from "@/lib/dal";
+import { getMostReadPosts, getPostBySlugWithFallback, getRelatedPosts, isValidCountry } from "@/lib/dal";
 import { isBookmarked } from "@/lib/dal/bookmarks";
 import { publicEnv } from "@/lib/env";
 import { formatDate } from "@/lib/format";
@@ -32,8 +32,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const { countryCode, slug } = await params;
   if (!isValidCountry(countryCode)) return {};
 
-  const post = await getPostBySlug(countryCode, slug);
-  if (!post) return {};
+  const resolved = await getPostBySlugWithFallback(countryCode, slug);
+  if (!resolved) return {};
+  const { post } = resolved;
 
   const url = getArticleUrl(countryCode, slug);
   const description = post.excerpt || post.title;
@@ -70,14 +71,16 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
     notFound();
   }
 
-  const post = await getPostBySlug(countryCode, slug);
-  if (!post) {
+  const resolved = await getPostBySlugWithFallback(countryCode, slug);
+  if (!resolved) {
     notFound();
   }
+  const { post, sourceCountry } = resolved;
 
   const category = post.categories[0];
-  // Related by shared categories + tags (not just the first category).
-  const related = await getRelatedPosts(countryCode, post, RELATED_COUNT);
+  // Related by shared categories + tags, from the edition the post lives in
+  // (term IDs are edition-specific), not just the first category.
+  const related = await getRelatedPosts(sourceCountry, post, RELATED_COUNT);
 
   // Most-read fills the desktop rail beside the article; degrades to [] on error.
   const mostRead = await getMostReadPosts(countryCode, 6);
