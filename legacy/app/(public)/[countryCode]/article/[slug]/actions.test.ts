@@ -58,6 +58,7 @@ describe("fetchCommentsPageAction", () => {
       limit: 20,
       parentId: null,
       status: "active",
+      sortOption: "newest",
       cursor: "cursor-1",
       session: { user: { id: "u1" } },
     })

@@ -95,7 +95,7 @@ describe("bookmark service contracts", () => {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
-    const payload = await addBookmarkForUser(supabase as any, "user-1", { postId: "post-1" }, { revalidate, editionHints: ["ng"] })
+    const payload = await addBookmarkForUser(supabase as any, "user-1", { postId: "101" }, { revalidate, editionHints: ["ng"] })
 
     expect(payload.added).toHaveLength(1)
     expect(applyCounterDeltaMock).toHaveBeenCalled()
@@ -120,7 +120,7 @@ describe("bookmark service contracts", () => {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
-    const payload = await updateBookmarkForUser(supabase as any, "user-1", "post-1", { readState: "read" })
+    const payload = await updateBookmarkForUser(supabase as any, "user-1", "101", { readState: "read" })
     expect(payload.updated).toHaveLength(1)
     expect(payload.statsDelta.total).toBe(0)
   })
@@ -136,8 +136,8 @@ describe("bookmark service contracts", () => {
     const supabase = { from: vi.fn().mockReturnValue(deleteChain) }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only lightweight client stub.
-    const payload = await bulkRemoveBookmarksForUser(supabase as any, "user-1", ["post-1", "post-2"])
+    const payload = await bulkRemoveBookmarksForUser(supabase as any, "user-1", ["101", "102"])
     expect(payload.removed).toHaveLength(1)
-    expect(deleteChain.in).toHaveBeenCalledWith("wp_post_id", ["post-1", "post-2"])
+    expect(deleteChain.in).toHaveBeenCalledWith("wp_post_id", [101, 102])
   })
 })

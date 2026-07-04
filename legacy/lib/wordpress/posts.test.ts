@@ -46,7 +46,9 @@ describe("getRelatedPostsForCountry", () => {
   it("returns an empty list when category lookup fails", async () => {
     const mockFetch = fetchWordPressGraphQL as unknown as Mock
 
-    mockFetch.mockResolvedValueOnce({ ok: false, kind: "http_error", message: "down" })
+    // Every GraphQL call fails — fetchWordPressGraphQL always resolves to a
+    // result object, so use a persistent mock (not Once) for all internal calls.
+    mockFetch.mockResolvedValue({ ok: false, kind: "http_error", message: "down" })
 
     const result = await getRelatedPostsForCountry("sz", "42", 3)
 

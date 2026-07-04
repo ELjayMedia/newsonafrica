@@ -80,13 +80,6 @@ const createPost = (slug: string, title: string): HomePost => ({
   excerpt: `${title} excerpt`,
 })
 
-const createFetchResponse = (data: unknown) =>
-  Promise.resolve({
-    ok: true,
-    status: 200,
-    json: () => Promise.resolve(data),
-  } as Response)
-
 describe("HomeContent", () => {
   const fetchMock = vi.fn()
   const originalFetch = global.fetch
@@ -123,25 +116,27 @@ describe("HomeContent", () => {
     ...overrides,
   })
 
+  // HomeContent is now fully server-driven: category posts arrive through
+  // initialData rather than being fetched client-side. Render with the payload
+  // wired straight into initialData.
   const renderHomeContent = async (overrides: Partial<ReturnType<typeof createApiPayload>> = {}) => {
     const apiPayload = createApiPayload(overrides)
-    fetchMock.mockResolvedValueOnce(createFetchResponse(apiPayload))
 
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, errorRetryCount: 0 }}>
         <HomeContent
           initialPosts={[createPost("initial-post", "Initial Story")]}
           initialData={{
-            taggedPosts: [createPost("fp-post", "Featured Story")],
-            featuredPosts: [createPost("feat-post", "Featured Story")],
-            categories: [],
-            recentPosts: [createPost("recent-post", "Recent Story")],
+            taggedPosts: apiPayload.taggedPosts,
+            featuredPosts: apiPayload.featuredPosts,
+            categories: apiPayload.categories,
+            recentPosts: apiPayload.recentPosts,
+            categoryPosts: apiPayload.categoryPosts,
           }}
         />
       </SWRConfig>,
     )
 
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
     return apiPayload
   }
 
@@ -149,15 +144,14 @@ describe("HomeContent", () => {
     const categoryPosts: Record<string, HomePost[]> = {}
 
     categoryConfigs.forEach((config) => {
-      const slug = config.name.toLowerCase()
+      // The client keys category posts by the resolved slug (typeOverride ?? name).
+      const slug = (config.typeOverride ?? config.name).toLowerCase()
       categoryPosts[slug] = [createPost(`${slug}-post`, `${config.name} Story`)]
     })
 
     await renderHomeContent({ categoryPosts })
 
     await waitFor(() => expect(screen.queryAllByText("News Story").length).toBeGreaterThan(0))
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("country=sz")
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("categories=")
     expect(screen.getAllByText("News Story").length).toBeGreaterThan(0)
 
     categoryConfigs.forEach((config) => {
@@ -173,7 +167,7 @@ describe("HomeContent", () => {
         return
       }
 
-      const slug = config.name.toLowerCase()
+      const slug = (config.typeOverride ?? config.name).toLowerCase()
       categoryPosts[slug] = [createPost(`${slug}-post`, `${config.name} Story`)]
     })
 
