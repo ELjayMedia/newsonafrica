@@ -105,7 +105,7 @@ function isSafeUrl(value: string, attrName: string): boolean {
 function isSafeSrcSet(value: string): boolean {
   return value.split(",").every((candidate) => {
     const [url] = candidate.trim().split(/\s+/);
-    return Boolean(url) && isSafeUrl(url, "src");
+    return url ? isSafeUrl(url, "src") : false;
   });
 }
 
