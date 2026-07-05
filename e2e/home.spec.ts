@@ -23,8 +23,10 @@ test.describe("country home page", () => {
     const articleLinks = page.locator('a[href^="/sz/article/"]');
     expect(await articleLinks.count()).toBeGreaterThanOrEqual(9);
 
-    // Secondary story headlines render alongside the hero.
-    await expect(page.getByText("Stub headline 2")).toBeVisible();
+    // Secondary story headlines render alongside the hero. The home page ships
+    // both a desktop tree and a mobile feed (one hidden per breakpoint), so a
+    // headline appears twice in the DOM — assert the first (visible desktop) one.
+    await expect(page.getByText("Stub headline 2").first()).toBeVisible();
   });
 
   test("unknown country segment renders the 404 page", async ({ page }) => {
