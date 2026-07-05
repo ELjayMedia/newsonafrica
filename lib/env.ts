@@ -87,6 +87,11 @@ function loadServerEnvValue<K extends ServerEnvKey>(key: K): ServerEnvShape[K] {
   return parsed.data as ServerEnvShape[K];
 }
 
+/**
+ * Lazily validates server env vars per key. This keeps public WordPress reads
+ * independent from privileged Supabase/content-sync secrets, so a missing
+ * admin-only key cannot blank public article feeds.
+ */
 export const serverEnv = Object.freeze(
   new Proxy({} as ServerEnvShape, {
     get(_target, prop: string | symbol) {
