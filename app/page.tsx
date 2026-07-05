@@ -60,7 +60,7 @@ export default async function HomePage() {
 
   return (
     <div className="px-4 py-6 sm:px-6">
-      <AdSlot format="billboard" className="mb-8" />
+      <AdSlot format="billboard" className="mb-8 hidden lg:block" />
 
       {hero ? (
         <>
