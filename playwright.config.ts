@@ -4,7 +4,7 @@ import { defineConfig, devices } from "@playwright/test";
  * Playwright E2E configuration (NOA-117).
  *
  * Two web servers are started for a test run:
- *  1. e2e/fixtures/wp-stub.mjs — a tiny WordPress REST stub, because the
+ *  1. e2e/fixtures/wp-stub.mjs — a tiny WordPress stub, because the
  *     Next.js server fetches CMS content server-side (browser-level route
  *     interception can't mock it) and no live WordPress exists in CI.
  *  2. The production Next.js build (`pnpm build && pnpm start`) with env
@@ -31,7 +31,9 @@ const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEB_SERVER === "1";
 /**
  * Dummy-but-valid env for building/running the app without live backends.
  * Values mirror vitest.config.ts and .env.example; WORDPRESS_API_URL is the
- * fixture stub above.
+ * fixture stub above. The app now reads posts/categories/tags/authors via
+ * WPGraphQL, while REST is still available on the same stub for menu-only
+ * paths and legacy smoke coverage.
  */
 const appEnv = {
   // Isolated build output so an E2E run never races another build using .next
@@ -80,7 +82,7 @@ export default defineConfig({
     : [
         {
           command: `node e2e/fixtures/wp-stub.mjs`,
-          url: `http://127.0.0.1:${WP_STUB_PORT}/sz/wp-json/wp/v2/posts`,
+          url: `http://127.0.0.1:${WP_STUB_PORT}/sz/graphql`,
           reuseExistingServer: !process.env.CI,
           timeout: 15_000,
           env: { WP_STUB_PORT: String(WP_STUB_PORT) },
