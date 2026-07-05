@@ -90,7 +90,7 @@ export function ArticleBody({ html, className }: ArticleBodyProps) {
   );
   const paragraphsBetweenAds =
     SECOND_MOBILE_AD_AFTER_PARAGRAPHS - FIRST_MOBILE_AD_AFTER_PARAGRAPHS;
-  const [betweenAds, afterSecondAd] = shouldShowSecondMobileAd
+  const [betweenAds, afterSecondAd]: [string, string] = shouldShowSecondMobileAd
     ? splitAfterParagraphs(afterFirstAd, paragraphsBetweenAds)
     : [afterFirstAd, ""];
 
