@@ -22,6 +22,11 @@ import { publicEnv } from "@/lib/env";
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });
 
+  // Skip Supabase session refresh if not configured
+  if (!publicEnv.NEXT_PUBLIC_SUPABASE_URL || !publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return response;
+  }
+
   const supabase = createServerClient(
     publicEnv.NEXT_PUBLIC_SUPABASE_URL,
     publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
