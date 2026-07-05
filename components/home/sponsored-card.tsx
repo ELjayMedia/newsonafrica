@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 /**
  * In-feed native ad (design system §05: "Advertising is a first-class citizen").
  * A sponsored unit styled to sit in the story flow but clearly marked with a
@@ -8,16 +10,20 @@
 export interface SponsoredCardProps {
   advertiser?: string;
   headline?: string;
+  disclosure?: string;
+  className?: string;
 }
 
 export function SponsoredCard({
   advertiser = "Acme Telecom",
   headline = "5G is rewriting how Africa connects — here's what it means for your business.",
+  disclosure = "Paid partnership",
+  className,
 }: SponsoredCardProps) {
   return (
     <aside
       aria-label="Sponsored content"
-      className="overflow-hidden rounded-xl border border-[#e7d9b0] bg-[#fffdf7]"
+      className={cn("overflow-hidden rounded-xl border border-[#e7d9b0] bg-[#fffdf7]", className)}
     >
       <div className="border-b border-[#e7d9b0] bg-[#faf3df] px-5 py-2">
         <span className="noa-eyebrow text-[0.6875rem] tracking-[0.14em] text-[#a07d24]">
@@ -34,7 +40,7 @@ export function SponsoredCard({
           <p className="font-display text-lg font-extrabold leading-[1.1] tracking-[-0.01em] text-noa-ink">
             {headline}
           </p>
-          <p className="mt-2 text-xs font-semibold text-noa-faint">Paid partnership</p>
+          <p className="mt-2 text-xs font-semibold text-noa-faint">{disclosure}</p>
         </div>
       </div>
     </aside>
