@@ -1,13 +1,21 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { Container } from "@/components/ui/container";
-import { FeaturedHero } from "@/components/home/featured-hero";
-import { NewsGrid } from "@/components/home/news-grid";
-import { SecondaryStories } from "@/components/home/secondary-stories";
-import { MostReadRail } from "@/components/home/most-read-rail";
-import { RailLayout } from "@/components/ui/rail-layout";
-import { getCountry, getHomeFeed, getMostReadPosts, isValidCountry, type HomeFeed, type MostReadPost } from "@/lib/dal";
+import { AdSlot } from "@/components/ads/ad-slot";
+import { ExploreAfrica } from "@/components/home/explore-africa";
+import { HeroLead } from "@/components/home/hero-lead";
+import { HomeRail } from "@/components/home/home-rail";
+import { LatestAcross } from "@/components/home/latest-across";
+import { SponsoredCard } from "@/components/home/sponsored-card";
+import { StoryCard } from "@/components/home/story-card";
+import {
+  getCountry,
+  getHomeFeed,
+  getMostReadPosts,
+  isValidCountry,
+  type HomeFeed,
+  type MostReadPost,
+} from "@/lib/dal";
 import { createLogger } from "@/lib/log";
 
 interface CountryHomePageProps {
@@ -34,13 +42,16 @@ export async function generateMetadata({ params }: CountryHomePageProps): Promis
   };
 }
 
-// 1 hero + 3 secondary stories + 9 grid cards.
+// 1 hero + 3 secondary + 9 grid stories fill the hero, standard cards, the
+// "Latest across" grid and the rail's Latest News list.
 const HOME_POST_COUNT = 13;
 const MOST_READ_COUNT = 6;
 
 const log = createLogger("country-home-page");
 
-async function loadCountryHomeData(countryCode: string): Promise<{ feed: HomeFeed; mostRead: MostReadPost[] }> {
+async function loadCountryHomeData(
+  countryCode: string,
+): Promise<{ feed: HomeFeed; mostRead: MostReadPost[] }> {
   const [feedResult, mostReadResult] = await Promise.allSettled([
     // Editor-pinned (sticky) posts lead the feed, then the latest fill in.
     getHomeFeed(countryCode, { total: HOME_POST_COUNT, secondary: 3 }),
@@ -52,11 +63,17 @@ async function loadCountryHomeData(countryCode: string): Promise<{ feed: HomeFee
   }
 
   if (mostReadResult.status === "rejected") {
-    log.warn("Country home most-read feed unavailable", { country: countryCode, err: mostReadResult.reason });
+    log.warn("Country home most-read feed unavailable", {
+      country: countryCode,
+      err: mostReadResult.reason,
+    });
   }
 
   return {
-    feed: feedResult.status === "fulfilled" ? feedResult.value : { hero: null, secondary: [], grid: [] },
+    feed:
+      feedResult.status === "fulfilled"
+        ? feedResult.value
+        : { hero: null, secondary: [], grid: [] },
     mostRead: mostReadResult.status === "fulfilled" ? mostReadResult.value : [],
   };
 }
@@ -71,25 +88,49 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
   const { feed, mostRead } = await loadCountryHomeData(countryCode);
   const { hero, secondary, grid } = feed;
 
+  // Fan the feed out across the mockup's surfaces.
+  const standardCards = secondary.slice(0, 2);
+  const pool = [...secondary.slice(2), ...grid];
+  const latestAcross = pool.slice(0, 4);
+  const railLatest = pool.slice(4, 8);
+
   return (
-    <Container className="space-y-10 py-8">
+    <div className="px-4 py-6 sm:px-6">
+      <AdSlot format="billboard" className="mb-8" />
+
       {hero ? (
-        <div className="space-y-6">
-          <FeaturedHero post={hero} />
-          <SecondaryStories posts={secondary} />
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0 space-y-10">
+            <HeroLead post={hero} />
+
+            {standardCards.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 border-t border-noa-hairline pt-8 sm:grid-cols-2">
+                {standardCards.map((post) => (
+                  <StoryCard key={`${post.country}-${post.id}`} post={post} />
+                ))}
+              </div>
+            ) : null}
+
+            <ExploreAfrica />
+            <SponsoredCard />
+            <LatestAcross posts={latestAcross} />
+          </div>
+
+          <aside className="min-w-0">
+            <HomeRail mostRead={mostRead} latest={railLatest} />
+          </aside>
         </div>
       ) : (
-        <section className="rounded-xl border border-border bg-muted/30 p-6">
-          <h1 className="heading-lg">No stories available yet</h1>
-          <p className="body-md mt-2 text-muted-foreground">
-            We could not load this edition’s latest stories just now. Please check back shortly.
+        <section className="rounded-xl border border-noa-hairline bg-noa-paper p-6">
+          <h1 className="font-display text-2xl font-black text-noa-ink">
+            No stories available yet
+          </h1>
+          <p className="mt-2 text-noa-muted">
+            We could not load this edition&rsquo;s latest stories just now. Please check back
+            shortly.
           </p>
         </section>
       )}
-
-      <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
-        <NewsGrid posts={grid} />
-      </RailLayout>
-    </Container>
+    </div>
   );
 }

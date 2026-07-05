@@ -18,24 +18,24 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  /* Surfaces & text */
+  /* Surfaces & text — warm neutral scale (design system v1.0 "warm grey"). */
   --background: 0 0% 100%;
-  --foreground: 240 10% 3.9%;
+  --foreground: 30 10% 8%; /* Ink #161412 */
   --card: 0 0% 100%;
-  --card-foreground: 240 10% 3.9%;
+  --card-foreground: 30 10% 8%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 10% 3.9%;
+  --popover-foreground: 30 10% 8%;
 
   /* Brand & semantic colours */
-  --primary: 142.1 76.2% 36.3%;
+  --primary: 142.1 76.2% 36.3%; /* Green 600 #15994A */
   --primary-foreground: 0 0% 98%;
-  --secondary: 240 4.8% 95.9%;
-  --secondary-foreground: 240 10% 3.9%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 7% 40%;
-  --accent: 240 4.8% 95.9%;
-  --accent-foreground: 240 10% 3.9%;
-  --destructive: 0 84.2% 60.2%;
+  --secondary: 40 14% 98%; /* Paper #FAFAF9 */
+  --secondary-foreground: 30 10% 8%;
+  --muted: 40 14% 98%;
+  --muted-foreground: 30 4% 42%; /* #6E6A66 */
+  --accent: 36 10% 92%; /* Hairline-ish #ECEAE7 */
+  --accent-foreground: 30 10% 8%;
+  --destructive: 0 68% 50%; /* Live/breaking red #D62828 */
   --destructive-foreground: 0 0% 98%;
   --success: 142 76% 36%;
   --success-foreground: 0 0% 98%;
@@ -45,12 +45,38 @@
   --info-foreground: 0 0% 98%;
 
   /* Lines & focus */
-  --border: 240 5.9% 90%;
-  --input: 240 5.9% 90%;
+  --border: 36 10% 92%; /* Hairline #ECEAE7 */
+  --input: 36 10% 92%;
   --ring: 142.1 76.2% 36.3%;
 
   /* Radius scale */
   --radius: 0.625rem;
+
+  /**
+   * News On Africa brand palette (design system v1.0) — fixed hex tokens,
+   * theme-independent. The homepage + masthead adopt the high-fidelity light
+   * mockup ("Bold Punch" direction with a light masthead) regardless of the
+   * site theme, so these read the same in light and dark and are consumed via
+   * the `noa-*` Tailwind colour utilities exposed in the @theme block below.
+   */
+  --noa-paper: #fafaf9;
+  --noa-white: #ffffff;
+  --noa-ink: #161412;
+  --noa-body: #2b2825;
+  --noa-muted: #6e6a66;
+  --noa-faint: #9a9591;
+  --noa-hairline: #eceae7;
+  --noa-green: #15994a; /* Green 600 — primary */
+  --noa-green-dark: #0b5e2d; /* Green 900 */
+  --noa-green-bright: #1bb257; /* Green 500 */
+  --noa-green-50: #e8f6ee;
+  --noa-green-200: #a6e2be;
+  --noa-live: #d62828;
+
+  /* Width of the centred white "content well" that floats over the takeover
+     skin (see .noa-well and components/ads/takeover-skin.tsx). Both the well
+     and the skin gutters read this single value so they always line up. */
+  --noa-well-w: 980px;
 }
 
 .dark {
@@ -114,13 +140,33 @@
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
 
+  /* News On Africa fixed brand palette (see :root above). */
+  --color-noa-paper: var(--noa-paper);
+  --color-noa-white: var(--noa-white);
+  --color-noa-ink: var(--noa-ink);
+  --color-noa-body: var(--noa-body);
+  --color-noa-muted: var(--noa-muted);
+  --color-noa-faint: var(--noa-faint);
+  --color-noa-hairline: var(--noa-hairline);
+  --color-noa-green: var(--noa-green);
+  --color-noa-green-dark: var(--noa-green-dark);
+  --color-noa-green-bright: var(--noa-green-bright);
+  --color-noa-green-50: var(--noa-green-50);
+  --color-noa-green-200: var(--noa-green-200);
+  --color-noa-live: var(--noa-live);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
+  /* Body copy: Source Sans 3 (design system §03), loaded via next/font in
+     app/layout.tsx as --font-source. Display: Archivo for mastheads, eyebrows
+     and the heavy Bold Punch headlines, loaded as --font-archivo. */
   --font-sans:
-    "Funnel Sans", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    var(--font-source), system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-display:
+    var(--font-archivo), "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 @layer base {
@@ -203,6 +249,57 @@
     line-height: 1.4;
     letter-spacing: 0.025em;
     font-weight: 500;
+  }
+
+  /**
+   * Bold Punch editorial system (design system direction B, adapted with a
+   * light masthead). Archivo, heavy weights, tight condensed leading and
+   * negative tracking for "tabloid-modern" headlines; green uppercase eyebrows
+   * for section/category labels. Used across the homepage + masthead.
+   */
+  .noa-eyebrow {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.2;
+  }
+  .noa-hed {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+  }
+  .noa-hed-tight {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .noa-wordmark {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 0.9;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  /**
+   * The floating white content sheet (design system homepage mockup). Centred,
+   * capped at --noa-well-w, sitting above the takeover skin with a soft lift so
+   * it reads as a sheet on paper even when no skin is sold. Wraps the masthead,
+   * nav, page content and footer so the whole site reads as one sheet.
+   */
+  .noa-well {
+    width: 100%;
+    max-width: var(--noa-well-w);
+    margin-inline: auto;
+    background-color: var(--noa-white);
+    box-shadow:
+      0 0 0 1px rgb(20 28 22 / 0.05),
+      0 18px 50px -24px rgb(8 13 10 / 0.28);
   }
 
   /**

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { Container } from "@/components/ui/container";
+import { BrandMark } from "@/components/brand-mark";
 import { CountrySwitcher } from "@/components/country-switcher";
 import { HeaderSearch } from "@/components/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -19,19 +19,61 @@ interface HeaderSection {
 interface SiteHeaderProps {
   /** WordPress-derived nav sections (busiest categories) from the root layout. */
   sections?: HeaderSection[];
-  accountSlot?: React.ReactNode;
+}
+
+function SocialLink({
+  label,
+  path,
+  children,
+}: {
+  label: string;
+  path: string;
+  children?: React.ReactNode;
+}) {
+  return (
+    <a
+      href={path}
+      aria-label={label}
+      target="_blank"
+      rel="noreferrer noopener"
+      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-noa-hairline text-noa-ink transition-colors hover:border-noa-green hover:text-noa-green"
+    >
+      {children}
+    </a>
+  );
+}
+
+/** Live edition date ("Saturday, June 20"), rendered after mount to avoid a
+ *  server/client hydration mismatch on the timezone-sensitive value. */
+function EditionDate() {
+  const [label, setLabel] = React.useState("");
+  React.useEffect(() => {
+    setLabel(
+      new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }),
+    );
+  }, []);
+  return (
+    <span
+      suppressHydrationWarning
+      className="whitespace-nowrap text-sm font-semibold text-noa-muted"
+    >
+      {label}
+    </span>
+  );
 }
 
 /**
- * Responsive navigation shell (NOA-84): brand, WordPress-driven section nav
- * (collapses to a disclosure menu on small screens), and the theme toggle.
- * Section links are edition-aware — they target the country in the current URL.
+ * Masthead + section nav (design system, Bold Punch direction with a light
+ * masthead). Lives inside the floating content well: a white masthead row
+ * (brand lockup, edition picker, search, socials, date, theme) over an
+ * uppercase Archivo nav row whose active item carries a green underline, with a
+ * green accent bar beneath as the Bold Punch signature. Collapses to a
+ * hamburger disclosure below `lg`.
  */
-export function SiteHeader({ sections = [], accountSlot }: SiteHeaderProps) {
+export function SiteHeader({ sections = [] }: SiteHeaderProps) {
   const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
-  // Resolve the active edition from the URL so section links stay in-edition.
   const firstSegment = pathname.split("/")[1] ?? "";
   const country = isValidCountry(firstSegment) ? firstSegment : DEFAULT_COUNTRY;
 
@@ -43,58 +85,94 @@ export function SiteHeader({ sections = [], accountSlot }: SiteHeaderProps) {
     })),
   ];
 
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <Container className="flex h-16 items-center justify-between gap-4">
-        <Link href="/" className="heading-sm shrink-0 font-bold tracking-tight">
-          News<span className="text-primary">on</span>Africa
+    <header className="border-b-[3px] border-noa-green bg-noa-white">
+      {/* Masthead row */}
+      <div className="flex items-center gap-4 px-4 py-3.5 sm:px-6">
+        <Link href="/" aria-label="News On Africa home" className="shrink-0">
+          <BrandMark />
         </Link>
 
-        <nav aria-label="Primary" className="hidden min-w-0 items-center gap-5 lg:flex">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="ui-md whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
+        <div className="hidden flex-1 items-center gap-3 md:flex">
+          <CountrySwitcher className="shrink-0" />
+          <div className="min-w-0 flex-1">
+            <HeaderSearch />
+          </div>
+        </div>
 
-        <div className="flex items-center gap-2">
-          <CountrySwitcher className="hidden sm:inline-flex" />
-          <HeaderSearch />
-          {/* Account/profile menu (NOA-99): server-rendered slot passed in
-              from the root layout, next to the theme toggle. */}
-          {accountSlot}
+        <div className="ml-auto flex items-center gap-2 md:ml-0">
+          <div className="hidden items-center gap-1.5 lg:flex">
+            <SocialLink label="News On Africa on X" path="https://x.com">
+              <span className="text-sm font-bold">𝕏</span>
+            </SocialLink>
+            <SocialLink label="News On Africa on Facebook" path="https://facebook.com">
+              <span className="font-display text-sm font-black">f</span>
+            </SocialLink>
+          </div>
+          <span className="mx-1 hidden h-6 w-px bg-noa-hairline lg:block" aria-hidden />
+          <div className="hidden lg:block">
+            <EditionDate />
+          </div>
           <ThemeToggle />
           <button
             type="button"
             aria-label="Toggle navigation menu"
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-input lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-noa-hairline text-noa-ink lg:hidden"
           >
             <span aria-hidden>{open ? "✕" : "☰"}</span>
           </button>
         </div>
-      </Container>
+      </div>
 
-      <div className={cn("border-t border-border lg:hidden", open ? "block" : "hidden")}>
-        <Container className="flex flex-col gap-1 py-2">
+      {/* Section nav (desktop) */}
+      <nav
+        aria-label="Primary"
+        className="hidden items-center gap-6 overflow-x-auto border-t border-noa-hairline px-4 sm:px-6 lg:flex"
+      >
+        {navLinks.map((link) => {
+          const active = isActive(link.href);
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "noa-eyebrow whitespace-nowrap border-b-[3px] py-3 tracking-[0.08em] transition-colors",
+                active
+                  ? "border-noa-green text-noa-green"
+                  : "border-transparent text-noa-ink hover:text-noa-green",
+              )}
+            >
+              {link.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Mobile disclosure */}
+      <div className={cn("border-t border-noa-hairline lg:hidden", open ? "block" : "hidden")}>
+        <div className="flex flex-col gap-1 px-4 py-2 sm:px-6">
+          <div className="py-2 md:hidden">
+            <HeaderSearch />
+          </div>
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
               onClick={() => setOpen(false)}
-              className="ui-md py-2 text-muted-foreground transition-colors hover:text-foreground"
+              className={cn(
+                "noa-eyebrow py-2.5 tracking-[0.08em]",
+                isActive(link.href) ? "text-noa-green" : "text-noa-ink",
+              )}
             >
               {link.label}
             </Link>
           ))}
-          <CountrySwitcher className="mt-1 sm:hidden" />
-        </Container>
+          <CountrySwitcher className="mt-1" />
+        </div>
       </div>
     </header>
   );

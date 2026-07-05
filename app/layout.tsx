@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { Archivo, Source_Sans_3 } from "next/font/google";
 import { Suspense } from "react";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
+import { UtilityBar } from "@/components/utility-bar";
+import { TakeoverSkin } from "@/components/ads/takeover-skin";
 import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
 import { BottomNavigation } from "@/components/bottom-navigation";
@@ -12,6 +15,23 @@ import { SiteJsonLd } from "@/components/seo/json-ld";
 import { colorTokens } from "@/lib/design-tokens";
 import { publicEnv } from "@/lib/env";
 import { getNavSections } from "@/lib/nav";
+
+// Bold Punch typography (design system §03): Archivo carries mastheads,
+// eyebrows and the heavy condensed headlines; Source Sans 3 carries body copy.
+// Exposed as CSS variables so globals.css helper classes can reference them.
+const archivo = Archivo({
+  subsets: ["latin"],
+  weight: ["500", "600", "700", "800", "900"],
+  variable: "--font-archivo",
+  display: "swap",
+});
+
+const sourceSans = Source_Sans_3({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-source",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(publicEnv.SITE_URL),
@@ -62,24 +82,35 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const navSections = await getNavSections();
 
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${archivo.variable} ${sourceSans.variable}`}
+    >
       {/* Mobile bottom padding matches the fixed bottom navigation height
           (h-16) + the device safe-area inset so content and the footer are
           never hidden behind it (NOA-111). */}
-      <body className="flex min-h-screen flex-col pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <body className="flex min-h-screen flex-col bg-noa-paper pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         {/* WebSite + Organization structured data (NOA-114). */}
         <SiteJsonLd />
         <ThemeProvider>
-          <SiteHeader
-            sections={navSections}
+          {/* Body-level takeover skin (home routes, wide screens): a fixed
+              gradient behind everything. The masthead, page content and footer
+              share one centred white sheet (.noa-well, z-10) that floats above
+              it, with the full-bleed utility bar spanning the top. */}
+          <TakeoverSkin />
+          <UtilityBar
             accountSlot={
               <Suspense fallback={<AccountMenuFallback />}>
                 <AccountMenu />
               </Suspense>
             }
           />
-          <main className="flex-1">{children}</main>
-          <SiteFooter />
+          <div className="noa-well relative z-10 flex flex-1 flex-col">
+            <SiteHeader sections={navSections} />
+            <main className="flex-1">{children}</main>
+            <SiteFooter />
+          </div>
           <BottomNavigation />
           <ServiceWorkerRegistration />
         </ThemeProvider>
