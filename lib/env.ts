@@ -46,10 +46,17 @@ const serverSchema = z.object({
   PAYSTACK_SECRET_KEY: z.string().optional(),
 });
 
-const isServer = typeof window === "undefined";
-let serverEnvCache: z.infer<typeof serverSchema> | null = null;
+type ParsedServerEnv = z.infer<typeof serverSchema>;
+type ServerEnvShape = ParsedServerEnv & {
+  SUPABASE_SERVICE_ROLE_KEY: string;
+  WORDPRESS_WEBHOOK_SECRET: string;
+  CONTENT_SYNC_SECRET: string;
+};
 
-function loadServerEnv(): z.infer<typeof serverSchema> {
+const isServer = typeof window === "undefined";
+let serverEnvCache: ParsedServerEnv | null = null;
+
+function loadServerEnv(): ParsedServerEnv {
   if (serverEnvCache) return serverEnvCache;
   const parsed = serverSchema.safeParse({
     NODE_ENV: process.env.NODE_ENV,
@@ -71,15 +78,15 @@ function loadServerEnv(): z.infer<typeof serverSchema> {
 }
 
 export const serverEnv = Object.freeze(
-  new Proxy({} as z.infer<typeof serverSchema>, {
+  new Proxy({} as ServerEnvShape, {
     get(_target, prop: string) {
       if (!isServer) {
         throw new Error(
           `Attempted to read server env var "${prop}" on the client. Use publicEnv (NEXT_PUBLIC_*) instead.`,
         );
       }
-      return loadServerEnv()[prop as keyof z.infer<typeof serverSchema>];
+      return loadServerEnv()[prop as keyof ParsedServerEnv];
     },
   }),
 );
-export type ServerEnv = z.infer<typeof serverSchema>;
+export type ServerEnv = ServerEnvShape;
