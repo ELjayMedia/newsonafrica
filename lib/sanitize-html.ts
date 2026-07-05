@@ -103,11 +103,10 @@ function isSafeUrl(value: string, attrName: string): boolean {
 }
 
 function isSafeSrcSet(value: string): boolean {
-  return value
-    .split(",")
-    .map((candidate) => candidate.trim().split(/\s+/)[0])
-    .filter(Boolean)
-    .every((url) => isSafeUrl(url, "src"));
+  return value.split(",").every((candidate) => {
+    const [url] = candidate.trim().split(/\s+/);
+    return Boolean(url) && isSafeUrl(url, "src");
+  });
 }
 
 function sanitizeAttributes(tagName: string, rawAttributes = ""): string {
@@ -117,6 +116,8 @@ function sanitizeAttributes(tagName: string, rawAttributes = ""): string {
 
   while ((match = ATTR_REGEX.exec(rawAttributes)) !== null) {
     const rawName = match[1];
+    if (!rawName) continue;
+
     const name = rawName.toLowerCase();
     const value = match[2] ?? match[3] ?? match[4];
 
