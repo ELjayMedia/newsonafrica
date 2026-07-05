@@ -42,12 +42,12 @@ function splitAfterParagraphs(html: string, paragraphCount: number): [string, st
   return [html, ""];
 }
 
-function ArticleHtmlChunk({ html }: { html: string }) {
+function ArticleHtmlChunk({ html, className }: { html: string; className?: string }) {
   if (!html) return null;
 
   return (
     <div
-      data-article-body-chunk
+      className={cn("prose-article max-w-none", className)}
       // eslint-disable-next-line react/no-danger -- sanitized via DOMPurify (lib/sanitize-html.ts)
       dangerouslySetInnerHTML={{ __html: html }}
     />
@@ -61,7 +61,7 @@ function MobileArticleSponsor({ position }: { position: "first" | "second" }) {
       : "More insight for readers following this story in depth.";
 
   return (
-    <div className="article-sponsored-card lg:hidden">
+    <div className="lg:hidden">
       <SponsoredCard
         advertiser="News On Africa Partner"
         headline={headline}
@@ -81,13 +81,7 @@ export function ArticleBody({ html, className }: ArticleBodyProps) {
     wordCount >= LONG_ARTICLE_WORD_COUNT && paragraphCount >= SECOND_MOBILE_AD_AFTER_PARAGRAPHS;
 
   if (!shouldShowFirstMobileAd) {
-    return (
-      <div
-        className={cn("prose-article max-w-none", className)}
-        // eslint-disable-next-line react/no-danger -- sanitized via DOMPurify (lib/sanitize-html.ts)
-        dangerouslySetInnerHTML={{ __html: sanitized }}
-      />
-    );
+    return <ArticleHtmlChunk html={sanitized} className={className} />;
   }
 
   const [beforeFirstAd, afterFirstAd] = splitAfterParagraphs(
@@ -101,12 +95,12 @@ export function ArticleBody({ html, className }: ArticleBodyProps) {
     : [afterFirstAd, ""];
 
   return (
-    <div className={cn("prose-article max-w-none", className)}>
-      <ArticleHtmlChunk html={beforeFirstAd} />
+    <>
+      <ArticleHtmlChunk html={beforeFirstAd} className={className} />
       <MobileArticleSponsor position="first" />
-      <ArticleHtmlChunk html={betweenAds} />
+      <ArticleHtmlChunk html={betweenAds} className={className} />
       {shouldShowSecondMobileAd ? <MobileArticleSponsor position="second" /> : null}
-      <ArticleHtmlChunk html={afterSecondAd} />
-    </div>
+      <ArticleHtmlChunk html={afterSecondAd} className={className} />
+    </>
   );
 }
