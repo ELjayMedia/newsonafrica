@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { FeaturedHero } from "@/components/home/featured-hero";
-import { NewsGrid } from "@/components/home/news-grid";
-import { SecondaryStories } from "@/components/home/secondary-stories";
-import { Container } from "@/components/ui/container";
-import { RailLayout } from "@/components/ui/rail-layout";
+import { AdSlot } from "@/components/ads/ad-slot";
+import { ExploreAfrica } from "@/components/home/explore-africa";
+import { HeroLead } from "@/components/home/hero-lead";
+import { HomeRail } from "@/components/home/home-rail";
+import { LatestAcross } from "@/components/home/latest-across";
+import { SponsoredCard } from "@/components/home/sponsored-card";
+import { StoryCard } from "@/components/home/story-card";
 import { createLogger } from "@/lib/log";
 import { listCountries, listPosts, type Country, type PostSummary } from "@/lib/dal";
 
@@ -19,9 +20,14 @@ const PAN_AFRICAN_POST_COUNT = 13;
 
 const log = createLogger("home-page");
 
-async function listPostsForCountry(country: Country): Promise<{ country: Country; posts: PostSummary[] }> {
+async function listPostsForCountry(
+  country: Country,
+): Promise<{ country: Country; posts: PostSummary[] }> {
   try {
-    const { items } = await listPosts({ country: country.code, perPage: PAN_AFRICAN_POSTS_PER_COUNTRY });
+    const { items } = await listPosts({
+      country: country.code,
+      perPage: PAN_AFRICAN_POSTS_PER_COUNTRY,
+    });
     return { country, posts: items };
   } catch (error) {
     log.warn("Country feed unavailable on pan-African home", { country: country.code, err: error });
@@ -35,64 +41,62 @@ function getPostSortTime(post: PostSummary): number {
 }
 
 export default async function HomePage() {
-  const countryFeeds = await Promise.all(listCountries().map((country) => listPostsForCountry(country)));
+  const countryFeeds = await Promise.all(
+    listCountries().map((country) => listPostsForCountry(country)),
+  );
   const posts = countryFeeds
     .flatMap(({ posts }) => posts)
     .sort((a, b) => getPostSortTime(b) - getPostSortTime(a))
     .slice(0, PAN_AFRICAN_POST_COUNT);
 
   const [hero, ...rest] = posts;
-  const secondary = rest.slice(0, 3);
-  const grid = rest.slice(3);
+  const standardCards = rest.slice(0, 2);
+  const pool = rest.slice(2);
+  const latestAcross = pool.slice(0, 4);
+  const railLatest = pool.slice(4, 8);
 
   return (
-    <Container className="space-y-10 py-8">
-      <section className="space-y-3">
-        <p className="ui-sm uppercase tracking-wide text-primary">Pan-African edition</p>
-        <h1 className="display-lg">News on Africa</h1>
-        <p className="body-lg max-w-3xl text-muted-foreground">
-          Top stories from across the continent, with local editions for every supported country.
-        </p>
-      </section>
+    <div className="px-4 py-6 sm:px-6">
+      <AdSlot format="billboard" className="mb-8" />
 
       {hero ? (
-        <div className="space-y-6">
-          <FeaturedHero post={hero} />
-          <SecondaryStories posts={secondary} />
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="min-w-0 space-y-10">
+            <HeroLead post={hero} />
+
+            {standardCards.length > 0 ? (
+              <div className="grid grid-cols-1 gap-6 border-t border-noa-hairline pt-8 sm:grid-cols-2">
+                {standardCards.map((post) => (
+                  <StoryCard key={`${post.country}-${post.id}`} post={post} />
+                ))}
+              </div>
+            ) : null}
+
+            <ExploreAfrica />
+            <SponsoredCard />
+            <LatestAcross posts={latestAcross} />
+          </div>
+
+          <aside className="min-w-0">
+            {/* Pan-African home has no per-edition Most Read RPC; the rail
+                  leads with the personalised Latest News list + house ads. */}
+            <HomeRail mostRead={[]} latest={railLatest} />
+          </aside>
         </div>
       ) : (
-        <section className="rounded-xl border border-border bg-muted/30 p-6">
-          <h2 className="heading-sm">Stories are being prepared</h2>
-          <p className="body-md mt-2 text-muted-foreground">
-            We could not load the latest stories just now. Choose a country edition below or check back shortly.
+        <section className="rounded-xl border border-noa-hairline bg-noa-paper p-6">
+          <h1 className="font-display text-2xl font-black text-noa-ink">
+            Stories are being prepared
+          </h1>
+          <p className="mt-2 text-noa-muted">
+            We could not load the latest stories just now. Choose a country edition below or check
+            back shortly.
           </p>
+          <div className="mt-6">
+            <ExploreAfrica />
+          </div>
         </section>
       )}
-
-      <RailLayout
-        rail={
-          <div aria-label="Country editions" className="space-y-4">
-            <h2 className="heading-sm border-b-2 border-primary pb-2">Editions</h2>
-            <ul className="space-y-3">
-              {countryFeeds.map(({ country, posts }) => (
-                <li key={country.code}>
-                  <Link
-                    href={`/${country.code}`}
-                    className="flex items-center justify-between rounded-lg border border-border p-3 transition-colors hover:border-primary hover:bg-muted/40"
-                  >
-                    <span className="ui-md font-medium">{country.name}</span>
-                    <span className="ui-sm text-muted-foreground">
-                      {posts.length > 0 ? `${posts.length} stories` : "Open edition"}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        }
-      >
-        <NewsGrid posts={grid} />
-      </RailLayout>
-    </Container>
+    </div>
   );
 }

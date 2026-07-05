@@ -16,7 +16,10 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-      <Link href={href} className="group relative block aspect-video w-full overflow-hidden rounded-xl bg-muted md:aspect-auto md:h-full">
+      <Link
+        href={href}
+        className="group relative block aspect-video w-full overflow-hidden rounded-xl bg-muted md:aspect-auto md:h-full"
+      >
         {post.featuredImage ? (
           // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
           <img
@@ -28,7 +31,10 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" aria-hidden />
+          <div
+            className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20"
+            aria-hidden
+          />
         )}
       </Link>
 
@@ -45,7 +51,9 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
           </Link>
         </h1>
 
-        {post.excerpt ? <p className="body-lg line-clamp-3 text-muted-foreground">{post.excerpt}</p> : null}
+        {post.excerpt ? (
+          <p className="body-lg line-clamp-3 text-muted-foreground">{post.excerpt}</p>
+        ) : null}
 
         <div className="flex items-center gap-2 ui-sm text-muted-foreground">
           {post.author ? <span>{post.author.name}</span> : null}

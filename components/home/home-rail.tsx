@@ -1,0 +1,85 @@
+import Link from "next/link";
+
+import { AdSlot } from "@/components/ads/ad-slot";
+import { ThumbRow } from "@/components/home/story-card";
+import type { MostReadPost, PostSummary } from "@/lib/dal/types";
+// Note: rank list links use MostReadPost.url; ThumbRow resolves its own hrefs.
+
+/**
+ * Numbered "Most Read" list (homepage mockup): oversized green Archivo rank
+ * numbers beside tight headlines, under a green-underlined section heading.
+ */
+function MostRead({ posts }: { posts: MostReadPost[] }) {
+  if (posts.length === 0) return null;
+  return (
+    <section aria-label="Most read">
+      <h2 className="mb-4 border-b-2 border-noa-green pb-2 font-display text-lg font-black uppercase tracking-[-0.01em] text-noa-ink">
+        Most Read
+      </h2>
+      <ol className="space-y-4">
+        {posts.map((post, index) => (
+          <li key={post.id} className="flex items-start gap-3">
+            <span
+              className="font-display text-2xl font-black leading-none text-noa-green"
+              aria-hidden
+            >
+              {index + 1}
+            </span>
+            <h3 className="font-display text-[0.9375rem] font-bold leading-[1.15] tracking-[-0.01em] text-noa-ink">
+              <Link href={post.url} className="transition-colors hover:text-noa-green">
+                {post.title}
+              </Link>
+            </h3>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+/**
+ * "Latest News" personalised list (homepage mockup): thumbnail rows with a
+ * date, using the shared ThumbRow row.
+ */
+function LatestNews({ posts }: { posts: PostSummary[] }) {
+  if (posts.length === 0) return null;
+  return (
+    <section aria-label="Latest news">
+      <h2 className="mb-1 border-b-2 border-noa-green pb-2 font-display text-lg font-black uppercase tracking-[-0.01em] text-noa-ink">
+        Latest News
+      </h2>
+      <p className="mb-4 text-xs font-semibold text-noa-faint">Personalized for you</p>
+      <div className="space-y-4">
+        {posts.map((post) => (
+          <div
+            key={`${post.country}-${post.id}`}
+            className="border-b border-noa-hairline pb-4 last:border-0 last:pb-0"
+          >
+            <ThumbRow post={post} showEyebrow={false} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export interface HomeRailProps {
+  mostRead: MostReadPost[];
+  latest: PostSummary[];
+}
+
+/**
+ * Right rail for the homepage: Most Read, a mid-rail MPU ad, a personalised
+ * Latest News list and a sticky half-page ad — the full monetised sidebar from
+ * the design system homepage mockup.
+ */
+export function HomeRail({ mostRead, latest }: HomeRailProps) {
+  return (
+    <div className="space-y-8">
+      <MostRead posts={mostRead} />
+      <AdSlot format="mpu" />
+      <LatestNews posts={latest} />
+      <AdSlot format="half-page" label="Advertisement · Sticky" sticky />
+    </div>
+  );
+}

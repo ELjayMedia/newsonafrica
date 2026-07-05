@@ -13,7 +13,7 @@ test.describe("country home page", () => {
     // Header chrome (brand + primary nav) renders on every page.
     const header = page.getByRole("banner");
     await expect(header).toBeVisible();
-    await expect(header.getByRole("link", { name: "NewsonAfrica" })).toBeVisible();
+    await expect(header.getByRole("link", { name: "News On Africa home" })).toBeVisible();
 
     // Featured hero: newest fixture post becomes the h1 headline.
     await expect(page.getByRole("heading", { level: 1, name: "Stub headline 1" })).toBeVisible();
