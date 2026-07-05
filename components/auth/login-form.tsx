@@ -26,12 +26,22 @@ export function LoginForm({
   const [state, formAction, pending] = useActionState(signInAction, initialAuthFormState);
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="overflow-hidden rounded-2xl shadow-lg md:rounded-lg md:shadow-sm">
+      <CardHeader className="hidden md:flex">
         <CardTitle>Sign in</CardTitle>
         <CardDescription>Welcome back to News on Africa.</CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardHeader className="items-center px-6 pb-3 pt-8 text-center md:hidden">
+        <div className="space-y-1">
+          <p className="noa-wordmark text-4xl text-foreground">NOA</p>
+          <p className="ui-sm uppercase tracking-wide text-primary">News On Africa</p>
+        </div>
+        <CardTitle className="mt-5 text-3xl font-bold tracking-tight">Welcome back</CardTitle>
+        <CardDescription className="max-w-xs">
+          Sign in to save stories, follow topics, and continue reading across the continent.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4 p-6 pt-0">
         {callbackError ? (
           <FormAlert tone="error">
             That sign-in link is invalid or has expired. Please sign in below or request a new link.
@@ -55,6 +65,8 @@ export function LoginForm({
               required
               aria-describedby="login-email-errors"
               aria-invalid={Boolean(state.fieldErrors?.email)}
+              className="h-12 rounded-xl md:h-10 md:rounded-md"
+              placeholder="you@example.com"
             />
             <FieldErrors id="login-email-errors" errors={state.fieldErrors?.email} />
           </div>
@@ -76,11 +88,13 @@ export function LoginForm({
               required
               aria-describedby="login-password-errors"
               aria-invalid={Boolean(state.fieldErrors?.password)}
+              className="h-12 rounded-xl md:h-10 md:rounded-md"
+              placeholder="Enter your password"
             />
             <FieldErrors id="login-password-errors" errors={state.fieldErrors?.password} />
           </div>
 
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button type="submit" className="h-12 w-full rounded-xl md:h-10 md:rounded-full" disabled={pending}>
             {pending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
@@ -96,6 +110,27 @@ export function LoginForm({
             Create one
           </Link>
         </p>
+
+        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-muted p-3 md:hidden" aria-label="Sign-in benefits">
+          <div className="text-center">
+            <p className="text-lg" aria-hidden>
+              ✓
+            </p>
+            <p className="ui-sm text-muted-foreground">Save stories</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg" aria-hidden>
+              ✓
+            </p>
+            <p className="ui-sm text-muted-foreground">Get alerts</p>
+          </div>
+          <div className="text-center">
+            <p className="text-lg" aria-hidden>
+              ✓
+            </p>
+            <p className="ui-sm text-muted-foreground">Personalise</p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
