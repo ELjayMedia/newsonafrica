@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { Container } from "@/components/ui/container";
-import { RailLayout } from "@/components/ui/rail-layout";
-import { NewsGrid } from "@/components/home/news-grid";
-import { MostReadRail } from "@/components/home/most-read-rail";
 import { MobileFeatureStory, MobilePostList } from "@/components/article/mobile-post-list";
+import { HomeRail } from "@/components/home/home-rail";
+import { NewsGrid } from "@/components/home/news-grid";
 import { Pagination } from "@/components/pagination";
 import { BreadcrumbJsonLd } from "@/components/seo/json-ld";
+import { Container } from "@/components/ui/container";
+import { RailLayout } from "@/components/ui/rail-layout";
 import { COUNTRIES } from "@/lib/countries";
-import { getCategoryBySlug, getMostReadPosts, isValidCountry, listPosts } from "@/lib/dal";
+import { getCategoryBySlug, isValidCountry, listPosts } from "@/lib/dal";
+import { getHomeRailData } from "@/lib/dal/home-rail";
 
 interface CategoryPageProps {
   params: Promise<{ countryCode: string; slug: string }>;
@@ -46,9 +47,9 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   const page = Number(pageParam) || 1;
-  const [result, mostRead] = await Promise.all([
+  const [result, rail] = await Promise.all([
     listPosts({ country: countryCode, categorySlug: slug, page, perPage: PER_PAGE }),
-    getMostReadPosts(countryCode, 6),
+    getHomeRailData(countryCode),
   ]);
   const [featuredPost, ...remainingPosts] = result.items;
 
@@ -95,7 +96,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
       </section>
 
       <div className="max-md:hidden">
-        <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
+        <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
           {result.items.length > 0 ? (
             <div className="space-y-8">
               <NewsGrid posts={result.items} />
