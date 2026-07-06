@@ -42,6 +42,11 @@ interface WordPressWebhookPayload {
   post?: WordPressWebhookPost;
 }
 
+function readWebhookSecret(): string | null {
+  const secret = serverEnv.WORDPRESS_WEBHOOK_SECRET?.trim();
+  return secret ? secret : null;
+}
+
 function safeEqual(a: string, b: string): boolean {
   const bufferA = Buffer.from(a);
   const bufferB = Buffer.from(b);
@@ -49,21 +54,24 @@ function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(bufferA, bufferB);
 }
 
-function verifySignature(rawBody: string, signatureHeader: string): boolean {
+function verifySignature(rawBody: string, signatureHeader: string, secret: string): boolean {
   const provided = signatureHeader.replace(/^sha256=/i, "").trim();
-  const expected = createHmac("sha256", serverEnv.WORDPRESS_WEBHOOK_SECRET).update(rawBody).digest("hex");
+  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
   return safeEqual(provided, expected);
 }
 
 function isAuthorized(request: NextRequest, rawBody: string): boolean {
+  const webhookSecret = readWebhookSecret();
+  if (!webhookSecret) return false;
+
   const secretHeader = request.headers.get("x-webhook-secret")?.trim();
   if (secretHeader) {
-    return safeEqual(secretHeader, serverEnv.WORDPRESS_WEBHOOK_SECRET);
+    return safeEqual(secretHeader, webhookSecret);
   }
 
   const signatureHeader = request.headers.get("x-wp-signature")?.trim();
   if (signatureHeader) {
-    return verifySignature(rawBody, signatureHeader);
+    return verifySignature(rawBody, signatureHeader, webhookSecret);
   }
 
   return false;
