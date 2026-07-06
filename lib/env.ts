@@ -39,15 +39,15 @@ export type PublicEnv = typeof publicEnv;
 
 const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   WORDPRESS_API_URL: z.string().url(),
   WORDPRESS_API_AUTH_HEADER: z.string().min(1).optional(),
   WORDPRESS_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
   WORDPRESS_RETRY_ATTEMPTS: z.coerce.number().int().min(1).max(8).optional(),
   WORDPRESS_RETRY_BACKOFF_MS: z.coerce.number().int().positive().optional(),
-  WORDPRESS_WEBHOOK_SECRET: z.string().min(16),
-  CONTENT_SYNC_SECRET: z.string().min(16),
-  PAYSTACK_SECRET_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  WORDPRESS_WEBHOOK_SECRET: z.string().optional(),
+  CONTENT_SYNC_SECRET: z.string().optional(),
+  PAYSTACK_SECRET_KEY: z.string().optional(),
 });
 
 const serverSchemaShape = serverSchema.shape;

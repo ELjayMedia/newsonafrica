@@ -14,8 +14,16 @@ import type { Database } from "@/lib/supabase/types";
 
 let adminClient: SupabaseClient<Database> | undefined;
 
+function getServiceRoleKey(): string {
+  const key = serverEnv.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  if (!key) {
+    throw new Error("Missing required Supabase admin credential for privileged content-sync code path.");
+  }
+  return key;
+}
+
 export function createAdminClient(): SupabaseClient<Database> {
-  adminClient ??= createSupabaseClient<Database>(publicEnv.NEXT_PUBLIC_SUPABASE_URL, serverEnv.SUPABASE_SERVICE_ROLE_KEY, {
+  adminClient ??= createSupabaseClient<Database>(publicEnv.NEXT_PUBLIC_SUPABASE_URL, getServiceRoleKey(), {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
