@@ -13,19 +13,16 @@ function MostRead({ posts }: { posts: MostReadPost[] }) {
   if (posts.length === 0) return null;
   return (
     <section aria-label="Most read">
-      <h2 className="mb-4 border-b-2 border-noa-green pb-2 font-display text-lg font-black uppercase tracking-[-0.01em] text-noa-ink">
+      <h2 className="noa-eyebrow mb-4 border-b-2 border-noa-green pb-2 text-noa-ink">
         Most Read
       </h2>
       <ol className="space-y-4">
         {posts.map((post, index) => (
           <li key={post.id} className="flex items-start gap-3">
-            <span
-              className="font-display text-2xl font-black leading-none text-noa-green"
-              aria-hidden
-            >
+            <span className="heading-md font-display text-noa-green" aria-hidden>
               {index + 1}
             </span>
-            <h3 className="font-display text-[0.9375rem] font-bold leading-[1.15] tracking-[-0.01em] text-noa-ink">
+            <h3 className="ui-md font-display text-noa-ink">
               <Link href={post.url} className="transition-colors hover:text-noa-green">
                 {post.title}
               </Link>
@@ -45,10 +42,10 @@ function LatestNews({ posts }: { posts: PostSummary[] }) {
   if (posts.length === 0) return null;
   return (
     <section aria-label="Latest news">
-      <h2 className="mb-1 border-b-2 border-noa-green pb-2 font-display text-lg font-black uppercase tracking-[-0.01em] text-noa-ink">
+      <h2 className="noa-eyebrow mb-1 border-b-2 border-noa-green pb-2 text-noa-ink">
         Latest News
       </h2>
-      <p className="mb-4 text-xs font-semibold text-noa-faint">Personalized for you</p>
+      <p className="ui-sm mb-4 text-noa-faint">Personalized for you</p>
       <div className="space-y-4">
         {posts.map((post) => (
           <div

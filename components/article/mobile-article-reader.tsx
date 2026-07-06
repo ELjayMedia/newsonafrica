@@ -41,15 +41,15 @@ export function MobileArticleReader({
         <div className="mb-5 flex items-center justify-between gap-3">
           <Link
             href={`/${countryCode}`}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-lg text-foreground"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border ui-md text-foreground"
             aria-label={`Back to ${countryName}`}
           >
             ←
           </Link>
-          <Link href={`/${countryCode}`} className="noa-wordmark text-xl text-foreground" aria-label="News On Africa home">
+          <Link href={`/${countryCode}`} className="noa-wordmark heading-md text-foreground" aria-label="News On Africa home">
             NOA
           </Link>
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border text-sm text-muted-foreground">
+          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border ui-sm text-muted-foreground">
             Aa
           </span>
         </div>
@@ -61,16 +61,17 @@ export function MobileArticleReader({
             </Link>
           ) : null}
 
-          <h1 className="font-display text-[clamp(1.125rem,6vw,1.625rem)] font-black leading-[1.05] tracking-tight text-foreground">
-            {post.title}
-          </h1>
+          <div className="space-y-3">
+            <h1 className="heading-lg font-display text-foreground">{post.title}</h1>
+            {post.excerpt ? <p className="body-md text-muted-foreground">{post.excerpt}</p> : null}
+          </div>
 
           <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
             {post.author?.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted avatar
               <img src={post.author.avatarUrl} alt="" className="h-11 w-11 rounded-full object-cover" />
             ) : (
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 font-semibold text-primary">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 ui-md text-primary">
                 {post.author?.name.charAt(0) ?? "N"}
               </div>
             )}
@@ -117,7 +118,26 @@ export function MobileArticleReader({
         </figure>
       ) : null}
 
-      <ArticleBody html={post.content} className="text-[1.075rem] leading-8" />
+      {post.excerpt ? (
+        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm" aria-labelledby="story-at-a-glance">
+          <h2 id="story-at-a-glance" className="heading-sm">
+            Story at a glance
+          </h2>
+          <p className="body-sm mt-2 text-muted-foreground">{post.excerpt}</p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-xl bg-muted p-3">
+              <p className="ui-sm text-muted-foreground">Section</p>
+              <p className="ui-md text-foreground">{category?.name ?? "News"}</p>
+            </div>
+            <div className="rounded-xl bg-muted p-3">
+              <p className="ui-sm text-muted-foreground">Published</p>
+              <p className="ui-md text-foreground">{formatDate(post.publishedAt)}</p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
+      <ArticleBody html={post.content} />
 
       {post.tags.length > 0 ? (
         <div className="flex flex-wrap gap-2 border-t border-border pt-5">
