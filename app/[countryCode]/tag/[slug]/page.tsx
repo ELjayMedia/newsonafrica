@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { HomeRail } from "@/components/home/home-rail";
+import { NewsGrid } from "@/components/home/news-grid";
+import { Pagination } from "@/components/pagination";
 import { Container } from "@/components/ui/container";
 import { RailLayout } from "@/components/ui/rail-layout";
-import { NewsGrid } from "@/components/home/news-grid";
-import { MostReadRail } from "@/components/home/most-read-rail";
-import { Pagination } from "@/components/pagination";
-import { getMostReadPosts, getTagBySlug, isValidCountry, listPosts } from "@/lib/dal";
+import { getTagBySlug, isValidCountry, listPosts } from "@/lib/dal";
+import { getHomeRailData } from "@/lib/dal/home-rail";
 
 interface TagPageProps {
   params: Promise<{ countryCode: string; slug: string }>;
@@ -43,9 +44,9 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
   }
 
   const page = Number(pageParam) || 1;
-  const [result, mostRead] = await Promise.all([
+  const [result, rail] = await Promise.all([
     listPosts({ country: countryCode, tagSlug: slug, page, perPage: PER_PAGE }),
-    getMostReadPosts(countryCode, 6),
+    getHomeRailData(countryCode),
   ]);
 
   return (
@@ -55,7 +56,7 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
         <h1 className="display-lg">#{tag.name}</h1>
       </header>
 
-      <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
+      <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
         {result.items.length > 0 ? (
           <div className="space-y-8">
             <NewsGrid posts={result.items} />

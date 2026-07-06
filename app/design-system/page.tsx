@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Container } from "@/components/ui/container";
+import { HomeRail } from "@/components/home/home-rail";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -10,8 +10,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Container } from "@/components/ui/container";
 import { Input } from "@/components/ui/input";
+import { RailLayout } from "@/components/ui/rail-layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getHomeRailData } from "@/lib/dal/home-rail";
 
 export const metadata: Metadata = {
   title: "Design System",
@@ -53,7 +56,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-export default function DesignSystemPage() {
+export default async function DesignSystemPage() {
+  const rail = await getHomeRailData();
+
   return (
     <Container className="space-y-12 py-12">
       <header>
@@ -64,83 +69,87 @@ export default function DesignSystemPage() {
         </p>
       </header>
 
-      <Section title="Colors">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {SWATCHES.map((cls) => (
-            <div key={cls} className={`flex h-20 items-end rounded-lg p-3 ${cls}`}>
-              <span className="ui-sm">{cls.split(" ")[0]}</span>
+      <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
+        <div className="space-y-12">
+          <Section title="Colors">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {SWATCHES.map((cls) => (
+                <div key={cls} className={`flex h-20 items-end rounded-lg p-3 ${cls}`}>
+                  <span className="ui-sm">{cls.split(" ")[0]}</span>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </Section>
+          </Section>
 
-      <Section title="Typography">
-        <div className="space-y-2">
-          {TYPE_SCALE.map((name) => (
-            <p key={name} className={name}>
-              {name}
-            </p>
-          ))}
-        </div>
-      </Section>
+          <Section title="Typography">
+            <div className="space-y-2">
+              {TYPE_SCALE.map((name) => (
+                <p key={name} className={name}>
+                  {name}
+                </p>
+              ))}
+            </div>
+          </Section>
 
-      <Section title="Buttons">
-        <div className="flex flex-wrap items-center gap-3">
-          <Button>Default</Button>
-          <Button variant="secondary">Secondary</Button>
-          <Button variant="outline">Outline</Button>
-          <Button variant="ghost">Ghost</Button>
-          <Button variant="destructive">Destructive</Button>
-          <Button variant="link">Link</Button>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button size="sm">Small</Button>
-          <Button size="default">Default</Button>
-          <Button size="lg">Large</Button>
-          <Button disabled>Disabled</Button>
-        </div>
-      </Section>
+          <Section title="Buttons">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button>Default</Button>
+              <Button variant="secondary">Secondary</Button>
+              <Button variant="outline">Outline</Button>
+              <Button variant="ghost">Ghost</Button>
+              <Button variant="destructive">Destructive</Button>
+              <Button variant="link">Link</Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button size="sm">Small</Button>
+              <Button size="default">Default</Button>
+              <Button size="lg">Large</Button>
+              <Button disabled>Disabled</Button>
+            </div>
+          </Section>
 
-      <Section title="Input">
-        <div className="max-w-sm space-y-3">
-          <Input placeholder="Search articles..." />
-          <Input type="email" placeholder="you@example.com" />
-          <Input placeholder="Disabled" disabled />
-        </div>
-      </Section>
+          <Section title="Input">
+            <div className="max-w-sm space-y-3">
+              <Input placeholder="Search articles..." />
+              <Input type="email" placeholder="you@example.com" />
+              <Input placeholder="Disabled" disabled />
+            </div>
+          </Section>
 
-      <Section title="Card">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Headline story</CardTitle>
-              <CardDescription>A reusable content card for article previews.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="body-md text-muted-foreground">
-                Cards compose header, content, and footer slots.
-              </p>
-            </CardContent>
-            <CardFooter>
-              <Button size="sm" variant="outline">
-                Read more
-              </Button>
-            </CardFooter>
-          </Card>
+          <Section title="Card">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Headline story</CardTitle>
+                  <CardDescription>A reusable content card for article previews.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="body-md text-muted-foreground">
+                    Cards compose header, content, and footer slots.
+                  </p>
+                </CardContent>
+                <CardFooter>
+                  <Button size="sm" variant="outline">
+                    Read more
+                  </Button>
+                </CardFooter>
+              </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Loading state</CardTitle>
-              <CardDescription>Skeleton primitives for async content.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-1/2" />
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Loading state</CardTitle>
+                  <CardDescription>Skeleton primitives for async content.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/2" />
+                </CardContent>
+              </Card>
+            </div>
+          </Section>
         </div>
-      </Section>
+      </RailLayout>
     </Container>
   );
 }
