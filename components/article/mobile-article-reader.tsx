@@ -62,7 +62,7 @@ export function MobileArticleReader({
           ) : null}
 
           <div className="space-y-3">
-            <h1 className="font-display text-4xl font-black leading-[0.98] tracking-tight text-foreground">
+            <h1 className="font-display text-[clamp(1.125rem,6vw,1.625rem)] font-black leading-[1.05] tracking-tight text-foreground">
               {post.title}
             </h1>
             {post.excerpt ? <p className="body-md text-muted-foreground">{post.excerpt}</p> : null}
