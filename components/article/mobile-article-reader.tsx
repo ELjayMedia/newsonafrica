@@ -61,12 +61,9 @@ export function MobileArticleReader({
             </Link>
           ) : null}
 
-          <div className="space-y-3">
-            <h1 className="font-display text-[clamp(1.125rem,6vw,1.625rem)] font-black leading-[1.05] tracking-tight text-foreground">
-              {post.title}
-            </h1>
-            {post.excerpt ? <p className="body-md text-muted-foreground">{post.excerpt}</p> : null}
-          </div>
+          <h1 className="font-display text-[clamp(1.125rem,6vw,1.625rem)] font-black leading-[1.05] tracking-tight text-foreground">
+            {post.title}
+          </h1>
 
           <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
             {post.author?.avatarUrl ? (
@@ -118,25 +115,6 @@ export function MobileArticleReader({
           />
           {post.featuredImage.alt ? <figcaption className="ui-sm text-muted-foreground">{post.featuredImage.alt}</figcaption> : null}
         </figure>
-      ) : null}
-
-      {post.excerpt ? (
-        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm" aria-labelledby="story-at-a-glance">
-          <h2 id="story-at-a-glance" className="heading-sm">
-            Story at a glance
-          </h2>
-          <p className="body-sm mt-2 text-muted-foreground">{post.excerpt}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-muted p-3">
-              <p className="ui-sm text-muted-foreground">Section</p>
-              <p className="ui-md text-foreground">{category?.name ?? "News"}</p>
-            </div>
-            <div className="rounded-xl bg-muted p-3">
-              <p className="ui-sm text-muted-foreground">Published</p>
-              <p className="ui-md text-foreground">{formatDate(post.publishedAt)}</p>
-            </div>
-          </div>
-        </section>
       ) : null}
 
       <ArticleBody html={post.content} className="text-[1.075rem] leading-8" />

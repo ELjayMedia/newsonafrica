@@ -131,8 +131,6 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                 {post.title}
               </h1>
 
-              {post.excerpt ? <p className="body-lg text-muted-foreground">{post.excerpt}</p> : null}
-
               <div className="flex flex-wrap items-center justify-between gap-4 border-y border-border py-4">
                 <div className="flex items-center gap-3">
                   {post.author?.avatarUrl ? (
