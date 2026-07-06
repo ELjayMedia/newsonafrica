@@ -35,33 +35,40 @@ export type PublicEnv = typeof publicEnv;
 
 const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   WORDPRESS_API_URL: z.string().url(),
   WORDPRESS_API_AUTH_HEADER: z.string().min(1).optional(),
   WORDPRESS_REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().optional(),
   WORDPRESS_RETRY_ATTEMPTS: z.coerce.number().int().min(1).max(8).optional(),
   WORDPRESS_RETRY_BACKOFF_MS: z.coerce.number().int().positive().optional(),
-  WORDPRESS_WEBHOOK_SECRET: z.string().min(16),
-  CONTENT_SYNC_SECRET: z.string().min(16),
-  PAYSTACK_SECRET_KEY: z.string().min(1).optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  WORDPRESS_WEBHOOK_SECRET: z.string().optional(),
+  CONTENT_SYNC_SECRET: z.string().optional(),
+  PAYSTACK_SECRET_KEY: z.string().optional(),
 });
 
-const isServer = typeof window === "undefined";
-let serverEnvCache: z.infer<typeof serverSchema> | null = null;
+type ParsedServerEnv = z.infer<typeof serverSchema>;
+type ServerEnvShape = ParsedServerEnv & {
+  SUPABASE_SERVICE_ROLE_KEY: string;
+  WORDPRESS_WEBHOOK_SECRET: string;
+  CONTENT_SYNC_SECRET: string;
+};
 
-function loadServerEnv(): z.infer<typeof serverSchema> {
+const isServer = typeof window === "undefined";
+let serverEnvCache: ParsedServerEnv | null = null;
+
+function loadServerEnv(): ParsedServerEnv {
   if (serverEnvCache) return serverEnvCache;
   const parsed = serverSchema.safeParse({
     NODE_ENV: process.env.NODE_ENV,
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     WORDPRESS_API_URL: process.env.WORDPRESS_API_URL,
-    WORDPRESS_API_AUTH_HEADER: process.env.WORDPRESS_API_AUTH_HEADER,
+    WORDPRESS_API_AUTH_HEADER: process.env.WORDPRESS_API_AUTH_HEADER || undefined,
     WORDPRESS_REQUEST_TIMEOUT_MS: process.env.WORDPRESS_REQUEST_TIMEOUT_MS,
     WORDPRESS_RETRY_ATTEMPTS: process.env.WORDPRESS_RETRY_ATTEMPTS,
     WORDPRESS_RETRY_BACKOFF_MS: process.env.WORDPRESS_RETRY_BACKOFF_MS,
-    WORDPRESS_WEBHOOK_SECRET: process.env.WORDPRESS_WEBHOOK_SECRET,
-    CONTENT_SYNC_SECRET: process.env.CONTENT_SYNC_SECRET,
-    PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || undefined,
+    WORDPRESS_WEBHOOK_SECRET: process.env.WORDPRESS_WEBHOOK_SECRET || undefined,
+    CONTENT_SYNC_SECRET: process.env.CONTENT_SYNC_SECRET || undefined,
+    PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY || undefined,
   });
   if (!parsed.success) {
     throw new Error(`Invalid server environment variables:\n${format(parsed.error)}`);
@@ -71,15 +78,15 @@ function loadServerEnv(): z.infer<typeof serverSchema> {
 }
 
 export const serverEnv = Object.freeze(
-  new Proxy({} as z.infer<typeof serverSchema>, {
+  new Proxy({} as ServerEnvShape, {
     get(_target, prop: string) {
       if (!isServer) {
         throw new Error(
           `Attempted to read server env var "${prop}" on the client. Use publicEnv (NEXT_PUBLIC_*) instead.`,
         );
       }
-      return loadServerEnv()[prop as keyof z.infer<typeof serverSchema>];
+      return loadServerEnv()[prop as keyof ParsedServerEnv];
     },
   }),
 );
-export type ServerEnv = z.infer<typeof serverSchema>;
+export type ServerEnv = ServerEnvShape;
