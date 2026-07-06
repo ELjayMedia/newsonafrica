@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { Container } from "@/components/ui/container";
-import { Input } from "@/components/ui/input";
+import { HomeRail } from "@/components/home/home-rail";
 import { Pagination } from "@/components/pagination";
 import { SearchResultCard } from "@/components/search/search-result-card";
+import { Container } from "@/components/ui/container";
+import { Input } from "@/components/ui/input";
+import { RailLayout } from "@/components/ui/rail-layout";
 import { COUNTRY_LIST, type CountryCode } from "@/lib/countries";
+import { getHomeRailData } from "@/lib/dal/home-rail";
 import { searchContent } from "@/lib/search";
 import {
   buildSearchUrl,
@@ -74,7 +77,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const country = normalizeCountryFilter(params.country);
   const page = normalizeSearchPage(params.page);
 
-  const result = query ? await searchContent({ query, country, page }) : null;
+  const [result, rail] = await Promise.all([
+    query ? searchContent({ query, country, page }) : Promise.resolve(null),
+    getHomeRailData(country ?? undefined),
+  ]);
 
   return (
     <Container className="space-y-8 py-8">
@@ -105,39 +111,41 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         {query ? <CountryFilter query={query} active={country} /> : null}
       </header>
 
-      {!query ? (
-        <p className="body-lg text-muted-foreground">Enter a search term to find stories from across our editions.</p>
-      ) : result && result.items.length > 0 ? (
-        <>
-          <p className="ui-sm text-muted-foreground" role="status">
-            {result.total.toLocaleString("en")} {result.total === 1 ? "result" : "results"} for &ldquo;{query}&rdquo;
-            {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}
-          </p>
+      <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
+        {!query ? (
+          <p className="body-lg text-muted-foreground">Enter a search term to find stories from across our editions.</p>
+        ) : result && result.items.length > 0 ? (
+          <div className="space-y-8">
+            <p className="ui-sm text-muted-foreground" role="status">
+              {result.total.toLocaleString("en")} {result.total === 1 ? "result" : "results"} for &ldquo;{query}&rdquo;
+              {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}
+            </p>
 
-          <div className="flex flex-col gap-6">
-            {result.items.map((item) => (
-              <SearchResultCard key={item.id} result={item} />
-            ))}
+            <div className="flex flex-col gap-6">
+              {result.items.map((item) => (
+                <SearchResultCard key={item.id} result={item} />
+              ))}
+            </div>
+
+            <Pagination
+              basePath="/search"
+              page={result.page}
+              totalPages={result.totalPages}
+              extraParams={{ q: query, ...(country ? { country } : {}) }}
+            />
           </div>
-
-          <Pagination
-            basePath="/search"
-            page={result.page}
-            totalPages={result.totalPages}
-            extraParams={{ q: query, ...(country ? { country } : {}) }}
-          />
-        </>
-      ) : (
-        <div className="space-y-2">
-          <p className="body-lg text-muted-foreground" role="status">
-            No results for &ldquo;{query}&rdquo;
-            {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}.
-          </p>
-          <p className="body-sm text-muted-foreground">
-            Try a different search term{country ? ", or search all countries" : ""}.
-          </p>
-        </div>
-      )}
+        ) : (
+          <div className="space-y-2">
+            <p className="body-lg text-muted-foreground" role="status">
+              No results for &ldquo;{query}&rdquo;
+              {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}.
+            </p>
+            <p className="body-sm text-muted-foreground">
+              Try a different search term{country ? ", or search all countries" : ""}.
+            </p>
+          </div>
+        )}
+      </RailLayout>
     </Container>
   );
 }
