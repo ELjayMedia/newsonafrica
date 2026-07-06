@@ -25,7 +25,7 @@ export function OAuthButtons({ next }: { next?: string }) {
 
       <form action={formAction}>
         {next ? <input type="hidden" name="next" value={next} /> : null}
-        <Button type="submit" variant="outline" className="w-full" disabled={pending}>
+        <Button type="submit" variant="outline" className="h-12 w-full rounded-xl md:h-10 md:rounded-full" disabled={pending}>
           <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden focusable="false">
             <path
               fill="currentColor"
