@@ -94,34 +94,73 @@ export interface WPRestListResult<T> {
 }
 
 /* ------------------------------------------------------------------ */
-/* GraphQL (WPGraphQL)                                                 */
+/* GraphQL (WPGraphQL) — the primary content transport                 */
 /* ------------------------------------------------------------------ */
 
-export interface WPGraphQLPageInfo {
-  hasNextPage: boolean;
-  endCursor: string | null;
-}
+/**
+ * These mirror the subset of the WPGraphQL schema the DAL consumes. Fields are
+ * broadly nullable because WPGraphQL returns `null` for absent nodes/fields and
+ * the mappers must not assume presence. `title`/`excerpt`/`content` are requested
+ * with `format: RENDERED`, so they arrive as HTML strings.
+ *
+ * Pagination uses the WPGraphQL Offset Pagination plugin, which adds
+ * `where: { offsetPagination: { offset, size } }` and exposes the total count via
+ * `pageInfo.offsetPagination.total`. This lets the DAL keep page-number semantics
+ * (`page`/`perPage`/`total`/`totalPages`) instead of Relay cursors.
+ */
 
-export interface WPGraphQLImage {
+export interface WPGraphQLImageNode {
   sourceUrl?: string | null;
   altText?: string | null;
+  caption?: string | null;
+  mediaDetails?: { width?: number | null; height?: number | null } | null;
+}
+
+export interface WPGraphQLTermNode {
+  databaseId?: number | null;
+  id?: string | null;
+  name?: string | null;
+  slug?: string | null;
+  description?: string | null;
+  count?: number | null;
+  parentDatabaseId?: number | null;
+}
+
+export interface WPGraphQLAuthorNode {
+  databaseId?: number | null;
+  id?: string | null;
+  name?: string | null;
+  slug?: string | null;
+  description?: string | null;
+  avatar?: { url?: string | null } | null;
 }
 
 export interface WPGraphQLPostNode {
-  id: string;
-  databaseId: number;
-  slug: string;
-  date: string;
-  title: string;
-  excerpt: string;
-  content?: string;
-  featuredImage?: { node?: WPGraphQLImage | null } | null;
-  categories?: { nodes: Array<{ id: string; databaseId: number; name: string; slug: string }> } | null;
-  tags?: { nodes: Array<{ id: string; databaseId: number; name: string; slug: string }> } | null;
-  author?: { node?: { id: string; databaseId: number; name: string; slug: string } | null } | null;
+  databaseId?: number | null;
+  id?: string | null;
+  slug?: string | null;
+  date?: string | null;
+  modified?: string | null;
+  status?: string | null;
+  title?: string | null;
+  excerpt?: string | null;
+  content?: string | null;
+  uri?: string | null;
+  link?: string | null;
+  featuredImage?: { node?: WPGraphQLImageNode | null } | null;
+  categories?: { nodes?: Array<WPGraphQLTermNode | null> | null } | null;
+  tags?: { nodes?: Array<WPGraphQLTermNode | null> | null } | null;
+  author?: { node?: WPGraphQLAuthorNode | null } | null;
 }
 
-export interface WPGraphQLPostsConnection {
-  pageInfo: WPGraphQLPageInfo;
-  nodes: WPGraphQLPostNode[];
+/** Relay `pageInfo` extended by the offset-pagination plugin's `offsetPagination.total`. */
+export interface WPGraphQLPageInfo {
+  hasNextPage?: boolean | null;
+  endCursor?: string | null;
+  offsetPagination?: { total?: number | null; hasMore?: boolean | null } | null;
+}
+
+export interface WPGraphQLConnection<TNode> {
+  pageInfo?: WPGraphQLPageInfo | null;
+  nodes?: Array<TNode | null> | null;
 }

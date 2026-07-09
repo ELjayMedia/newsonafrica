@@ -80,7 +80,7 @@ export default defineConfig({
     : [
         {
           command: `node e2e/fixtures/wp-stub.mjs`,
-          url: `http://127.0.0.1:${WP_STUB_PORT}/sz/wp-json/wp/v2/posts`,
+          url: `http://127.0.0.1:${WP_STUB_PORT}/health`,
           reuseExistingServer: !process.env.CI,
           timeout: 15_000,
           env: { WP_STUB_PORT: String(WP_STUB_PORT) },
