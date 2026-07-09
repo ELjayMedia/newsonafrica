@@ -80,23 +80,35 @@ export type SearchSuggestionRow = {
   url_path: string;
 };
 
-/** Reader profile row (NOA-99, `supabase/migrations/20260703100000_profiles.sql`). */
+// Reader profile row — matches the live `profiles` schema. The reader's name
+// is stored in `full_name` (not `display_name`) and their edition preference in
+// `country` (not `preferred_country`); several richer profile fields exist too.
 export type ProfileRow = {
   id: string;
-  display_name: string | null;
+  full_name: string | null;
   avatar_url: string | null;
-  preferred_country: string | null;
+  username: string | null;
+  handle: string | null;
+  email: string | null;
+  website: string | null;
+  bio: string | null;
+  country: string | null;
+  location: string | null;
+  interests: string[] | null;
+  preferences: Record<string, unknown> | null;
   /** Moderation gate (NOA-102) — set via SQL/service role only. */
-  is_admin: boolean;
+  is_admin: boolean | null;
+  onboarded: boolean | null;
+  role: string | null;
   created_at: string;
   updated_at: string;
 };
 
 export type ProfileInsert = Pick<ProfileRow, "id"> &
-  Partial<Pick<ProfileRow, "display_name" | "avatar_url" | "preferred_country">>;
+  Partial<Pick<ProfileRow, "full_name" | "avatar_url" | "country">>;
 
 export type ProfileUpdate = Partial<
-  Pick<ProfileRow, "display_name" | "avatar_url" | "preferred_country">
+  Pick<ProfileRow, "full_name" | "avatar_url" | "country">
 >;
 
 /** Saved article (NOA-100, `supabase/migrations/20260703110000_bookmarks.sql`). */

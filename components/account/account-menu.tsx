@@ -22,7 +22,7 @@ export async function AccountMenu() {
   }
 
   const profile = await getProfile(user.id);
-  const displayName = profile?.display_name?.trim() || user.email || "Account";
+  const displayName = profile?.full_name?.trim() || user.email || "Account";
 
   return (
     <AccountMenuClient

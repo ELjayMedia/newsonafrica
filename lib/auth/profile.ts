@@ -64,8 +64,8 @@ export async function updateProfileAction(
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").upsert({
     id: user.id,
-    display_name: displayName,
-    preferred_country: preferredCountry,
+    full_name: displayName,
+    country: preferredCountry,
     // Keep an existing avatar when the form submits without one.
     ...(avatarUrl !== null ? { avatar_url: avatarUrl } : {}),
   });

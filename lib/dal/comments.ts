@@ -152,7 +152,7 @@ export async function listComments(params: {
     if (userIds.length > 0) {
       const { data: profileRows, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, display_name, avatar_url")
+        .select("id, full_name, avatar_url")
         .in("id", userIds);
 
       if (profilesError) {
@@ -161,7 +161,7 @@ export async function listComments(params: {
       for (const profile of profileRows ?? []) {
         authors.set(profile.id, {
           id: profile.id,
-          displayName: profile.display_name,
+          displayName: profile.full_name,
           avatarUrl: profile.avatar_url,
         });
       }
@@ -274,7 +274,7 @@ export async function listCommentsForModeration(params: {
     const postIds = Array.from(new Set(comments.map((row) => row.wp_post_id)));
 
     const [profilesResult, articlesResult] = await Promise.all([
-      supabase.from("profiles").select("id, display_name, avatar_url").in("id", userIds),
+      supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds),
       supabase.from("content_index").select("edition_code, wp_post_id, title, url_path").in("wp_post_id", postIds),
     ]);
 
@@ -289,7 +289,7 @@ export async function listCommentsForModeration(params: {
     for (const profile of profilesResult.data ?? []) {
       authors.set(profile.id, {
         id: profile.id,
-        displayName: profile.display_name,
+        displayName: profile.full_name,
         avatarUrl: profile.avatar_url,
       });
     }
