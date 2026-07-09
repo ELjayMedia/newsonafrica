@@ -13,6 +13,16 @@ import type { BookmarkRow } from "@/lib/supabase/types";
 
 const log = createLogger("dal:bookmarks");
 
+/** Pull a usable image URL out of the bookmark's snapshotted `featured_image` jsonb. */
+function featuredImageUrl(featuredImage: Record<string, unknown> | null): string | null {
+  if (!featuredImage) return null;
+  for (const key of ["url", "source_url", "sourceUrl", "src"]) {
+    const value = featuredImage[key];
+    if (typeof value === "string" && value.length > 0) return value;
+  }
+  return null;
+}
+
 /** A saved article hydrated against `content_index` (title etc. when indexed). */
 export interface BookmarkedArticle {
   /** Bookmark row id (used for removal). */
@@ -37,7 +47,7 @@ export async function isBookmarked(country: string, wpPostId: number): Promise<b
     const { data, error } = await supabase
       .from("bookmarks")
       .select("id")
-      .eq("country", country)
+      .eq("edition_code", country)
       .eq("wp_post_id", wpPostId)
       .maybeSingle();
 
@@ -73,14 +83,15 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
     const bookmarks: BookmarkRow[] = data ?? [];
     if (bookmarks.length === 0) return [];
 
-    // Hydrate titles/URLs from content_index, one query per country present
-    // (articles are keyed by (country, wp_post_id), and wp post IDs are only
-    // unique within a country's WordPress install).
+    // Hydrate titles/URLs from content_index when the article is indexed, one
+    // query per edition present (articles are keyed by (edition_code,
+    // wp_post_id), and wp post IDs are only unique within an edition's install).
+    // The bookmark row also snapshots this metadata, used as the fallback.
     const byCountry = new Map<string, number[]>();
     for (const bookmark of bookmarks) {
-      const ids = byCountry.get(bookmark.country) ?? [];
+      const ids = byCountry.get(bookmark.edition_code) ?? [];
       ids.push(bookmark.wp_post_id);
-      byCountry.set(bookmark.country, ids);
+      byCountry.set(bookmark.edition_code, ids);
     }
 
     const indexRows = new Map<
@@ -107,17 +118,21 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
     );
 
     return bookmarks.map((bookmark) => {
-      const indexed = indexRows.get(`${bookmark.country}:${bookmark.wp_post_id}`);
+      const indexed = indexRows.get(`${bookmark.edition_code}:${bookmark.wp_post_id}`);
+      const slug = bookmark.slug ?? "";
       return {
         id: bookmark.id,
-        country: bookmark.country,
+        country: bookmark.edition_code,
         wpPostId: bookmark.wp_post_id,
-        slug: bookmark.slug,
+        slug,
         savedAt: bookmark.created_at,
-        url: indexed?.url_path ?? getArticleUrl(bookmark.country, bookmark.slug),
-        title: indexed?.title ?? null,
-        excerpt: indexed?.excerpt ?? null,
-        featuredImageUrl: indexed?.featured_image_url ?? null,
+        // Prefer the live index for a fresh URL/title; fall back to the
+        // snapshot the bookmark row carries (content_index may not have the
+        // article, e.g. before/while the backfill runs).
+        url: indexed?.url_path ?? (slug ? getArticleUrl(bookmark.edition_code, slug) : `/${bookmark.edition_code}`),
+        title: indexed?.title ?? bookmark.title ?? null,
+        excerpt: indexed?.excerpt ?? bookmark.excerpt ?? null,
+        featuredImageUrl: indexed?.featured_image_url ?? featuredImageUrl(bookmark.featured_image),
         publishedAt: indexed?.published_at ?? null,
       };
     });

@@ -111,18 +111,39 @@ export type ProfileUpdate = Partial<
   Pick<ProfileRow, "full_name" | "avatar_url" | "country">
 >;
 
-/** Saved article (NOA-100, `supabase/migrations/20260703110000_bookmarks.sql`). */
+/** Reading progress on a saved article (live `read_status` enum). */
+export type ReadStatus = "unread" | "in_progress" | "read";
+
+// Saved article — matches the live `bookmarks` schema: keyed by
+// (user_id, wp_post_id, edition_code), with the article metadata snapshotted
+// onto the row (title/slug/excerpt/featured_image/category/tags) plus reading
+// state (read_state/read_at/note/collection_id).
 export type BookmarkRow = {
   id: string;
   user_id: string;
-  country: string;
   wp_post_id: number;
-  slug: string;
+  edition_code: string;
+  collection_id: string | null;
+  read_state: ReadStatus;
+  read_at: string | null;
+  note: string | null;
   created_at: string;
+  updated_at: string;
+  title: string | null;
+  slug: string | null;
+  excerpt: string | null;
+  featured_image: Record<string, unknown> | null;
+  category: string | null;
+  tags: string[] | null;
 };
 
-export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "country" | "wp_post_id" | "slug"> &
-  Partial<Pick<BookmarkRow, "id" | "created_at">>;
+export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "wp_post_id" | "edition_code"> &
+  Partial<
+    Pick<
+      BookmarkRow,
+      "id" | "slug" | "title" | "excerpt" | "category" | "tags" | "note" | "collection_id" | "read_state" | "created_at"
+    >
+  >;
 
 /** Moderation states (NOA-101, `supabase/migrations/20260703112000_comments.sql`). */
 export type CommentStatus = "pending" | "approved" | "hidden" | "deleted";

@@ -66,7 +66,7 @@ export async function toggleBookmarkAction(input: {
   if (input.bookmarked) {
     const { error } = await supabase.from("bookmarks").insert({
       user_id: user.id,
-      country,
+      edition_code: country,
       wp_post_id: wpPostId,
       slug,
     });
@@ -81,7 +81,7 @@ export async function toggleBookmarkAction(input: {
       .from("bookmarks")
       .delete()
       .eq("user_id", user.id)
-      .eq("country", country)
+      .eq("edition_code", country)
       .eq("wp_post_id", wpPostId);
 
     if (error) {
