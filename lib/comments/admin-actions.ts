@@ -60,7 +60,7 @@ export async function moderateCommentAction(
     .from("comments")
     .update(intent === "delete" ? { status, body: "" } : { status })
     .eq("id", commentId)
-    .select("country, wp_post_id")
+    .select("edition_code, wp_post_id")
     .maybeSingle();
 
   if (error) {
@@ -83,7 +83,7 @@ export async function moderateCommentAction(
   const { data: indexRow } = await supabase
     .from("content_index")
     .select("url_path")
-    .eq("edition_code", data.country)
+    .eq("edition_code", data.edition_code)
     .eq("wp_post_id", data.wp_post_id)
     .maybeSingle();
 

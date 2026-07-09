@@ -145,25 +145,40 @@ export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "wp_post_id" | "editi
     >
   >;
 
-/** Moderation states (NOA-101, `supabase/migrations/20260703112000_comments.sql`). */
-export type CommentStatus = "pending" | "approved" | "hidden" | "deleted";
+/** Moderation states — the live `comment_status` enum. */
+export type CommentStatus =
+  | "active"
+  | "flagged"
+  | "hidden"
+  | "deleted"
+  | "pending"
+  | "approved"
+  | "spam";
 
-/** Article comment (NOA-101). `root_id` is set by a DB trigger on insert. */
+// Article comment — matches the live `comments` schema: keyed by edition_code,
+// threaded purely by parent_id (no `root_id` column), with moderation/report
+// metadata and engagement counters on the row.
 export type CommentRow = {
   id: string;
-  country: string;
   wp_post_id: number;
+  edition_code: string;
   user_id: string;
   parent_id: string | null;
-  root_id: string | null;
   body: string;
   status: CommentStatus;
+  reactions_count: number;
+  replies_count: number;
+  edited_at: string | null;
   created_at: string;
   updated_at: string;
-  edited_at: string | null;
+  reported_by: string | null;
+  report_reason: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  is_rich_text: boolean | null;
 };
 
-export type CommentInsert = Pick<CommentRow, "country" | "wp_post_id" | "user_id" | "body"> &
+export type CommentInsert = Pick<CommentRow, "edition_code" | "wp_post_id" | "user_id" | "body"> &
   Partial<Pick<CommentRow, "id" | "parent_id" | "status">>;
 
 export type CommentUpdate = Partial<Pick<CommentRow, "body" | "status" | "edited_at">>;

@@ -92,7 +92,7 @@ export async function listComments(params: {
     let rootsQuery = supabase
       .from("comments")
       .select("*")
-      .eq("country", params.country)
+      .eq("edition_code", params.country)
       .eq("wp_post_id", params.wpPostId)
       .is("parent_id", null)
       .order("created_at", { ascending: sort === "oldest" })
@@ -113,8 +113,11 @@ export async function listComments(params: {
     const hasMore = (rootRows ?? []).length > limit;
     const roots = (rootRows ?? []).slice(0, limit);
 
-    // 2. Every reply belonging to this page's threads, plus 3. author
-    //    profiles and 4. the public approved count — fetched concurrently.
+    // 2. Replies for this article, plus 3. author profiles and 4. the public
+    //    approved count — fetched concurrently. The live schema has no
+    //    `root_id`, so we fetch every reply on the article and let
+    //    buildCommentTree nest them by parent_id under this page's roots
+    //    (replies whose thread root isn't on this page are discarded).
     const rootIds = roots.map((row) => row.id);
 
     const [repliesResult, countResult] = await Promise.all([
@@ -122,14 +125,15 @@ export async function listComments(params: {
         ? supabase
             .from("comments")
             .select("*")
-            .in("root_id", rootIds)
+            .eq("edition_code", params.country)
+            .eq("wp_post_id", params.wpPostId)
             .not("parent_id", "is", null)
             .order("created_at", { ascending: true })
         : Promise.resolve({ data: [] as CommentRow[], error: null }),
       supabase
         .from("comments")
         .select("id", { count: "exact", head: true })
-        .eq("country", params.country)
+        .eq("edition_code", params.country)
         .eq("wp_post_id", params.wpPostId)
         .eq("status", "approved"),
     ]);
@@ -305,10 +309,10 @@ export async function listCommentsForModeration(params: {
 
     return {
       comments: comments.map((row) => {
-        const article = articles.get(`${row.country}:${row.wp_post_id}`) ?? null;
+        const article = articles.get(`${row.edition_code}:${row.wp_post_id}`) ?? null;
         return {
           id: row.id,
-          country: row.country,
+          country: row.edition_code,
           wpPostId: row.wp_post_id,
           body: row.status === "deleted" ? "" : row.body,
           status: row.status,
