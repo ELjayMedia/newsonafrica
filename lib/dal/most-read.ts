@@ -40,12 +40,11 @@ export async function getMostReadPosts(
       id: row.id,
       wpPostId: row.wp_post_id,
       slug: row.slug,
-      country: row.country as CountryCode,
+      country: row.edition_code as CountryCode,
       title: row.title,
       excerpt: row.excerpt ?? "",
       url: row.url_path,
       featuredImageUrl: row.featured_image_url,
-      viewCount: row.view_count,
       publishedAt: row.published_at,
     }));
   } catch (error) {

@@ -112,6 +112,5 @@ export interface MostReadPost {
   excerpt: string;
   url: string;
   featuredImageUrl: string | null;
-  viewCount: number;
   publishedAt: string;
 }

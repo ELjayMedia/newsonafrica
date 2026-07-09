@@ -62,11 +62,14 @@ export async function searchContent(params: SearchContentParams): Promise<Search
 
   try {
     const supabase = createPublicClient();
+    const offset = (page - 1) * perPage;
+    // The live `search_content` RPC doesn't return a windowed total, so fetch
+    // one extra row to detect whether a next page exists.
     const { data, error } = await supabase.rpc("search_content", {
       search_query: query,
       country_filter: country,
-      limit_count: perPage,
-      offset_count: (page - 1) * perPage,
+      limit_count: perPage + 1,
+      offset_count: offset,
     });
 
     if (error) {
@@ -75,14 +78,18 @@ export async function searchContent(params: SearchContentParams): Promise<Search
     }
 
     const rows = data ?? [];
-    const total = rows[0]?.total_count ?? 0;
-    const totalPages = total > 0 ? Math.ceil(total / perPage) : 0;
+    const hasNextPage = rows.length > perPage;
+    const pageRows = hasNextPage ? rows.slice(0, perPage) : rows;
+    // Exact total is only known on the final page (no windowed count from the
+    // RPC); before then `total` is a lower bound and the UI phrases it as such.
+    const total = offset + pageRows.length;
+    const totalPages = hasNextPage ? page + 1 : page;
 
-    const items: SearchResult[] = rows.map((row) => ({
+    const items: SearchResult[] = pageRows.map((row) => ({
       id: row.id,
       wpPostId: row.wp_post_id,
       slug: row.slug,
-      country: row.country as CountryCode,
+      country: row.edition_code as CountryCode,
       title: row.title,
       excerpt: row.excerpt ?? "",
       url: row.url_path,
@@ -94,7 +101,7 @@ export async function searchContent(params: SearchContentParams): Promise<Search
       rank: row.rank,
     }));
 
-    return { items, query, country, page, perPage, total, totalPages, hasNextPage: page < totalPages };
+    return { items, query, country, page, perPage, total, totalPages, hasNextPage };
   } catch (error) {
     log.error("searchContent failed", { err: error });
     return emptyPage(query, country, page, perPage);
@@ -128,7 +135,7 @@ export async function searchSuggestions(params: SearchSuggestionsParams): Promis
 
     return (data ?? []).map((row) => ({
       title: row.title,
-      country: row.country as CountryCode,
+      country: row.edition_code as CountryCode,
       slug: row.slug,
       url: row.url_path,
     }));

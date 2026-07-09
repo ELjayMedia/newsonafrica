@@ -117,7 +117,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         ) : result && result.items.length > 0 ? (
           <div className="space-y-8">
             <p className="ui-sm text-muted-foreground" role="status">
-              {result.total.toLocaleString("en")} {result.total === 1 ? "result" : "results"} for &ldquo;{query}&rdquo;
+              {result.hasNextPage
+                ? `Showing results for “${query}”`
+                : `${result.total.toLocaleString("en")} ${result.total === 1 ? "result" : "results"} for “${query}”`}
               {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}
             </p>
 

@@ -54,9 +54,12 @@ export type ContentSyncCursorRow = {
   updated_at: string;
 };
 
+// Matches the live `search_content` RPC return: keyed by `edition_code`, and
+// the live function does NOT return a windowed `total_count` — the query layer
+// derives `hasNextPage` by over-fetching one row instead (see lib/search).
 export type SearchContentRow = {
   id: string;
-  country: string;
+  edition_code: string;
   wp_post_id: number;
   slug: string;
   title: string;
@@ -68,13 +71,11 @@ export type SearchContentRow = {
   url_path: string;
   featured_image_url: string | null;
   rank: number;
-  /** Window count of ALL rows matching the query/filters (same on every row) — added by 20260702150000_search_pagination.sql for pagination. */
-  total_count: number;
 };
 
 export type SearchSuggestionRow = {
   title: string;
-  country: string;
+  edition_code: string;
   slug: string;
   url_path: string;
 };
@@ -134,16 +135,17 @@ export type CommentInsert = Pick<CommentRow, "country" | "wp_post_id" | "user_id
 
 export type CommentUpdate = Partial<Pick<CommentRow, "body" | "status" | "edited_at">>;
 
+// Matches the live `most_read_content` RPC return: keyed by `edition_code`,
+// ordered internally by the RPC (returns `rank`, not a `view_count` column).
 export type MostReadRow = {
   id: string;
-  country: string;
+  edition_code: string;
   wp_post_id: number;
   slug: string;
   title: string;
   excerpt: string | null;
   url_path: string;
   featured_image_url: string | null;
-  view_count: number;
   published_at: string;
 };
 
