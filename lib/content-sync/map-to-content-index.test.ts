@@ -24,7 +24,7 @@ describe("mapPostToContentIndexRow", () => {
     const row = mapPostToContentIndexRow(basePost);
 
     expect(row.wp_post_id).toBe(101);
-    expect(row.country).toBe("ng");
+    expect(row.edition_code).toBe("ng");
     expect(row.slug).toBe("election-results");
     expect(row.url_path).toBe("/ng/article/election-results");
     expect(row.title).toBe("Election Results");

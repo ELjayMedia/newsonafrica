@@ -11,13 +11,15 @@
  * every `.from(...)` call to `never`.
  */
 
+// Matches the live `content_index` schema (NOA-87): the edition is keyed by
+// `edition_code` (not `country`), and the live table has no `status`/`view_count`
+// columns — only published content is indexed, and view counts aren't tracked here.
 export type ContentIndexRow = {
   id: string;
   wp_post_id: number;
-  country: string;
+  edition_code: string;
   slug: string;
   url_path: string;
-  status: string;
   title: string;
   excerpt: string | null;
   content_plain: string | null;
@@ -27,25 +29,24 @@ export type ContentIndexRow = {
   featured_image_url: string | null;
   published_at: string;
   updated_at: string;
-  view_count: number;
   search_vector: unknown;
 };
 
 export type ContentIndexInsert = Omit<
   ContentIndexRow,
-  "id" | "updated_at" | "view_count" | "search_vector" | "status" | "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
+  "id" | "updated_at" | "search_vector" | "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
 > &
   Partial<
     Pick<
       ContentIndexRow,
-      "status" | "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url" | "view_count"
+      "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
     >
   >;
 
 export type ContentSyncStatus = "idle" | "running" | "completed" | "failed";
 
 export type ContentSyncCursorRow = {
-  country: string;
+  edition_code: string;
   last_synced_at: string;
   last_wp_post_id: number | null;
   sync_status: ContentSyncStatus;
@@ -157,7 +158,7 @@ export type Database = {
       };
       content_sync_cursor: {
         Row: ContentSyncCursorRow;
-        Insert: Partial<ContentSyncCursorRow> & Pick<ContentSyncCursorRow, "country">;
+        Insert: Partial<ContentSyncCursorRow> & Pick<ContentSyncCursorRow, "edition_code">;
         Update: Partial<ContentSyncCursorRow>;
         Relationships: [];
       };

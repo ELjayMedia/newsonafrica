@@ -93,7 +93,7 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
         const { data: rows, error: indexError } = await supabase
           .from("content_index")
           .select("wp_post_id, title, excerpt, url_path, featured_image_url, published_at")
-          .eq("country", country)
+          .eq("edition_code", country)
           .in("wp_post_id", wpPostIds);
 
         if (indexError) {

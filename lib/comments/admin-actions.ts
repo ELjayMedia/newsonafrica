@@ -83,7 +83,7 @@ export async function moderateCommentAction(
   const { data: indexRow } = await supabase
     .from("content_index")
     .select("url_path")
-    .eq("country", data.country)
+    .eq("edition_code", data.country)
     .eq("wp_post_id", data.wp_post_id)
     .maybeSingle();
 

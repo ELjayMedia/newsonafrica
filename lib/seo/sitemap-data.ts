@@ -42,8 +42,7 @@ export async function listSitemapArticles(country: string, page: number): Promis
     const { data, error } = await supabase
       .from("content_index")
       .select("url_path, published_at, updated_at")
-      .eq("country", country)
-      .eq("status", "publish")
+      .eq("edition_code", country)
       .order("published_at", { ascending: false })
       .range(from, from + ARTICLES_PER_SITEMAP - 1);
 
@@ -70,8 +69,7 @@ export async function countSitemapArticles(country: string): Promise<number> {
     const { count, error } = await supabase
       .from("content_index")
       .select("id", { count: "exact", head: true })
-      .eq("country", country)
-      .eq("status", "publish");
+      .eq("edition_code", country);
 
     if (error) {
       console.error(`[sitemap] content_index count failed for ${country}`, error);
@@ -109,8 +107,7 @@ export async function listRecentNewsArticles(
     const { data, error } = await supabase
       .from("content_index")
       .select("url_path, title, published_at, categories")
-      .eq("country", country)
-      .eq("status", "publish")
+      .eq("edition_code", country)
       .gte("published_at", cutoff)
       .order("published_at", { ascending: false })
       .limit(NEWS_SITEMAP_MAX_URLS);

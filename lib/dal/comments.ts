@@ -275,7 +275,7 @@ export async function listCommentsForModeration(params: {
 
     const [profilesResult, articlesResult] = await Promise.all([
       supabase.from("profiles").select("id, display_name, avatar_url").in("id", userIds),
-      supabase.from("content_index").select("country, wp_post_id, title, url_path").in("wp_post_id", postIds),
+      supabase.from("content_index").select("edition_code, wp_post_id, title, url_path").in("wp_post_id", postIds),
     ]);
 
     if (profilesResult.error) {
@@ -297,7 +297,7 @@ export async function listCommentsForModeration(params: {
     // wp_post_id is only unique per country, so key articles by the pair.
     const articles = new Map<string, { title: string; urlPath: string }>();
     for (const article of articlesResult.data ?? []) {
-      articles.set(`${article.country}:${article.wp_post_id}`, {
+      articles.set(`${article.edition_code}:${article.wp_post_id}`, {
         title: article.title,
         urlPath: article.url_path,
       });

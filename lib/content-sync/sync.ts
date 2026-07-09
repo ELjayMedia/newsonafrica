@@ -46,7 +46,7 @@ async function upsertRows(rows: ReturnType<typeof mapPostToContentIndexRow>[]): 
   if (rows.length === 0) return [];
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("content_index").upsert(rows, { onConflict: "country,wp_post_id" });
+  const { error } = await supabase.from("content_index").upsert(rows, { onConflict: "edition_code,wp_post_id" });
 
   if (!error) return [];
 
@@ -99,7 +99,7 @@ export async function syncPostById(
 
   const supabase = createAdminClient();
   const row = mapPostToContentIndexRow(post);
-  const { error } = await supabase.from("content_index").upsert([row], { onConflict: "country,wp_post_id" });
+  const { error } = await supabase.from("content_index").upsert([row], { onConflict: "edition_code,wp_post_id" });
 
   if (error) {
     return { success: false, error: error.message };
@@ -112,7 +112,7 @@ export async function deletePostFromIndex(
   wpPostId: number,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createAdminClient();
-  const { error } = await supabase.from("content_index").delete().match({ country, wp_post_id: wpPostId });
+  const { error } = await supabase.from("content_index").delete().match({ edition_code: country, wp_post_id: wpPostId });
 
   if (error) {
     return { success: false, error: error.message };
@@ -127,7 +127,7 @@ async function updateSyncCursor(
 ): Promise<void> {
   const supabase = createAdminClient();
   await supabase.from("content_sync_cursor").upsert({
-    country,
+    edition_code: country,
     sync_status: status,
     error_message: errorMessage ?? null,
     updated_at: new Date().toISOString(),
