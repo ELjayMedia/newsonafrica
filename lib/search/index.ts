@@ -62,14 +62,11 @@ export async function searchContent(params: SearchContentParams): Promise<Search
 
   try {
     const supabase = createPublicClient();
-    const offset = (page - 1) * perPage;
-    // The live `search_content` RPC doesn't return a windowed total, so fetch
-    // one extra row to detect whether a next page exists.
     const { data, error } = await supabase.rpc("search_content", {
       search_query: query,
       country_filter: country,
-      limit_count: perPage + 1,
-      offset_count: offset,
+      limit_count: perPage,
+      offset_count: (page - 1) * perPage,
     });
 
     if (error) {
@@ -78,14 +75,12 @@ export async function searchContent(params: SearchContentParams): Promise<Search
     }
 
     const rows = data ?? [];
-    const hasNextPage = rows.length > perPage;
-    const pageRows = hasNextPage ? rows.slice(0, perPage) : rows;
-    // Exact total is only known on the final page (no windowed count from the
-    // RPC); before then `total` is a lower bound and the UI phrases it as such.
-    const total = offset + pageRows.length;
-    const totalPages = hasNextPage ? page + 1 : page;
+    // Every row carries the same windowed match count (total_count) — exact
+    // totals + numbered pagination without a second count query.
+    const total = rows[0]?.total_count ?? 0;
+    const totalPages = total > 0 ? Math.ceil(total / perPage) : 0;
 
-    const items: SearchResult[] = pageRows.map((row) => ({
+    const items: SearchResult[] = rows.map((row) => ({
       id: row.id,
       wpPostId: row.wp_post_id,
       slug: row.slug,
@@ -101,7 +96,7 @@ export async function searchContent(params: SearchContentParams): Promise<Search
       rank: row.rank,
     }));
 
-    return { items, query, country, page, perPage, total, totalPages, hasNextPage };
+    return { items, query, country, page, perPage, total, totalPages, hasNextPage: page < totalPages };
   } catch (error) {
     log.error("searchContent failed", { err: error });
     return emptyPage(query, country, page, perPage);

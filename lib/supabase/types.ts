@@ -54,9 +54,9 @@ export type ContentSyncCursorRow = {
   updated_at: string;
 };
 
-// Matches the live `search_content` RPC return: keyed by `edition_code`, and
-// the live function does NOT return a windowed `total_count` — the query layer
-// derives `hasNextPage` by over-fetching one row instead (see lib/search).
+// Matches the live `search_content` RPC return: keyed by `edition_code`, with a
+// windowed `total_count` (same on every row) for exact pagination — restored by
+// migration 20260710000000_search_content_total_count.sql.
 export type SearchContentRow = {
   id: string;
   edition_code: string;
@@ -71,6 +71,8 @@ export type SearchContentRow = {
   url_path: string;
   featured_image_url: string | null;
   rank: number;
+  /** Count of ALL rows matching the query/filters (same on every row). */
+  total_count: number;
 };
 
 export type SearchSuggestionRow = {
