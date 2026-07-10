@@ -10,16 +10,13 @@
  */
 import "server-only";
 
-import { mapPost } from "@/lib/dal/mappers";
-import { getPostById } from "@/lib/dal/posts";
+import { getPostById, listPostsForSync } from "@/lib/dal/posts";
 import { createLogger } from "@/lib/log";
 import { getMetrics } from "@/lib/metrics";
 import { mapPostToContentIndexRow } from "@/lib/content-sync/map-to-content-index";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ContentSyncStatus } from "@/lib/supabase/types";
 import { SUPPORTED_COUNTRY_CODES, type CountryCode } from "@/lib/wordpress/countries";
-import { fetchWordPressRestList } from "@/lib/wordpress/rest-client";
-import type { WPRestPost } from "@/lib/wordpress/types";
 
 export interface SyncError {
   wpPostId?: number;
@@ -61,13 +58,9 @@ export async function syncPostsPage(
   country: CountryCode | string,
   { page = 1, perPage = DEFAULT_PER_PAGE }: { page?: number; perPage?: number } = {},
 ): Promise<SyncPageResult> {
-  const { items, pageInfo } = await fetchWordPressRestList<WPRestPost>(country, "posts", {
-    params: { page, per_page: perPage, _embed: true, orderby: "date", order: "desc" },
-    // Backfill/sync always wants the freshest content — never served from cache.
-    revalidate: 0,
-  });
+  const { posts, total, hasNextPage } = await listPostsForSync(country, { page, perPage });
 
-  const rows = items.map((raw) => mapPostToContentIndexRow(mapPost(raw, country)));
+  const rows = posts.map((post) => mapPostToContentIndexRow(post));
   const errors = await upsertRows(rows);
 
   if (errors.length > 0) {
@@ -78,10 +71,10 @@ export async function syncPostsPage(
     country,
     page,
     perPage,
-    fetched: items.length,
+    fetched: posts.length,
     synced: errors.length > 0 ? 0 : rows.length,
-    hasNextPage: page < pageInfo.totalPages,
-    total: pageInfo.total,
+    hasNextPage,
+    total,
     errors,
   };
 }

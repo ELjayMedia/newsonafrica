@@ -284,3 +284,36 @@ export async function getPostById(country: CountryCode | string, id: number): Pr
 
   return data.post ? mapGraphQLPost(data.post, country) : null;
 }
+
+/**
+ * Page through a country's posts (with body content) for the content-sync
+ * backfill/index (NOA-87). Uses the same WPGraphQL read path as the site —
+ * REST does not serve content on this install — so the search index is
+ * populated from the source the app actually reads. Fetched uncached since
+ * backfill always wants the freshest content. Returns fully-mapped domain
+ * `Post`s plus pagination so the sync routine knows when to stop.
+ */
+export async function listPostsForSync(
+  country: CountryCode | string,
+  { page = 1, perPage = 50 }: { page?: number; perPage?: number } = {},
+): Promise<{ posts: Post[]; total: number; hasNextPage: boolean }> {
+  const normalizedPage = normalizePage(page);
+  const normalizedPerPage = normalizePerPage(perPage);
+  const first = normalizedPage * normalizedPerPage;
+
+  const result = await fetchWordPressGraphQL<PostsListData>(
+    country,
+    POSTS_LIST_QUERY,
+    { first, categoryName: null, tagSlugIn: null, authorName: null, search: null },
+    { tags: [cacheTags.posts(country)], revalidate: 0, operationName: "PostsList" },
+  );
+  if (!result.ok) throw result.error;
+
+  const allItems = result.data.posts?.nodes ?? [];
+  const windowItems = allItems.slice((normalizedPage - 1) * normalizedPerPage, first);
+  const posts = windowItems.map((raw) => mapGraphQLPost(raw, country));
+  const hasNextPage = Boolean(result.data.posts?.pageInfo?.hasNextPage) || allItems.length > first;
+  const total = hasNextPage ? first + 1 : (normalizedPage - 1) * normalizedPerPage + posts.length;
+
+  return { posts, total, hasNextPage };
+}
