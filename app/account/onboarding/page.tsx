@@ -20,8 +20,8 @@ export default async function OnboardingPage() {
 
   return (
     <OnboardingForm
-      initialDisplayName={profile?.display_name ?? user.email?.split("@")[0] ?? ""}
-      initialPreferredCountry={profile?.preferred_country ?? ""}
+      initialDisplayName={profile?.full_name ?? user.email?.split("@")[0] ?? ""}
+      initialPreferredCountry={profile?.country ?? ""}
     />
   );
 }

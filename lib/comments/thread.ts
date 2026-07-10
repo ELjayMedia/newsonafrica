@@ -6,11 +6,16 @@
  * Pure and dependency-free so it unit-tests without Supabase.
  */
 
-/** The minimal shape threading needs — `CommentRow` satisfies it. */
+/**
+ * The minimal shape threading needs — `CommentRow` satisfies it. `root_id` is
+ * optional: the live schema threads purely by `parent_id`, so the DAL supplies
+ * every reply in the thread and the `root_id` re-attachment fallback below only
+ * fires for callers that still carry it.
+ */
 export interface ThreadableComment {
   id: string;
   parent_id: string | null;
-  root_id: string | null;
+  root_id?: string | null;
   created_at: string;
 }
 

@@ -16,8 +16,11 @@ type ModerationIntent = "approve" | "hide" | "delete";
  */
 const AVAILABLE_INTENTS: Record<CommentStatus, ModerationIntent[]> = {
   pending: ["approve", "hide", "delete"],
+  flagged: ["approve", "hide", "delete"],
   approved: ["hide", "delete"],
+  active: ["hide", "delete"],
   hidden: ["approve", "delete"],
+  spam: ["approve", "delete"],
   deleted: [],
 };
 

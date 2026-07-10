@@ -2,21 +2,23 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
-import { Container } from "@/components/ui/container";
-import { RailLayout } from "@/components/ui/rail-layout";
-import { MostReadRail } from "@/components/home/most-read-rail";
 import { ArticleBody } from "@/components/article/article-body";
+import { MobileArticleReader } from "@/components/article/mobile-article-reader";
 import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { CommentSection, COMMENTS_CURSOR_PARAM } from "@/components/comments/comment-section";
+import { HomeRail } from "@/components/home/home-rail";
 import { BreadcrumbJsonLd, NewsArticleJsonLd } from "@/components/seo/json-ld";
+import { Badge } from "@/components/ui/badge";
+import { Container } from "@/components/ui/container";
+import { RailLayout } from "@/components/ui/rail-layout";
 import { getUser } from "@/lib/auth/session";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { COUNTRIES } from "@/lib/countries";
-import { getMostReadPosts, getPostBySlugWithFallback, getRelatedPosts, isValidCountry } from "@/lib/dal";
+import { getPostBySlugWithFallback, getRelatedPosts, isValidCountry } from "@/lib/dal";
 import { isBookmarked } from "@/lib/dal/bookmarks";
+import { getHomeRailData } from "@/lib/dal/home-rail";
 import { publicEnv } from "@/lib/env";
 import { formatDate } from "@/lib/format";
 
@@ -78,12 +80,12 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
   const { post, sourceCountry } = resolved;
 
   const category = post.categories[0];
-  // Related by shared categories + tags, from the edition the post lives in
-  // (term IDs are edition-specific), not just the first category.
-  const related = await getRelatedPosts(sourceCountry, post, RELATED_COUNT);
-
-  // Most-read fills the desktop rail beside the article; degrades to [] on error.
-  const mostRead = await getMostReadPosts(countryCode, 6);
+  const [related, rail] = await Promise.all([
+    // Related by shared categories + tags, from the edition the post lives in
+    // (term IDs are edition-specific), not just the first category.
+    getRelatedPosts(sourceCountry, post, RELATED_COUNT),
+    getHomeRailData(countryCode),
+  ]);
 
   const shareUrl = `${publicEnv.SITE_URL}${getArticleUrl(countryCode, slug)}`;
 
@@ -91,7 +93,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
   const bookmarked = user ? await isBookmarked(countryCode, post.id) : false;
 
   return (
-    <Container className="py-8">
+    <Container className="py-8 max-md:py-0">
       {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
       <NewsArticleJsonLd post={post} />
       <BreadcrumbJsonLd
@@ -101,84 +103,96 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
           { name: post.title },
         ]}
       />
-      <RailLayout rail={mostRead.length > 0 ? <MostReadRail posts={mostRead} /> : undefined}>
-        {/* Constrain the article to a comfortable reading measure; on desktop it
-            sits left of the rail instead of centered in an empty container. */}
-        <article className="mx-auto w-full max-w-3xl space-y-6 lg:mx-0">
-      <header className="space-y-4">
-        {category ? (
-          <Link href={`/${countryCode}/category/${category.slug}`} className="w-fit">
-            <Badge>{category.name}</Badge>
-          </Link>
-        ) : null}
 
-        <h1 className="display-xl">{post.title}</h1>
+      <MobileArticleReader
+        countryCode={countryCode}
+        slug={slug}
+        post={post}
+        related={related}
+        shareUrl={shareUrl}
+        bookmarked={bookmarked}
+        signedIn={user !== null}
+        commentsCursor={commentsCursor}
+      />
 
-        {post.excerpt ? <p className="body-lg text-muted-foreground">{post.excerpt}</p> : null}
-
-        <div className="flex flex-wrap items-center justify-between gap-4 border-y border-border py-4">
-          <div className="flex items-center gap-3">
-            {post.author?.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted avatar
-              <img src={post.author.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
-            ) : null}
-            <div className="ui-md">
-              {post.author ? (
-                <p className="font-semibold text-foreground">
-                  <Link href={`/${countryCode}/author/${post.author.slug}`} className="hover:text-primary">
-                    {post.author.name}
-                  </Link>
-                </p>
+      <div className="hidden md:block">
+        <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
+          {/* Constrain the article to a comfortable reading measure; on desktop it
+              sits left of the rail instead of centered in an empty container. */}
+          <article className="mx-auto w-full max-w-3xl space-y-6 lg:mx-0">
+            <header className="space-y-4">
+              {category ? (
+                <Link href={`/${countryCode}/category/${category.slug}`} className="w-fit">
+                  <Badge>{category.name}</Badge>
+                </Link>
               ) : null}
-              <time dateTime={post.publishedAt} className="text-muted-foreground">
-                {formatDate(post.publishedAt)}
-              </time>
-            </div>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <ShareButtons title={post.title} url={shareUrl} />
-            <BookmarkButton
-              country={countryCode}
-              slug={slug}
-              wpPostId={post.id}
-              initialBookmarked={bookmarked}
-              signedIn={user !== null}
-            />
-          </div>
-        </div>
-      </header>
+              <h1 className="heading-lg font-display text-foreground">{post.title}</h1>
 
-      {post.featuredImage ? (
-        // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
-        <img
-          src={post.featuredImage.url}
-          alt={post.featuredImage.alt || post.title}
-          className="aspect-video w-full rounded-xl object-cover"
-        />
-      ) : null}
+              <div className="flex flex-wrap items-center justify-between gap-4 border-y border-border py-4">
+                <div className="flex items-center gap-3">
+                  {post.author?.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted avatar
+                    <img src={post.author.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+                  ) : null}
+                  <div className="ui-md">
+                    {post.author ? (
+                      <p className="font-semibold text-foreground">
+                        <Link href={`/${countryCode}/author/${post.author.slug}`} className="hover:text-primary">
+                          {post.author.name}
+                        </Link>
+                      </p>
+                    ) : null}
+                    <time dateTime={post.publishedAt} className="text-muted-foreground">
+                      {formatDate(post.publishedAt)}
+                    </time>
+                  </div>
+                </div>
 
-      <ArticleBody html={post.content} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <ShareButtons title={post.title} url={shareUrl} />
+                  <BookmarkButton
+                    country={countryCode}
+                    slug={slug}
+                    wpPostId={post.id}
+                    initialBookmarked={bookmarked}
+                    signedIn={user !== null}
+                  />
+                </div>
+              </div>
+            </header>
 
-      {post.tags.length > 0 ? (
-        <div className="flex flex-wrap gap-2 border-t border-border pt-6">
-          {post.tags.map((tag) => (
-            <Link
-              key={tag.slug}
-              href={`/${countryCode}/tag/${tag.slug}`}
-              className="ui-sm rounded-full border border-input px-3 py-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              #{tag.name}
-            </Link>
-          ))}
-        </div>
-      ) : null}
+            {post.featuredImage ? (
+              // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
+              <img
+                src={post.featuredImage.url}
+                alt={post.featuredImage.alt || post.title}
+                className="aspect-video w-full rounded-xl object-cover"
+              />
+            ) : null}
 
-      <CommentSection country={countryCode} slug={slug} wpPostId={post.id} cursorParam={commentsCursor} />
+            <ArticleBody html={post.content} />
 
-      <RelatedArticles posts={related} />
-        </article>
-      </RailLayout>
+            {post.tags.length > 0 ? (
+              <div className="flex flex-wrap gap-2 border-t border-border pt-6">
+                {post.tags.map((tag) => (
+                  <Link
+                    key={tag.slug}
+                    href={`/${countryCode}/tag/${tag.slug}`}
+                    className="ui-sm rounded-full border border-input px-3 py-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    #{tag.name}
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+
+            <CommentSection country={countryCode} slug={slug} wpPostId={post.id} cursorParam={commentsCursor} />
+
+            <RelatedArticles posts={related} />
+          </article>
+        </RailLayout>
+      </div>
     </Container>
   );
 }

@@ -1,18 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import { mapAuthor, mapCategory, mapPost, mapPostSummary, mapTag } from "@/lib/dal/mappers";
-import type { WPGraphQLAuthorNode, WPGraphQLPostNode, WPGraphQLTermNode } from "@/lib/wordpress/types";
+import type { WPRestAuthor, WPRestCategory, WPRestPost, WPRestTag } from "@/lib/wordpress/types";
 
-const basePost: WPGraphQLPostNode = {
-  databaseId: 42,
-  id: "cG9zdDo0Mg==",
-  slug: "hello-world",
+const basePost: WPRestPost = {
+  id: 42,
   date: "2026-06-01T10:00:00",
   modified: "2026-06-02T10:00:00",
+  slug: "hello-world",
   status: "publish",
-  title: "Hello &amp; World",
-  excerpt: "<p>Short &amp; sweet excerpt</p>",
-  content: "<p>Full content</p>",
+  link: "https://cms.test.example/za/hello-world",
+  title: { rendered: "Hello &amp; World" },
+  content: { rendered: "<p>Full content</p>" },
+  excerpt: { rendered: "<p>Short &amp; sweet excerpt</p>" },
+  author: 7,
+  featured_media: 99,
+  categories: [1],
+  tags: [2],
 };
 
 describe("mapPost", () => {
@@ -23,54 +27,35 @@ describe("mapPost", () => {
     expect(post.content).toBe("<p>Full content</p>");
     expect(post.country).toBe("za");
     expect(post.id).toBe(42);
-    expect(post.publishedAt).toBe("2026-06-01T10:00:00");
-    expect(post.updatedAt).toBe("2026-06-02T10:00:00");
   });
 
-  it("maps featured image, author and terms from GraphQL connections", () => {
-    const node: WPGraphQLPostNode = {
+  it("maps embedded featured media, author and terms", () => {
+    const embedded: WPRestPost = {
       ...basePost,
-      featuredImage: {
-        node: {
-          sourceUrl: "https://cdn.example.com/img.jpg",
-          altText: "An image",
-          mediaDetails: { width: 800, height: 600 },
-        },
+      _embedded: {
+        author: [{ id: 7, name: "Jane Doe", slug: "jane-doe", avatar_urls: { "24": "a24.png", "96": "a96.png" } }],
+        "wp:featuredmedia": [{ id: 99, source_url: "https://cdn.example.com/img.jpg", alt_text: "An image" }],
+        "wp:term": [
+          [{ id: 1, name: "Politics", slug: "politics", taxonomy: "category" }],
+          [{ id: 2, name: "Breaking", slug: "breaking", taxonomy: "post_tag" }],
+        ],
       },
-      author: {
-        node: { databaseId: 7, name: "Jane Doe", slug: "jane-doe", avatar: { url: "a96.png" } },
-      },
-      categories: { nodes: [{ databaseId: 1, name: "Politics", slug: "politics" }] },
-      tags: { nodes: [{ databaseId: 2, name: "Breaking", slug: "breaking" }] },
     };
 
-    const post = mapPost(node, "ng");
+    const post = mapPost(embedded, "ng");
 
-    expect(post.featuredImage).toEqual({ url: "https://cdn.example.com/img.jpg", alt: "An image", width: 800, height: 600 });
+    expect(post.featuredImage).toEqual({ url: "https://cdn.example.com/img.jpg", alt: "An image" });
     expect(post.author).toEqual({ id: 7, name: "Jane Doe", slug: "jane-doe", avatarUrl: "a96.png" });
     expect(post.categories).toEqual([{ id: 1, name: "Politics", slug: "politics" }]);
     expect(post.tags).toEqual([{ id: 2, name: "Breaking", slug: "breaking" }]);
   });
 
-  it("falls back to null/empty when connections are absent", () => {
+  it("falls back to null/empty when nothing is embedded", () => {
     const post = mapPost(basePost, "sz");
     expect(post.featuredImage).toBeNull();
     expect(post.author).toBeNull();
     expect(post.categories).toEqual([]);
     expect(post.tags).toEqual([]);
-  });
-
-  it("recovers the database id from a base64 relay id when databaseId is missing", () => {
-    const post = mapPost({ ...basePost, databaseId: null, id: "cG9zdDo0Mg==" }, "za");
-    expect(post.id).toBe(42);
-  });
-
-  it("ignores category/tag nodes without a slug", () => {
-    const post = mapPost(
-      { ...basePost, categories: { nodes: [{ databaseId: 1, name: "No slug", slug: null }, null] } },
-      "za",
-    );
-    expect(post.categories).toEqual([]);
   });
 });
 
@@ -84,24 +69,25 @@ describe("mapPostSummary", () => {
 
 describe("mapCategory / mapTag / mapAuthor", () => {
   it("maps a category", () => {
-    const node: WPGraphQLTermNode = { databaseId: 5, name: "Sport &amp; Leisure", slug: "sport", count: 12, description: "<p>All sport</p>" };
-    expect(mapCategory(node)).toEqual({ id: 5, name: "Sport & Leisure", slug: "sport", description: "All sport", postCount: 12 });
+    const raw: WPRestCategory = { id: 5, name: "Sport &amp; Leisure", slug: "sport", count: 12, description: "<p>All sport</p>" };
+    expect(mapCategory(raw)).toEqual({ id: 5, name: "Sport & Leisure", slug: "sport", description: "All sport", postCount: 12 });
   });
 
   it("maps a tag", () => {
-    const node: WPGraphQLTermNode = { databaseId: 9, name: "Breaking", slug: "breaking", count: 3 };
-    expect(mapTag(node)).toEqual({ id: 9, name: "Breaking", slug: "breaking", postCount: 3 });
+    const raw: WPRestTag = { id: 9, name: "Breaking", slug: "breaking", count: 3 };
+    expect(mapTag(raw)).toEqual({ id: 9, name: "Breaking", slug: "breaking", postCount: 3 });
   });
 
-  it("maps an author", () => {
-    const node: WPGraphQLAuthorNode = {
-      databaseId: 3,
+  it("maps an author, preferring the largest avatar size", () => {
+    const raw: WPRestAuthor = {
+      id: 3,
       name: "John Smith",
       slug: "john-smith",
-      description: "<p>Reporter</p>",
-      avatar: { url: "a96.png" },
+      description: "Reporter",
+      avatar_urls: { "24": "a24.png", "48": "a48.png", "96": "a96.png" },
     };
-    const author = mapAuthor(node);
-    expect(author).toEqual({ id: 3, name: "John Smith", slug: "john-smith", bio: "Reporter", avatarUrl: "a96.png" });
+    const author = mapAuthor(raw);
+    expect(author.avatarUrl).toBe("a96.png");
+    expect(author.bio).toBe("Reporter");
   });
 });

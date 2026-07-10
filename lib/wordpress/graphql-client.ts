@@ -96,17 +96,6 @@ function buildRequestInit(
   return init;
 }
 
-/**
- * Unwrap a {@link WordPressGraphQLResult} to its `data`, throwing the typed
- * error on any failure kind. Use this in DAL functions that want a plain
- * throwing contract (so callers' try/catch and `Promise.allSettled` handle
- * failures) rather than branching on the discriminated result themselves.
- */
-export function unwrapGraphQL<T>(result: WordPressGraphQLResult<T>): T {
-  if (result.ok) return result.data;
-  throw result.error;
-}
-
 export async function fetchWordPressGraphQL<T>(
   country: CountryCode | string,
   query: string,

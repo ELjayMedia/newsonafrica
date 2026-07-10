@@ -1,22 +1,13 @@
-/**
- * Category data access (NOA-86). WPGraphQL is the transport; results are tagged
- * for on-demand revalidation (NOA-88).
- */
 import "server-only";
 
 import { cacheTags } from "@/lib/wordpress/cache-tags";
 import type { CountryCode } from "@/lib/wordpress/countries";
-import { fetchWordPressGraphQL, unwrapGraphQL } from "@/lib/wordpress/graphql-client";
-import { CATEGORIES_QUERY, CATEGORY_BY_ID_QUERY, CATEGORY_BY_SLUG_QUERY } from "@/lib/wordpress/queries";
-import type { WPGraphQLConnection, WPGraphQLTermNode } from "@/lib/wordpress/types";
-import { mapCategory } from "@/lib/dal/mappers";
+import { fetchWordPressGraphQL } from "@/lib/wordpress/graphql-client";
 import { buildPaginatedResult, normalizePage, normalizePerPage } from "@/lib/dal/pagination";
 import type { Category, PaginatedResult } from "@/lib/dal/types";
+import { decodeHtmlEntities, stripHtml } from "@/lib/wordpress/html";
 
 const REVALIDATE_SECONDS = 300;
-
-type CategoriesResult = { categories: WPGraphQLConnection<WPGraphQLTermNode> | null };
-type CategoryResult = { category: WPGraphQLTermNode | null };
 
 export interface ListCategoriesParams {
   country: CountryCode | string;
@@ -24,52 +15,121 @@ export interface ListCategoriesParams {
   perPage?: number;
 }
 
+type GqlCategory = {
+  databaseId?: number | null;
+  name?: string | null;
+  slug?: string | null;
+  description?: string | null;
+  count?: number | null;
+};
+
+type CategoriesData = { categories?: { nodes?: GqlCategory[] | null; pageInfo?: { hasNextPage?: boolean } | null } | null };
+type CategoryData = { category?: GqlCategory | null };
+
+const CATEGORY_FIELDS = /* GraphQL */ `
+  databaseId
+  name
+  slug
+  description
+  count
+`;
+
+const CATEGORIES_QUERY = /* GraphQL */ `
+  query Categories($first: Int!) {
+    categories(first: $first, where: { orderby: NAME, order: ASC }) {
+      pageInfo {
+        hasNextPage
+      }
+      nodes {
+        ${CATEGORY_FIELDS}
+      }
+    }
+  }
+`;
+
+const CATEGORY_BY_SLUG_QUERY = /* GraphQL */ `
+  query CategoryBySlug($slug: ID!) {
+    category(id: $slug, idType: SLUG) {
+      ${CATEGORY_FIELDS}
+    }
+  }
+`;
+
+const CATEGORY_BY_ID_QUERY = /* GraphQL */ `
+  query CategoryById($id: ID!) {
+    category(id: $id, idType: DATABASE_ID) {
+      ${CATEGORY_FIELDS}
+    }
+  }
+`;
+
+function mapCategory(raw: GqlCategory): Category {
+  return {
+    id: raw.databaseId ?? 0,
+    name: decodeHtmlEntities(raw.name ?? ""),
+    slug: raw.slug ?? "",
+    description: stripHtml(raw.description ?? ""),
+    postCount: raw.count ?? 0,
+  };
+}
+
+async function graphQL<T>(country: CountryCode | string, query: string, variables: Record<string, unknown>, tags: string[], operationName: string): Promise<T> {
+  const result = await fetchWordPressGraphQL<T>(country, query, variables, {
+    tags,
+    revalidate: REVALIDATE_SECONDS,
+    operationName,
+  });
+
+  if (!result.ok) throw result.error;
+  return result.data;
+}
+
 export async function listCategories(params: ListCategoriesParams): Promise<PaginatedResult<Category>> {
   const page = normalizePage(params.page);
   const perPage = normalizePerPage(params.perPage);
-
-  const result = await fetchWordPressGraphQL<CategoriesResult>(
+  const first = page * perPage;
+  const data = await graphQL<CategoriesData>(
     params.country,
     CATEGORIES_QUERY,
-    { size: perPage, offset: (page - 1) * perPage },
-    { tags: [cacheTags.categories(params.country)], revalidate: REVALIDATE_SECONDS, operationName: "Categories" },
+    { first },
+    [cacheTags.categories(params.country)],
+    "Categories",
   );
 
-  const data = unwrapGraphQL(result);
-  const nodes = (data.categories?.nodes ?? []).filter((node): node is WPGraphQLTermNode => Boolean(node));
-  const total = data.categories?.pageInfo?.offsetPagination?.total ?? nodes.length;
+  const allItems = data.categories?.nodes ?? [];
+  const items = allItems.slice((page - 1) * perPage, page * perPage).map(mapCategory);
+  const hasNextPage = Boolean(data.categories?.pageInfo?.hasNextPage) || allItems.length > page * perPage;
+  const total = hasNextPage ? page * perPage + 1 : (page - 1) * perPage + items.length;
 
-  return buildPaginatedResult(nodes.map(mapCategory), page, perPage, { total, totalPages: 0 });
+  return buildPaginatedResult(items, page, perPage, {
+    total,
+    totalPages: hasNextPage ? page + 1 : page,
+  });
 }
 
-/** Resolve a category's WordPress term ID from its slug. */
 export async function getCategoryIdBySlug(country: CountryCode | string, slug: string): Promise<number | null> {
   const category = await getCategoryBySlug(country, slug);
   return category?.id ?? null;
 }
 
 export async function getCategoryBySlug(country: CountryCode | string, slug: string): Promise<Category | null> {
-  const result = await fetchWordPressGraphQL<CategoriesResult>(
+  const data = await graphQL<CategoryData>(
     country,
     CATEGORY_BY_SLUG_QUERY,
-    { slug: [slug] },
-    { tags: [cacheTags.category(country, slug)], revalidate: REVALIDATE_SECONDS, operationName: "CategoryBySlug" },
+    { slug },
+    [cacheTags.category(country, slug)],
+    "CategoryBySlug",
   );
-  const node = (unwrapGraphQL(result).categories?.nodes ?? []).find((n): n is WPGraphQLTermNode => Boolean(n));
-  return node ? mapCategory(node) : null;
+  return data.category ? mapCategory(data.category) : null;
 }
 
 export async function getCategoryById(country: CountryCode | string, id: number): Promise<Category | null> {
-  try {
-    const result = await fetchWordPressGraphQL<CategoryResult>(
-      country,
-      CATEGORY_BY_ID_QUERY,
-      { id: String(id) },
-      { tags: [cacheTags.categories(country)], revalidate: REVALIDATE_SECONDS, operationName: "CategoryById" },
-    );
-    const node = unwrapGraphQL(result).category;
-    return node ? mapCategory(node) : null;
-  } catch {
-    return null;
-  }
+  const data = await graphQL<CategoryData>(
+    country,
+    CATEGORY_BY_ID_QUERY,
+    { id: String(id) },
+    [cacheTags.categories(country)],
+    "CategoryById",
+  );
+  return data.category ? mapCategory(data.category) : null;
 }

@@ -69,7 +69,7 @@ export async function postCommentAction(_prev: AuthFormState, formData: FormData
 
   const supabase = await createClient();
   const { error } = await supabase.from("comments").insert({
-    country,
+    edition_code: country,
     wp_post_id: wpPostId,
     user_id: user.id,
     parent_id: parentId,

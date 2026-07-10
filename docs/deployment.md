@@ -74,6 +74,16 @@ Migrations live in `supabase/migrations/*.sql` (content index + FTS search,
 profiles + avatar storage, bookmarks, comments, admin flag). Apply them in
 filename order — they are timestamped and idempotent-ordered.
 
+> **Schema note:** the production Supabase schema has since diverged from these
+> historical migration files — editions are keyed by `edition_code` (not
+> `country`), `content_index` has no `status`/`view_count`, `profiles` uses
+> `full_name`/`country`, `bookmarks`/`comments` use `edition_code` with richer
+> columns, and the search/most-read RPCs return `edition_code`. The application
+> layer (`lib/supabase/types.ts` and the DAL) is aligned to the **live** schema,
+> which is the current source of truth. Treat the checked-in migrations as
+> historical; a fresh project should be reconciled against live (e.g.
+> `supabase db pull` / generated types) before relying on `db push`.
+
 Using the Supabase CLI:
 
 ```bash
@@ -120,7 +130,28 @@ to `https://<your-domain>/api/webhooks/wordpress`, authenticated either way:
   PLAYWRIGHT_SKIP_WEB_SERVER=1 PLAYWRIGHT_BASE_URL=https://<preview-url> pnpm test:e2e
   ```
 
-## 7. Deferred: Paystack & subscriptions
+## 7. Known build warnings (accepted)
+
+Two non-blocking warnings appear in the Vercel / `next build` logs. Both are
+known and accepted (NOA-120) — they do not fail the build or affect runtime:
+
+1. **Edge Runtime — Supabase SSR in middleware.** `middleware.ts` uses
+   `@supabase/ssr`'s `createServerClient` to refresh auth tokens on every
+   navigation (NOA-97), and the build flags that a Node.js API is referenced
+   from the Edge runtime. Those API references live in library code paths the
+   middleware never executes on Edge — the client only reads/writes cookies and
+   calls `fetch` for `auth.getUser()` — so the warning is cosmetic. The
+   middleware stays on the Edge runtime deliberately (session refresh must run
+   at the edge on every request); we do not adopt the experimental Node.js
+   middleware runtime solely to silence a benign warning.
+2. **`next.config.ts` TypeScript bootstrap.** Vercel installs TypeScript to load
+   the TS-authored `next.config.ts`, emitting a one-line bootstrap note.
+   Migrating to `next.config.mjs` was tried (PR #1475) and broke `@/` path-alias
+   resolution under the production install mode, so it was reverted. The `.ts`
+   config is kept; the note is accepted until alias resolution can first be
+   proven in a Vercel preview.
+
+## 8. Deferred: Paystack & subscriptions
 
 Payments/subscriptions are not part of this phase. The env vars are reserved in
 `.env.example`, and the CSP/Permissions-Policy entries they need were deliberately

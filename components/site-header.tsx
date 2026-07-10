@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { BrandMark } from "@/components/brand-mark";
 import { CountrySwitcher } from "@/components/country-switcher";
-import { HeaderSearch } from "@/components/search-box";
+import { HeaderSearch, SearchBox } from "@/components/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DEFAULT_COUNTRY, isValidCountry } from "@/lib/countries";
 import { cn } from "@/lib/utils";
@@ -116,22 +116,34 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
             <EditionDate />
           </div>
           <ThemeToggle />
+          {/* Mobile utilities menu (search + edition). Section nav is the
+              always-visible scrolling strip below, so this holds utilities
+              only. Hidden from md up, where they sit inline in the masthead. */}
           <button
             type="button"
-            aria-label="Toggle navigation menu"
+            aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-noa-hairline text-noa-ink lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-noa-hairline text-noa-ink md:hidden"
           >
             <span aria-hidden>{open ? "✕" : "☰"}</span>
           </button>
         </div>
       </div>
 
-      {/* Section nav (desktop) */}
+      {/* Mobile utilities disclosure (search + edition switcher) */}
+      <div className={cn("border-t border-noa-hairline md:hidden", open ? "block" : "hidden")}>
+        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
+          <SearchBox onNavigate={() => setOpen(false)} />
+          <CountrySwitcher />
+        </div>
+      </div>
+
+      {/* Section nav — a scrolling tab strip on mobile, a full row on desktop.
+          One of the two is visible at any width (they split at lg). */}
       <nav
         aria-label="Primary"
-        className="hidden items-center gap-6 overflow-x-auto border-t border-noa-hairline px-4 sm:px-6 lg:flex"
+        className="flex items-center gap-6 overflow-x-auto border-t border-noa-hairline px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-6"
       >
         {navLinks.map((link) => {
           const active = isActive(link.href);
@@ -151,29 +163,6 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
           );
         })}
       </nav>
-
-      {/* Mobile disclosure */}
-      <div className={cn("border-t border-noa-hairline lg:hidden", open ? "block" : "hidden")}>
-        <div className="flex flex-col gap-1 px-4 py-2 sm:px-6">
-          <div className="py-2 md:hidden">
-            <HeaderSearch />
-          </div>
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setOpen(false)}
-              className={cn(
-                "noa-eyebrow py-2.5 tracking-[0.08em]",
-                isActive(link.href) ? "text-noa-green" : "text-noa-ink",
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-          <CountrySwitcher className="mt-1" />
-        </div>
-      </div>
     </header>
   );
 }

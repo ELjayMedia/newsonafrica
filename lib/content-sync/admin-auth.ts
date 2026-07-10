@@ -32,6 +32,8 @@ function safeEqual(a: string, b: string): boolean {
 /** Returns true when the request presents the configured content-sync secret. */
 export function isAuthorizedContentSyncRequest(request: NextRequest): boolean {
   const provided = readProvidedSecret(request);
-  if (!provided) return false;
-  return safeEqual(provided, serverEnv.CONTENT_SYNC_SECRET);
+  const expected = serverEnv.CONTENT_SYNC_SECRET?.trim();
+
+  if (!provided || !expected) return false;
+  return safeEqual(provided, expected);
 }

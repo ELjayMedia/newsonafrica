@@ -19,7 +19,7 @@ function heroFlag(post: PostSummary): "LIVE" | "BREAKING" | null {
 /**
  * Lead hero (design system homepage mockup, Bold Punch treatment): a large
  * image with an optional red LIVE/BREAKING flag beside a green category
- * eyebrow, an oversized uppercase Archivo Black headline, a bold standfirst and
+ * eyebrow, a compact uppercase Archivo Black headline, a bold standfirst and
  * a byline/timestamp.
  */
 export function HeroLead({ post }: { post: PostSummary }) {
@@ -68,7 +68,7 @@ export function HeroLead({ post }: { post: PostSummary }) {
           </Link>
         ) : null}
 
-        <h1 className="noa-hed text-[clamp(2rem,4vw,3.25rem)] text-noa-ink">
+        <h1 className="noa-hed text-[clamp(1.125rem,1.5vw,1.625rem)] text-noa-ink">
           <Link href={href} className="transition-colors hover:text-noa-green">
             {post.title}
           </Link>

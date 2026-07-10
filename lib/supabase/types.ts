@@ -11,13 +11,15 @@
  * every `.from(...)` call to `never`.
  */
 
+// Matches the live `content_index` schema (NOA-87): the edition is keyed by
+// `edition_code` (not `country`), and the live table has no `status`/`view_count`
+// columns — only published content is indexed, and view counts aren't tracked here.
 export type ContentIndexRow = {
   id: string;
   wp_post_id: number;
-  country: string;
+  edition_code: string;
   slug: string;
   url_path: string;
-  status: string;
   title: string;
   excerpt: string | null;
   content_plain: string | null;
@@ -27,25 +29,24 @@ export type ContentIndexRow = {
   featured_image_url: string | null;
   published_at: string;
   updated_at: string;
-  view_count: number;
   search_vector: unknown;
 };
 
 export type ContentIndexInsert = Omit<
   ContentIndexRow,
-  "id" | "updated_at" | "view_count" | "search_vector" | "status" | "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
+  "id" | "updated_at" | "search_vector" | "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
 > &
   Partial<
     Pick<
       ContentIndexRow,
-      "status" | "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url" | "view_count"
+      "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
     >
   >;
 
 export type ContentSyncStatus = "idle" | "running" | "completed" | "failed";
 
 export type ContentSyncCursorRow = {
-  country: string;
+  edition_code: string;
   last_synced_at: string;
   last_wp_post_id: number | null;
   sync_status: ContentSyncStatus;
@@ -53,9 +54,12 @@ export type ContentSyncCursorRow = {
   updated_at: string;
 };
 
+// Matches the live `search_content` RPC return: keyed by `edition_code`, with a
+// windowed `total_count` (same on every row) for exact pagination — restored by
+// migration 20260710000000_search_content_total_count.sql.
 export type SearchContentRow = {
   id: string;
-  country: string;
+  edition_code: string;
   wp_post_id: number;
   slug: string;
   title: string;
@@ -67,82 +71,131 @@ export type SearchContentRow = {
   url_path: string;
   featured_image_url: string | null;
   rank: number;
-  /** Window count of ALL rows matching the query/filters (same on every row) — added by 20260702150000_search_pagination.sql for pagination. */
+  /** Count of ALL rows matching the query/filters (same on every row). */
   total_count: number;
 };
 
 export type SearchSuggestionRow = {
   title: string;
-  country: string;
+  edition_code: string;
   slug: string;
   url_path: string;
 };
 
-/** Reader profile row (NOA-99, `supabase/migrations/20260703100000_profiles.sql`). */
+// Reader profile row — matches the live `profiles` schema. The reader's name
+// is stored in `full_name` (not `display_name`) and their edition preference in
+// `country` (not `preferred_country`); several richer profile fields exist too.
 export type ProfileRow = {
   id: string;
-  display_name: string | null;
+  full_name: string | null;
   avatar_url: string | null;
-  preferred_country: string | null;
+  username: string | null;
+  handle: string | null;
+  email: string | null;
+  website: string | null;
+  bio: string | null;
+  country: string | null;
+  location: string | null;
+  interests: string[] | null;
+  preferences: Record<string, unknown> | null;
   /** Moderation gate (NOA-102) — set via SQL/service role only. */
-  is_admin: boolean;
+  is_admin: boolean | null;
+  onboarded: boolean | null;
+  role: string | null;
   created_at: string;
   updated_at: string;
 };
 
 export type ProfileInsert = Pick<ProfileRow, "id"> &
-  Partial<Pick<ProfileRow, "display_name" | "avatar_url" | "preferred_country">>;
+  Partial<Pick<ProfileRow, "full_name" | "avatar_url" | "country">>;
 
 export type ProfileUpdate = Partial<
-  Pick<ProfileRow, "display_name" | "avatar_url" | "preferred_country">
+  Pick<ProfileRow, "full_name" | "avatar_url" | "country">
 >;
 
-/** Saved article (NOA-100, `supabase/migrations/20260703110000_bookmarks.sql`). */
+/** Reading progress on a saved article (live `read_status` enum). */
+export type ReadStatus = "unread" | "in_progress" | "read";
+
+// Saved article — matches the live `bookmarks` schema: keyed by
+// (user_id, wp_post_id, edition_code), with the article metadata snapshotted
+// onto the row (title/slug/excerpt/featured_image/category/tags) plus reading
+// state (read_state/read_at/note/collection_id).
 export type BookmarkRow = {
   id: string;
   user_id: string;
-  country: string;
   wp_post_id: number;
-  slug: string;
-  created_at: string;
-};
-
-export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "country" | "wp_post_id" | "slug"> &
-  Partial<Pick<BookmarkRow, "id" | "created_at">>;
-
-/** Moderation states (NOA-101, `supabase/migrations/20260703112000_comments.sql`). */
-export type CommentStatus = "pending" | "approved" | "hidden" | "deleted";
-
-/** Article comment (NOA-101). `root_id` is set by a DB trigger on insert. */
-export type CommentRow = {
-  id: string;
-  country: string;
-  wp_post_id: number;
-  user_id: string;
-  parent_id: string | null;
-  root_id: string | null;
-  body: string;
-  status: CommentStatus;
+  edition_code: string;
+  collection_id: string | null;
+  read_state: ReadStatus;
+  read_at: string | null;
+  note: string | null;
   created_at: string;
   updated_at: string;
-  edited_at: string | null;
+  title: string | null;
+  slug: string | null;
+  excerpt: string | null;
+  featured_image: Record<string, unknown> | null;
+  category: string | null;
+  tags: string[] | null;
 };
 
-export type CommentInsert = Pick<CommentRow, "country" | "wp_post_id" | "user_id" | "body"> &
+export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "wp_post_id" | "edition_code"> &
+  Partial<
+    Pick<
+      BookmarkRow,
+      "id" | "slug" | "title" | "excerpt" | "category" | "tags" | "note" | "collection_id" | "read_state" | "created_at"
+    >
+  >;
+
+/** Moderation states — the live `comment_status` enum. */
+export type CommentStatus =
+  | "active"
+  | "flagged"
+  | "hidden"
+  | "deleted"
+  | "pending"
+  | "approved"
+  | "spam";
+
+// Article comment — matches the live `comments` schema: keyed by edition_code,
+// threaded purely by parent_id (no `root_id` column), with moderation/report
+// metadata and engagement counters on the row.
+export type CommentRow = {
+  id: string;
+  wp_post_id: number;
+  edition_code: string;
+  user_id: string;
+  parent_id: string | null;
+  body: string;
+  status: CommentStatus;
+  reactions_count: number;
+  replies_count: number;
+  edited_at: string | null;
+  created_at: string;
+  updated_at: string;
+  reported_by: string | null;
+  report_reason: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  is_rich_text: boolean | null;
+};
+
+export type CommentInsert = Pick<CommentRow, "edition_code" | "wp_post_id" | "user_id" | "body"> &
   Partial<Pick<CommentRow, "id" | "parent_id" | "status">>;
 
 export type CommentUpdate = Partial<Pick<CommentRow, "body" | "status" | "edited_at">>;
 
+// Matches the live `most_read_content` RPC return: keyed by `edition_code`,
+// ordered internally by the RPC (returns `rank`, not a `view_count` column).
 export type MostReadRow = {
   id: string;
-  country: string;
+  edition_code: string;
   wp_post_id: number;
   slug: string;
   title: string;
   excerpt: string | null;
   url_path: string;
   featured_image_url: string | null;
-  view_count: number;
   published_at: string;
 };
 
@@ -157,7 +210,7 @@ export type Database = {
       };
       content_sync_cursor: {
         Row: ContentSyncCursorRow;
-        Insert: Partial<ContentSyncCursorRow> & Pick<ContentSyncCursorRow, "country">;
+        Insert: Partial<ContentSyncCursorRow> & Pick<ContentSyncCursorRow, "edition_code">;
         Update: Partial<ContentSyncCursorRow>;
         Relationships: [];
       };

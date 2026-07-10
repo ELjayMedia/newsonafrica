@@ -1,8 +1,8 @@
 /**
- * Auth server actions (NOA-97): email+password sign up / sign in, Google
- * OAuth hand-off, and sign out. All input is zod-validated via
- * `lib/auth/validation.ts` and every action returns an `AuthFormState`
- * suitable for React 19 `useActionState`.
+ * Auth server actions (NOA-97/98/11): email+password sign up / sign in,
+ * Google OAuth hand-off, password reset, and Supabase password-policy error
+ * copy. All input is zod-validated via `lib/auth/validation.ts` and every
+ * action returns an `AuthFormState` suitable for React 19 `useActionState`.
  */
 "use server";
 
@@ -18,6 +18,44 @@ import {
   safeNextPath,
   type AuthFormState,
 } from "@/lib/auth/validation";
+
+type SupabaseAuthErrorLike = {
+  code?: string;
+  message?: string;
+};
+
+const PASSWORD_POLICY_ERROR_MESSAGE =
+  "That password is too weak or has appeared in a known data breach. Choose a longer, unique password that you don’t use elsewhere.";
+
+const SIGN_IN_PASSWORD_POLICY_ERROR_MESSAGE =
+  "This password can’t be used anymore. Reset your password with a stronger, unique password.";
+
+function passwordPolicyErrorMessage(
+  error: SupabaseAuthErrorLike | null | undefined,
+  context: "sign-in" | "password-change",
+): string | null {
+  if (!error) return null;
+
+  const code = error.code?.toLowerCase() ?? "";
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (
+    code === "weak_password" ||
+    code === "weakpassworderror" ||
+    message.includes("weak password") ||
+    message.includes("password is too weak") ||
+    message.includes("pwned") ||
+    message.includes("leaked") ||
+    message.includes("breach") ||
+    message.includes("compromised")
+  ) {
+    return context === "sign-in"
+      ? SIGN_IN_PASSWORD_POLICY_ERROR_MESSAGE
+      : PASSWORD_POLICY_ERROR_MESSAGE;
+  }
+
+  return null;
+}
 
 function siteUrl(): string {
   return publicEnv.SITE_URL.replace(/\/$/, "");
@@ -42,13 +80,15 @@ export async function signInAction(_prev: AuthFormState, formData: FormData): Pr
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
-    // Keep the message generic — don't reveal whether the email exists.
+    const passwordPolicyMessage = passwordPolicyErrorMessage(error, "sign-in");
+
+    // Keep the default message generic — don't reveal whether the email exists.
     return {
       status: "error",
       message:
         error.code === "email_not_confirmed"
           ? "Please confirm your email address before signing in. Check your inbox for the confirmation link."
-          : "Invalid email or password.",
+          : (passwordPolicyMessage ?? "Invalid email or password."),
     };
   }
 
@@ -86,14 +126,16 @@ export async function signUpAction(_prev: AuthFormState, formData: FormData): Pr
   });
 
   if (error) {
+    const passwordPolicyMessage = passwordPolicyErrorMessage(error, "password-change");
+
     if (error.code === "user_already_exists" || error.code === "email_exists") {
       return {
         status: "error",
         message: "An account with this email already exists. Try signing in instead.",
       };
     }
-    if (error.code === "weak_password") {
-      return { status: "error", message: "That password is too weak — try a longer one." };
+    if (passwordPolicyMessage) {
+      return { status: "error", message: passwordPolicyMessage };
     }
     return { status: "error", message: "Could not create your account. Please try again." };
   }
@@ -205,14 +247,16 @@ export async function resetPasswordAction(
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
 
   if (error) {
+    const passwordPolicyMessage = passwordPolicyErrorMessage(error, "password-change");
+
     if (error.code === "same_password") {
       return {
         status: "error",
         message: "Your new password must be different from the current one.",
       };
     }
-    if (error.code === "weak_password") {
-      return { status: "error", message: "That password is too weak — try a longer one." };
+    if (passwordPolicyMessage) {
+      return { status: "error", message: passwordPolicyMessage };
     }
     return { status: "error", message: "Could not update your password. Please try again." };
   }

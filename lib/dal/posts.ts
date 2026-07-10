@@ -1,154 +1,262 @@
-/**
- * Post data access (NOA-86): pagination + country/category/tag/author
- * filtering over WPGraphQL. Listing uses the offset-pagination plugin so the
- * DAL keeps page-number semantics with real totals; the summary query embeds
- * featured image, terms and author so `mapPostSummary` needs no follow-up reads.
- */
 import "server-only";
 
 import { cacheTags } from "@/lib/wordpress/cache-tags";
 import { SUPPORTED_COUNTRY_CODES } from "@/lib/countries";
 import type { CountryCode } from "@/lib/wordpress/countries";
-import { fetchWordPressGraphQL, unwrapGraphQL } from "@/lib/wordpress/graphql-client";
-import {
-  POSTS_LIST_QUERY,
-  POSTS_WITH_CONTENT_QUERY,
-  POST_BY_DATABASE_ID_QUERY,
-  POST_BY_SLUG_QUERY,
-  RELATED_BY_CATEGORIES_QUERY,
-  RELATED_BY_TAGS_QUERY,
-} from "@/lib/wordpress/queries";
-import type { WPGraphQLConnection, WPGraphQLPostNode } from "@/lib/wordpress/types";
-import { mapPost, mapPostSummary } from "@/lib/dal/mappers";
+import { fetchWordPressGraphQL } from "@/lib/wordpress/graphql-client";
 import { buildPaginatedResult, normalizePage, normalizePerPage } from "@/lib/dal/pagination";
-import type { PaginatedResult, Post, PostListParams, PostSummary } from "@/lib/dal/types";
+import type { AuthorSummary, CategorySummary, PaginatedResult, Post, PostListParams, PostSummary, TagSummary } from "@/lib/dal/types";
+import { decodeHtmlEntities, stripHtml } from "@/lib/wordpress/html";
 
 const REVALIDATE_SECONDS = 60;
 
-type PostsConnectionResult = { posts: WPGraphQLConnection<WPGraphQLPostNode> | null };
-type PostResult = { post: WPGraphQLPostNode | null };
+const POST_FIELDS = /* GraphQL */ `
+  databaseId
+  slug
+  date
+  modified
+  status
+  title(format: RENDERED)
+  excerpt(format: RENDERED)
+  content(format: RENDERED)
+  featuredImage {
+    node {
+      sourceUrl
+      altText
+      mediaDetails {
+        width
+        height
+      }
+    }
+  }
+  categories {
+    nodes {
+      databaseId
+      name
+      slug
+    }
+  }
+  tags {
+    nodes {
+      databaseId
+      name
+      slug
+    }
+  }
+  author {
+    node {
+      databaseId
+      name
+      slug
+      avatar {
+        url
+      }
+    }
+  }
+`;
 
-function nonNullNodes(connection: WPGraphQLConnection<WPGraphQLPostNode> | null | undefined): WPGraphQLPostNode[] {
-  return (connection?.nodes ?? []).filter((node): node is WPGraphQLPostNode => Boolean(node));
+const POSTS_LIST_QUERY = /* GraphQL */ `
+  query PostsList(
+    $first: Int!
+    $categoryName: String
+    $tagSlugIn: [String]
+    $authorName: String
+    $search: String
+  ) {
+    posts(
+      first: $first
+      where: {
+        status: PUBLISH
+        orderby: { field: DATE, order: DESC }
+        categoryName: $categoryName
+        tagSlugIn: $tagSlugIn
+        authorName: $authorName
+        search: $search
+      }
+    ) {
+      pageInfo {
+        hasNextPage
+      }
+      nodes {
+        ${POST_FIELDS}
+      }
+    }
+  }
+`;
+
+const POST_BY_SLUG_QUERY = /* GraphQL */ `
+  query PostBySlug($slug: ID!) {
+    post(id: $slug, idType: SLUG) {
+      ${POST_FIELDS}
+    }
+  }
+`;
+
+const POST_BY_ID_QUERY = /* GraphQL */ `
+  query PostById($id: ID!) {
+    post(id: $id, idType: DATABASE_ID) {
+      ${POST_FIELDS}
+    }
+  }
+`;
+
+type GqlTerm = { databaseId?: number | null; name?: string | null; slug?: string | null };
+type GqlAuthor = { databaseId?: number | null; name?: string | null; slug?: string | null; avatar?: { url?: string | null } | null };
+type GqlPost = {
+  databaseId?: number | null;
+  slug?: string | null;
+  date?: string | null;
+  modified?: string | null;
+  status?: string | null;
+  title?: string | null;
+  excerpt?: string | null;
+  content?: string | null;
+  featuredImage?: { node?: { sourceUrl?: string | null; altText?: string | null; mediaDetails?: { width?: number | null; height?: number | null } | null } | null } | null;
+  categories?: { nodes?: GqlTerm[] | null } | null;
+  tags?: { nodes?: GqlTerm[] | null } | null;
+  author?: { node?: GqlAuthor | null } | null;
+};
+
+type PostsListData = { posts?: { pageInfo?: { hasNextPage?: boolean }; nodes?: GqlPost[] | null } | null };
+type PostData = { post?: GqlPost | null };
+
+function mapTerm(term: GqlTerm): CategorySummary | TagSummary {
+  return {
+    id: term.databaseId ?? 0,
+    name: decodeHtmlEntities(term.name ?? ""),
+    slug: term.slug ?? "",
+  };
 }
 
-/**
- * List posts for a country, optionally filtered by category/tag/author slug and
- * paginated. Slugs are passed straight to WPGraphQL's `where` filters
- * (`categoryName`, `tagSlugIn`, `authorName`), so an unknown slug simply yields
- * an empty page — no separate term/user lookup round-trip is needed.
- */
+function mapAuthor(author?: GqlAuthor | null): AuthorSummary | null {
+  if (!author) return null;
+  return {
+    id: author.databaseId ?? 0,
+    name: decodeHtmlEntities(author.name ?? ""),
+    slug: author.slug ?? "",
+    avatarUrl: author.avatar?.url ?? undefined,
+  };
+}
+
+function mapGraphQLPost(raw: GqlPost, country: CountryCode | string): Post {
+  const image = raw.featuredImage?.node;
+  return {
+    id: raw.databaseId ?? 0,
+    slug: raw.slug ?? "",
+    country: country as CountryCode,
+    title: decodeHtmlEntities(raw.title ?? ""),
+    excerpt: stripHtml(raw.excerpt ?? ""),
+    content: raw.content ?? "",
+    status: raw.status ?? "publish",
+    publishedAt: raw.date ?? "",
+    updatedAt: raw.modified ?? raw.date ?? "",
+    featuredImage: image?.sourceUrl
+      ? {
+          url: image.sourceUrl,
+          alt: image.altText ?? "",
+          width: image.mediaDetails?.width ?? undefined,
+          height: image.mediaDetails?.height ?? undefined,
+        }
+      : null,
+    categories: (raw.categories?.nodes ?? []).map(mapTerm),
+    tags: (raw.tags?.nodes ?? []).map(mapTerm),
+    author: mapAuthor(raw.author?.node),
+  };
+}
+
+function mapGraphQLPostSummary(raw: GqlPost, country: CountryCode | string): PostSummary {
+  // Drop the heavy `content` field; PostSummary is `Omit<Post, "content">`.
+  const { content: _content, ...summary } = mapGraphQLPost(raw, country);
+  void _content;
+  return summary;
+}
+
+async function graphQL<T>(country: CountryCode | string, query: string, variables: Record<string, unknown>, tags: string[], operationName: string): Promise<T> {
+  const result = await fetchWordPressGraphQL<T>(country, query, variables, {
+    tags,
+    revalidate: REVALIDATE_SECONDS,
+    operationName,
+  });
+
+  if (!result.ok) throw result.error;
+  return result.data;
+}
+
 export async function listPosts(params: PostListParams): Promise<PaginatedResult<PostSummary>> {
   const page = normalizePage(params.page);
   const perPage = normalizePerPage(params.perPage);
-  const { country } = params;
+  const first = page * perPage;
+  const tags = [cacheTags.posts(params.country)];
+  if (params.categorySlug) tags.push(cacheTags.category(params.country, params.categorySlug));
+  if (params.tagSlug) tags.push(cacheTags.tag(params.country, params.tagSlug));
+  if (params.authorSlug) tags.push(cacheTags.author(params.country, params.authorSlug));
 
-  const tags = [cacheTags.posts(country)];
-  if (params.categorySlug) tags.push(cacheTags.category(country, params.categorySlug));
-  if (params.tagSlug) tags.push(cacheTags.tag(country, params.tagSlug));
-  if (params.authorSlug) tags.push(cacheTags.author(country, params.authorSlug));
-
-  const result = await fetchWordPressGraphQL<PostsConnectionResult>(
-    country,
+  const data = await graphQL<PostsListData>(
+    params.country,
     POSTS_LIST_QUERY,
     {
-      size: perPage,
-      offset: (page - 1) * perPage,
+      first,
       categoryName: params.categorySlug ?? null,
-      tagSlugs: params.tagSlug ? [params.tagSlug] : null,
+      tagSlugIn: params.tagSlug ? [params.tagSlug] : null,
       authorName: params.authorSlug ?? null,
       search: params.search ?? null,
     },
-    { tags, revalidate: REVALIDATE_SECONDS, operationName: "PostsList" },
+    tags,
+    "PostsList",
   );
 
-  const data = unwrapGraphQL(result);
-  const nodes = nonNullNodes(data.posts);
-  const total = data.posts?.pageInfo?.offsetPagination?.total ?? nodes.length;
+  const allItems = data.posts?.nodes ?? [];
+  const items = allItems.slice((page - 1) * perPage, page * perPage).map((raw) => mapGraphQLPostSummary(raw, params.country));
+  const hasNextPage = Boolean(data.posts?.pageInfo?.hasNextPage) || allItems.length > page * perPage;
+  const total = hasNextPage ? page * perPage + 1 : (page - 1) * perPage + items.length;
 
-  return buildPaginatedResult(
-    nodes.map((node) => mapPostSummary(node, country)),
-    page,
-    perPage,
-    { total, totalPages: 0 },
-  );
+  return buildPaginatedResult(items, page, perPage, {
+    total,
+    totalPages: hasNextPage ? page + 1 : page,
+  });
 }
 
-/**
- * Related posts for an article, matched by shared taxonomy (NOA port of the
- * legacy relevance logic): categories first, then supplemented by shared tags,
- * de-duplicated and excluding the article itself. Falls back to an empty list
- * when the post has no terms.
- */
 export async function getRelatedPosts(
   country: CountryCode | string,
   post: Pick<Post, "id" | "categories" | "tags">,
   limit = 3,
 ): Promise<PostSummary[]> {
-  const categoryIds = post.categories.map((category) => category.id).filter((id) => Number.isFinite(id) && id > 0);
-  const tagSlugs = post.tags.map((tag) => tag.slug).filter((slug): slug is string => Boolean(slug));
+  const categorySlug = post.categories[0]?.slug;
+  const tagSlug = post.tags[0]?.slug;
+  if (!categorySlug && !tagSlug) return [];
 
-  if (categoryIds.length === 0 && tagSlugs.length === 0) return [];
+  const data = await graphQL<PostsListData>(
+    country,
+    POSTS_LIST_QUERY,
+    {
+      first: limit + 4,
+      categoryName: categorySlug ?? null,
+      tagSlugIn: tagSlug ? [tagSlug] : null,
+      authorName: null,
+      search: null,
+    },
+    [cacheTags.posts(country)],
+    "PostsList",
+  );
 
-  const seen = new Set<number>([post.id]);
-  const related: PostSummary[] = [];
-
-  const collect = async (nodes: WPGraphQLPostNode[]) => {
-    for (const node of nodes) {
-      const summary = mapPostSummary(node, country);
-      if (seen.has(summary.id)) continue;
-      seen.add(summary.id);
-      related.push(summary);
-      if (related.length >= limit) break;
-    }
-  };
-
-  if (categoryIds.length > 0) {
-    const result = await fetchWordPressGraphQL<PostsConnectionResult>(
-      country,
-      RELATED_BY_CATEGORIES_QUERY,
-      { catIds: categoryIds, exclude: post.id, first: limit + 4 },
-      { tags: [cacheTags.posts(country)], revalidate: REVALIDATE_SECONDS, operationName: "RelatedByCategories" },
-    );
-    await collect(nonNullNodes(unwrapGraphQL(result).posts));
-  }
-
-  if (related.length < limit && tagSlugs.length > 0) {
-    const result = await fetchWordPressGraphQL<PostsConnectionResult>(
-      country,
-      RELATED_BY_TAGS_QUERY,
-      { tagSlugs, exclude: post.id, first: limit + 4 },
-      { tags: [cacheTags.posts(country)], revalidate: REVALIDATE_SECONDS, operationName: "RelatedByTags" },
-    );
-    await collect(nonNullNodes(unwrapGraphQL(result).posts));
-  }
-
-  return related.slice(0, limit);
+  return (data.posts?.nodes ?? [])
+    .map((raw) => mapGraphQLPostSummary(raw, country))
+    .filter((summary) => summary.id !== post.id)
+    .slice(0, limit);
 }
 
 export async function getPostBySlug(country: CountryCode | string, slug: string): Promise<Post | null> {
-  const result = await fetchWordPressGraphQL<PostResult>(
+  const data = await graphQL<PostData>(
     country,
     POST_BY_SLUG_QUERY,
     { slug },
-    {
-      tags: [cacheTags.postSlug(country, slug), cacheTags.posts(country)],
-      revalidate: REVALIDATE_SECONDS,
-      operationName: "PostBySlug",
-    },
+    [cacheTags.postSlug(country, slug), cacheTags.posts(country)],
+    "PostBySlug",
   );
 
-  const node = unwrapGraphQL(result).post;
-  return node ? mapPost(node, country) : null;
+  return data.post ? mapGraphQLPost(data.post, country) : null;
 }
 
-/**
- * Resolve an article by slug, falling back across editions (NOA port of the
- * legacy cross-country fallback). Tries the requested edition first; on a miss,
- * looks the slug up in the other editions in parallel and returns the first
- * match with the edition it was found in. Returns null only when no edition has
- * the slug.
- */
 export async function getPostBySlugWithFallback(
   country: CountryCode | string,
   slug: string,
@@ -166,46 +274,46 @@ export async function getPostBySlugWithFallback(
 }
 
 export async function getPostById(country: CountryCode | string, id: number): Promise<Post | null> {
-  const result = await fetchWordPressGraphQL<PostResult>(
+  const data = await graphQL<PostData>(
     country,
-    POST_BY_DATABASE_ID_QUERY,
+    POST_BY_ID_QUERY,
     { id: String(id) },
-    { tags: [cacheTags.post(country, id), cacheTags.posts(country)], revalidate: REVALIDATE_SECONDS, operationName: "PostByDatabaseId" },
+    [cacheTags.post(country, id), cacheTags.posts(country)],
+    "PostById",
   );
 
-  const node = unwrapGraphQL(result).post;
-  return node ? mapPost(node, country) : null;
+  return data.post ? mapGraphQLPost(data.post, country) : null;
 }
 
 /**
- * Page through a country's posts with body content, for the content-sync
- * backfill/index (NOA-87). Returns fully-mapped domain `Post`s plus pagination
- * so the sync routine can decide whether more pages remain.
+ * Page through a country's posts (with body content) for the content-sync
+ * backfill/index (NOA-87). Uses the same WPGraphQL read path as the site —
+ * REST does not serve content on this install — so the search index is
+ * populated from the source the app actually reads. Fetched uncached since
+ * backfill always wants the freshest content. Returns fully-mapped domain
+ * `Post`s plus pagination so the sync routine knows when to stop.
  */
 export async function listPostsForSync(
   country: CountryCode | string,
   { page = 1, perPage = 50 }: { page?: number; perPage?: number } = {},
-): Promise<{ posts: Post[]; total: number; totalPages: number; hasNextPage: boolean }> {
+): Promise<{ posts: Post[]; total: number; hasNextPage: boolean }> {
   const normalizedPage = normalizePage(page);
   const normalizedPerPage = normalizePerPage(perPage);
+  const first = normalizedPage * normalizedPerPage;
 
-  const result = await fetchWordPressGraphQL<PostsConnectionResult>(
+  const result = await fetchWordPressGraphQL<PostsListData>(
     country,
-    POSTS_WITH_CONTENT_QUERY,
-    { size: normalizedPerPage, offset: (normalizedPage - 1) * normalizedPerPage },
-    // Backfill/sync always wants the freshest content — never served from cache.
-    { revalidate: 0, operationName: "PostsWithContent" },
+    POSTS_LIST_QUERY,
+    { first, categoryName: null, tagSlugIn: null, authorName: null, search: null },
+    { tags: [cacheTags.posts(country)], revalidate: 0, operationName: "PostsList" },
   );
+  if (!result.ok) throw result.error;
 
-  const data = unwrapGraphQL(result);
-  const nodes = nonNullNodes(data.posts);
-  const total = data.posts?.pageInfo?.offsetPagination?.total ?? nodes.length;
-  const totalPages = total > 0 ? Math.ceil(total / normalizedPerPage) : nodes.length > 0 ? 1 : 0;
+  const allItems = result.data.posts?.nodes ?? [];
+  const windowItems = allItems.slice((normalizedPage - 1) * normalizedPerPage, first);
+  const posts = windowItems.map((raw) => mapGraphQLPost(raw, country));
+  const hasNextPage = Boolean(result.data.posts?.pageInfo?.hasNextPage) || allItems.length > first;
+  const total = hasNextPage ? first + 1 : (normalizedPage - 1) * normalizedPerPage + posts.length;
 
-  return {
-    posts: nodes.map((node) => mapPost(node, country)),
-    total,
-    totalPages,
-    hasNextPage: normalizedPage < totalPages,
-  };
+  return { posts, total, hasNextPage };
 }

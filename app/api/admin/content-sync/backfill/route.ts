@@ -51,14 +51,14 @@ export async function POST(request: NextRequest) {
   const perPage = normalizePositiveInt(body.perPage, 50, MAX_PER_PAGE);
 
   const supabase = createAdminClient();
-  await supabase.from("content_sync_cursor").upsert({ country, sync_status: "running", updated_at: new Date().toISOString() });
+  await supabase.from("content_sync_cursor").upsert({ edition_code: country, sync_status: "running", updated_at: new Date().toISOString() });
 
   try {
     const result = await syncPostsPage(country, { page, perPage });
     const status = result.errors.length > 0 ? "failed" : "completed";
 
     await supabase.from("content_sync_cursor").upsert({
-      country,
+      edition_code: country,
       sync_status: status,
       error_message: result.errors.length > 0 ? `${result.errors.length} post(s) failed during sync` : null,
       updated_at: new Date().toISOString(),
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Unknown content sync error";
     await supabase
       .from("content_sync_cursor")
-      .upsert({ country, sync_status: "failed", error_message: message, updated_at: new Date().toISOString() });
+      .upsert({ edition_code: country, sync_status: "failed", error_message: message, updated_at: new Date().toISOString() });
 
     return NextResponse.json({ country, page, perPage, status: "failed", error: message }, { status: 500 });
   }
