@@ -74,6 +74,16 @@ Migrations live in `supabase/migrations/*.sql` (content index + FTS search,
 profiles + avatar storage, bookmarks, comments, admin flag). Apply them in
 filename order — they are timestamped and idempotent-ordered.
 
+> **Schema note:** the production Supabase schema has since diverged from these
+> historical migration files — editions are keyed by `edition_code` (not
+> `country`), `content_index` has no `status`/`view_count`, `profiles` uses
+> `full_name`/`country`, `bookmarks`/`comments` use `edition_code` with richer
+> columns, and the search/most-read RPCs return `edition_code`. The application
+> layer (`lib/supabase/types.ts` and the DAL) is aligned to the **live** schema,
+> which is the current source of truth. Treat the checked-in migrations as
+> historical; a fresh project should be reconciled against live (e.g.
+> `supabase db pull` / generated types) before relying on `db push`.
+
 Using the Supabase CLI:
 
 ```bash
