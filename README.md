@@ -25,15 +25,15 @@ pnpm dev                     # http://localhost:3000
 
 ## Scripts
 
-| Command          | Description                 |
-| ---------------- | --------------------------- |
-| `pnpm dev`       | Start the dev server        |
-| `pnpm build`     | Production build            |
-| `pnpm start`     | Run the production build    |
-| `pnpm lint`      | ESLint (eslint-config-next) |
-| `pnpm typecheck` | `tsc --noEmit`              |
-| `pnpm format`    | Format with Prettier        |
-| `pnpm test`      | Vitest unit tests           |
+| Command                      | Description                                                                                        |
+| ---------------------------- | -------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                   | Start the dev server                                                                               |
+| `pnpm build`                 | Production build                                                                                   |
+| `pnpm start`                 | Run the production build                                                                           |
+| `pnpm lint`                  | ESLint (eslint-config-next)                                                                        |
+| `pnpm typecheck`             | `tsc --noEmit`                                                                                     |
+| `pnpm format`                | Format with Prettier                                                                               |
+| `pnpm test`                  | Vitest unit tests                                                                                  |
 | `pnpm content-sync:backfill` | Backfill the Supabase search/content index from WordPress (see [docs/search.md](./docs/search.md)) |
 
 ## Project layout
@@ -70,6 +70,11 @@ legacy/              The previous app, archived for reference & parity
 Full-text search runs against a Supabase `content_index` mirror of WordPress
 content (never against WordPress at request time). Architecture, sync paths,
 and backfill/rebuild instructions live in [docs/search.md](./docs/search.md).
+
+For the end-to-end **WordPress → Supabase → Next.js data flow** — which system
+owns content, search, comments, bookmarks and user state, the read/sync/discovery
+paths, and the `(edition_code, wp_post_id)` join key — see
+[docs/data-flow.md](./docs/data-flow.md).
 
 ## Legacy app
 
