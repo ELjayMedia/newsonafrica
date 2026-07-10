@@ -101,6 +101,32 @@ After the schema is in place:
    ```
 3. Auth: enable the Email provider and add the production domain + preview wildcard to Redirect URLs.
 
+### Content-sync monitoring (NOA-15)
+
+`public.content_sync_cursor` is the source of truth for per-edition sync state.
+Each row (keyed by `edition_code`) records `sync_status`, `last_synced_at`,
+`last_wp_post_id` and `error_message`, maintained by the sync routines in
+`lib/content-sync/sync.ts` (webhook single-post sync and the backfill route).
+
+**Status values** (`sync_status`, text):
+
+| Value | Meaning |
+| --- | --- |
+| `running` | A backfill/sync is in progress for the edition. |
+| `completed` | The last sync finished with no page errors; `last_synced_at` is set. |
+| `failed` | The last sync hit an error; `error_message` explains it. |
+| `idle` | Reserved initial/quiescent state. |
+| _(no row)_ | Edition present in `content_index` but never tracked by a sync run — shown as **Never synced**. |
+
+**Where to check it:**
+
+- **Admin UI:** `/account/admin/content-sync` — an admin-gated (`profiles.is_admin`) page showing each edition's status, indexed count, last-synced time and any error, with a summary of completed/running/failed/never-synced.
+- **JSON:** `GET /api/admin/content-sync/status` (secret-gated, `x-content-sync-secret: $CONTENT_SYNC_SECRET`) returns the same data for scripting/alerting.
+
+Successful syncs update `last_synced_at`; failures populate `error_message`, so
+a stale `last_synced_at` or a non-null `error_message` is the signal that an
+edition's indexing needs attention.
+
 ## 5. WordPress webhook configuration
 
 Near-real-time cache revalidation + content-index sync is driven by
