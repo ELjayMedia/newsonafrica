@@ -66,8 +66,12 @@ export async function isBookmarked(country: string, wpPostId: number): Promise<b
  * The signed-in user's saved articles, newest first, joined against
  * `content_index` for display metadata. Articles missing from the index
  * still appear, using the slug snapshot for the link.
+ *
+ * Returns `null` when the load fails so the saved-articles page can show an
+ * error state instead of a misleading "no saved articles yet" empty state; an
+ * empty array means the user genuinely has no bookmarks.
  */
-export async function listBookmarks(): Promise<BookmarkedArticle[]> {
+export async function listBookmarks(): Promise<BookmarkedArticle[] | null> {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -77,7 +81,7 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
 
     if (error) {
       log.warn("Failed to list bookmarks", { error: error.message });
-      return [];
+      return null;
     }
 
     const bookmarks: BookmarkRow[] = data ?? [];
@@ -138,6 +142,6 @@ export async function listBookmarks(): Promise<BookmarkedArticle[]> {
     });
   } catch (error) {
     log.warn("Bookmark list skipped", { err: error });
-    return [];
+    return null;
   }
 }

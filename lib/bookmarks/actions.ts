@@ -95,20 +95,21 @@ export async function toggleBookmarkAction(input: {
   return { ok: true, bookmarked: input.bookmarked };
 }
 
-/** Removes a bookmark from the saved-articles page (plain form action). */
-export async function removeBookmarkAction(formData: FormData): Promise<void> {
+export type RemoveBookmarkResult = { ok: true } | { ok: false; message: string };
+
+/** Removes a bookmark from the saved-articles page; returns a result so the
+ * client button can show a pending state and a friendly error on failure. */
+export async function removeBookmarkAction(bookmarkId: string): Promise<RemoveBookmarkResult> {
   const user = await getUser();
-  if (!user) return;
+  if (!user) return { ok: false, message: "Sign in to manage your saved articles." };
 
-  const parsed = z.string().uuid().safeParse(formData.get("bookmarkId"));
-  if (!parsed.success) return;
+  const parsed = z.string().uuid().safeParse(bookmarkId);
+  if (!parsed.success) return { ok: false, message: "Could not remove this bookmark." };
 
-  // Void form action (no error channel): a rate-limited remove is skipped;
-  // the revalidated list still showing the item is the feedback.
   const decision = getRateLimiter().consume("bookmarks:mutate", user.id);
   if (!decision.ok) {
     log.warn("Bookmark removal rate-limited", { userId: user.id });
-    return;
+    return { ok: false, message: rateLimitMessage(decision) };
   }
 
   const supabase = await createClient();
@@ -120,7 +121,9 @@ export async function removeBookmarkAction(formData: FormData): Promise<void> {
 
   if (error) {
     log.warn("Bookmark removal failed", { bookmarkId: parsed.data, error: error.message });
+    return { ok: false, message: "Could not remove this bookmark. Please try again." };
   }
 
   revalidatePath("/account/bookmarks");
+  return { ok: true };
 }
