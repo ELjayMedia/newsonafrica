@@ -25,8 +25,8 @@ export default async function ProfilePage() {
 
       <ProfileForm
         userId={user.id}
-        initialDisplayName={profile?.display_name ?? ""}
-        initialPreferredCountry={profile?.preferred_country ?? ""}
+        initialDisplayName={profile?.full_name ?? ""}
+        initialPreferredCountry={profile?.country ?? ""}
         initialAvatarUrl={profile?.avatar_url ?? null}
       />
     </div>

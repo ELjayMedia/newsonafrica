@@ -14,10 +14,9 @@ const MAX_CONTENT_PLAIN_LENGTH = 5000;
 export function mapPostToContentIndexRow(post: Post): ContentIndexInsert {
   return {
     wp_post_id: post.id,
-    country: post.country,
+    edition_code: post.country,
     slug: post.slug,
     url_path: getArticleUrl(post.country, post.slug),
-    status: post.status,
     title: post.title,
     excerpt: post.excerpt || null,
     content_plain: stripHtml(post.content).slice(0, MAX_CONTENT_PLAIN_LENGTH) || null,

@@ -75,6 +75,8 @@ export async function searchContent(params: SearchContentParams): Promise<Search
     }
 
     const rows = data ?? [];
+    // Every row carries the same windowed match count (total_count) — exact
+    // totals + numbered pagination without a second count query.
     const total = rows[0]?.total_count ?? 0;
     const totalPages = total > 0 ? Math.ceil(total / perPage) : 0;
 
@@ -82,7 +84,7 @@ export async function searchContent(params: SearchContentParams): Promise<Search
       id: row.id,
       wpPostId: row.wp_post_id,
       slug: row.slug,
-      country: row.country as CountryCode,
+      country: row.edition_code as CountryCode,
       title: row.title,
       excerpt: row.excerpt ?? "",
       url: row.url_path,
@@ -128,7 +130,7 @@ export async function searchSuggestions(params: SearchSuggestionsParams): Promis
 
     return (data ?? []).map((row) => ({
       title: row.title,
-      country: row.country as CountryCode,
+      country: row.edition_code as CountryCode,
       slug: row.slug,
       url: row.url_path,
     }));

@@ -92,7 +92,7 @@ export async function listComments(params: {
     let rootsQuery = supabase
       .from("comments")
       .select("*")
-      .eq("country", params.country)
+      .eq("edition_code", params.country)
       .eq("wp_post_id", params.wpPostId)
       .is("parent_id", null)
       .order("created_at", { ascending: sort === "oldest" })
@@ -113,8 +113,11 @@ export async function listComments(params: {
     const hasMore = (rootRows ?? []).length > limit;
     const roots = (rootRows ?? []).slice(0, limit);
 
-    // 2. Every reply belonging to this page's threads, plus 3. author
-    //    profiles and 4. the public approved count — fetched concurrently.
+    // 2. Replies for this article, plus 3. author profiles and 4. the public
+    //    approved count — fetched concurrently. The live schema has no
+    //    `root_id`, so we fetch every reply on the article and let
+    //    buildCommentTree nest them by parent_id under this page's roots
+    //    (replies whose thread root isn't on this page are discarded).
     const rootIds = roots.map((row) => row.id);
 
     const [repliesResult, countResult] = await Promise.all([
@@ -122,14 +125,15 @@ export async function listComments(params: {
         ? supabase
             .from("comments")
             .select("*")
-            .in("root_id", rootIds)
+            .eq("edition_code", params.country)
+            .eq("wp_post_id", params.wpPostId)
             .not("parent_id", "is", null)
             .order("created_at", { ascending: true })
         : Promise.resolve({ data: [] as CommentRow[], error: null }),
       supabase
         .from("comments")
         .select("id", { count: "exact", head: true })
-        .eq("country", params.country)
+        .eq("edition_code", params.country)
         .eq("wp_post_id", params.wpPostId)
         .eq("status", "approved"),
     ]);
@@ -152,7 +156,7 @@ export async function listComments(params: {
     if (userIds.length > 0) {
       const { data: profileRows, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, display_name, avatar_url")
+        .select("id, full_name, avatar_url")
         .in("id", userIds);
 
       if (profilesError) {
@@ -161,7 +165,7 @@ export async function listComments(params: {
       for (const profile of profileRows ?? []) {
         authors.set(profile.id, {
           id: profile.id,
-          displayName: profile.display_name,
+          displayName: profile.full_name,
           avatarUrl: profile.avatar_url,
         });
       }
@@ -274,8 +278,8 @@ export async function listCommentsForModeration(params: {
     const postIds = Array.from(new Set(comments.map((row) => row.wp_post_id)));
 
     const [profilesResult, articlesResult] = await Promise.all([
-      supabase.from("profiles").select("id, display_name, avatar_url").in("id", userIds),
-      supabase.from("content_index").select("country, wp_post_id, title, url_path").in("wp_post_id", postIds),
+      supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds),
+      supabase.from("content_index").select("edition_code, wp_post_id, title, url_path").in("wp_post_id", postIds),
     ]);
 
     if (profilesResult.error) {
@@ -289,7 +293,7 @@ export async function listCommentsForModeration(params: {
     for (const profile of profilesResult.data ?? []) {
       authors.set(profile.id, {
         id: profile.id,
-        displayName: profile.display_name,
+        displayName: profile.full_name,
         avatarUrl: profile.avatar_url,
       });
     }
@@ -297,7 +301,7 @@ export async function listCommentsForModeration(params: {
     // wp_post_id is only unique per country, so key articles by the pair.
     const articles = new Map<string, { title: string; urlPath: string }>();
     for (const article of articlesResult.data ?? []) {
-      articles.set(`${article.country}:${article.wp_post_id}`, {
+      articles.set(`${article.edition_code}:${article.wp_post_id}`, {
         title: article.title,
         urlPath: article.url_path,
       });
@@ -305,10 +309,10 @@ export async function listCommentsForModeration(params: {
 
     return {
       comments: comments.map((row) => {
-        const article = articles.get(`${row.country}:${row.wp_post_id}`) ?? null;
+        const article = articles.get(`${row.edition_code}:${row.wp_post_id}`) ?? null;
         return {
           id: row.id,
-          country: row.country,
+          country: row.edition_code,
           wpPostId: row.wp_post_id,
           body: row.status === "deleted" ? "" : row.body,
           status: row.status,

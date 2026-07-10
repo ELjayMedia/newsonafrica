@@ -165,7 +165,9 @@ function mapGraphQLPost(raw: GqlPost, country: CountryCode | string): Post {
 }
 
 function mapGraphQLPostSummary(raw: GqlPost, country: CountryCode | string): PostSummary {
+  // Drop the heavy `content` field; PostSummary is `Omit<Post, "content">`.
   const { content: _content, ...summary } = mapGraphQLPost(raw, country);
+  void _content;
   return summary;
 }
 

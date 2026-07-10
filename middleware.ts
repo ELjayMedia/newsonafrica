@@ -13,6 +13,12 @@
  * `auth.getUser()`, and always return the `response` object built here —
  * otherwise the auth cookies desynchronise and users get randomly logged
  * out.
+ *
+ * Build note (NOA-120): `@supabase/ssr` trips an Edge Runtime warning at build
+ * time (a Node.js API is referenced from library code paths the middleware
+ * never executes on Edge — here it only touches cookies and `fetch`). The
+ * warning is cosmetic and accepted; session refresh must run at the edge on
+ * every request, so we keep this on the Edge runtime. See docs/deployment.md §7.
  */
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";

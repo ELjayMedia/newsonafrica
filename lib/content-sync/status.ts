@@ -33,25 +33,25 @@ export async function getContentSyncStatus(): Promise<ContentSyncStatusSummary> 
   const supabase = createAdminClient();
 
   const [{ data: cursors, error: cursorError }, { data: indexRows, error: countError }] = await Promise.all([
-    supabase.from("content_sync_cursor").select("country, sync_status, last_synced_at, error_message, updated_at").order("country"),
-    supabase.from("content_index").select("country"),
+    supabase.from("content_sync_cursor").select("edition_code, sync_status, last_synced_at, error_message, updated_at").order("edition_code"),
+    supabase.from("content_index").select("edition_code"),
   ]);
 
   if (cursorError) throw new Error(cursorError.message);
   if (countError) throw new Error(countError.message);
 
   const countByCountry = (indexRows ?? []).reduce<Record<string, number>>((acc, row) => {
-    acc[row.country] = (acc[row.country] ?? 0) + 1;
+    acc[row.edition_code] = (acc[row.edition_code] ?? 0) + 1;
     return acc;
   }, {});
 
   const countries: CountrySyncStatus[] = (cursors ?? []).map((cursor) => ({
-    country: cursor.country,
+    country: cursor.edition_code,
     syncStatus: cursor.sync_status,
     lastSyncedAt: cursor.last_synced_at,
     errorMessage: cursor.error_message,
     updatedAt: cursor.updated_at,
-    indexedCount: countByCountry[cursor.country] ?? 0,
+    indexedCount: countByCountry[cursor.edition_code] ?? 0,
   }));
 
   const knownCountries = new Set(countries.map((c) => c.country));

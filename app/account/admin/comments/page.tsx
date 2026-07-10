@@ -23,15 +23,21 @@ export const metadata: Metadata = {
 const FILTER_LABELS: Record<ModerationStatusFilter, string> = {
   all: "All",
   approved: "Approved",
+  active: "Active",
   pending: "Pending",
+  flagged: "Flagged",
   hidden: "Hidden",
+  spam: "Spam",
   deleted: "Deleted",
 };
 
 const STATUS_BADGE_VARIANT: Record<CommentStatus, "default" | "secondary" | "outline"> = {
   approved: "default",
+  active: "default",
   pending: "secondary",
+  flagged: "secondary",
   hidden: "outline",
+  spam: "outline",
   deleted: "outline",
 };
 
