@@ -21,6 +21,7 @@ import { createLogger } from "@/lib/log";
 import { getMetrics } from "@/lib/metrics";
 import { cacheTags } from "@/lib/wordpress/cache-tags";
 import { isValidCountry, SUPPORTED_COUNTRY_CODES } from "@/lib/wordpress/countries";
+import { normalizeWpPostId } from "@/lib/wordpress/wp-post-id";
 import { deletePostFromIndex, syncPostById } from "@/lib/content-sync/sync";
 
 const log = createLogger("webhook:wordpress");
@@ -161,10 +162,11 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "post_published/post_updated requires post.id and post.slug" }, { status: 400 });
       }
 
-      const wpPostId = typeof post.id === "number" ? post.id : Number.parseInt(post.id, 10);
-      const syncResult = Number.isFinite(wpPostId)
-        ? await metrics.time("webhook.wordpress.sync_ms", () => syncPostById(syncCountry, wpPostId), { action })
-        : { success: false, error: "invalid post id" };
+      const wpPostId = normalizeWpPostId(post.id);
+      const syncResult =
+        wpPostId !== null
+          ? await metrics.time("webhook.wordpress.sync_ms", () => syncPostById(syncCountry, wpPostId), { action })
+          : { success: false, error: "invalid post id" };
       const revalidated = revalidatePost(countries, post);
 
       if (syncResult.success) {
@@ -182,8 +184,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "post_deleted requires post.id and post.slug" }, { status: 400 });
       }
 
-      const wpPostId = typeof post.id === "number" ? post.id : Number.parseInt(post.id, 10);
-      const syncResult = Number.isFinite(wpPostId) ? await deletePostFromIndex(syncCountry, wpPostId) : { success: false, error: "invalid post id" };
+      const wpPostId = normalizeWpPostId(post.id);
+      const syncResult =
+        wpPostId !== null ? await deletePostFromIndex(syncCountry, wpPostId) : { success: false, error: "invalid post id" };
       const revalidated = revalidatePost(countries, post);
 
       if (syncResult.success) {
