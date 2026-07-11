@@ -13,7 +13,10 @@
  */
 import "server-only";
 
+import { after } from "next/server";
+
 import { createLogger } from "@/lib/log";
+import { logSearchQuery } from "@/lib/search/log";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { CountryCode } from "@/lib/countries";
 import {
@@ -95,6 +98,17 @@ export async function searchContent(params: SearchContentParams): Promise<Search
       publishedAt: row.published_at,
       rank: row.rank,
     }));
+
+    // Log the executed search off the response's critical path (NOA-137).
+    // First page only, so pagination re-fetches don't double-count; zero-result
+    // searches are logged too (they drive the zero-result-rate KPI).
+    if (page === 1) {
+      try {
+        after(() => logSearchQuery({ query, country, resultCount: total }));
+      } catch {
+        // Called outside a request scope (defensive) — skip logging.
+      }
+    }
 
     return { items, query, country, page, perPage, total, totalPages, hasNextPage: page < totalPages };
   } catch (error) {

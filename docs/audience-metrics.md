@@ -152,6 +152,37 @@ A small, stable set for the launch scorecard — everything else is drill-down:
 6. **Moderation backlog** (`flagged`/`pending`) — operational health.
 7. **Engagement coverage** — how much of the corpus resonates.
 
+### 4b. Search analytics (NOA-137)
+
+Every executed search is logged to `search_query_log` (query, `edition_code`,
+`result_count`, `created_at`) server-side, off the response path — including
+zero-result searches. Only the first page of a search is logged, so pagination
+doesn't double-count.
+
+| Metric | Definition | Source |
+| ------ | ---------- | ------ |
+| Top queries | `count(*)` grouped by `lower(query)` | `search_query_log` |
+| Zero-result rate | share of searches with `result_count = 0` | `search_query_log` |
+| Search volume by edition | group by `edition_code` over time | `search_query_log` |
+
+```sql
+-- Top queries (last 30 days)
+select lower(query) as query, count(*) as searches, max(result_count) as results
+from public.search_query_log
+where created_at >= now() - interval '30 days'
+group by lower(query) order by searches desc limit 20;
+
+-- Zero-result rate — surfaces content gaps to editorial
+select
+  count(*)                                              as searches,
+  count(*) filter (where result_count = 0)             as zero_result_searches,
+  round(100.0 * count(*) filter (where result_count = 0) / nullif(count(*),0), 1) as zero_result_pct
+from public.search_query_log
+where created_at >= now() - interval '30 days';
+```
+
+Query→click attribution is not captured yet (a future enhancement).
+
 ## 5. Not yet measurable (instrumentation gaps)
 
 These are the metrics the June plan named that the current stack **cannot**
@@ -159,17 +190,14 @@ produce. Each is a follow-up, not a definition we can fill in today:
 
 | Wanted metric | Why it's blocked | Follow-up |
 | ------------- | ---------------- | --------- |
-| Page views, sessions, unique visitors, bounce, time-on-page | No analytics provider (`@vercel/analytics` not installed) and no server-side view logging; `app_write_events` is empty | Add a privacy-respecting analytics provider or a lightweight `page_views` capture, then define traffic KPIs |
+| Page views, sessions, unique visitors, bounce, time-on-page | No analytics provider (`@vercel/analytics` not installed) and no server-side view logging; `app_write_events` is empty | Add a privacy-respecting analytics provider or a lightweight `page_views` capture, then define traffic KPIs (NOA-138) |
 | Article view counts / most-read by traffic | `content_index` has no `view_count`; "most read" today is bookmark/comment-derived, not impressions | Same as above; `most_read_content` can switch to real views once captured |
-| Search analytics (top queries, zero-result rate, query→click) | No `search_query_log`; search runs server-side without logging terms | Log queries (term, edition, result count, clicked slug) to a new table, then define search KPIs |
-| Subscriber / newsletter / commercial engagement | No `subscriptions` table and no sponsor/ad event logging in this rebuild | Depends on NOA-27 (commercial/disclosure) landing a data model first |
+| Subscriber / newsletter / commercial engagement | Newsletter capture now exists (`newsletter_subscribers`); sponsor/ad event logging still absent | Depends on NOA-27 / NOA-142 (sponsor event logging) |
 | Session/return frequency, DAU/WAU/MAU | Requires per-session or per-visit events, which we don't capture | Blocked on the analytics decision above |
 
-**Recommendation:** the highest-leverage single addition is **search query
-logging** — it's self-contained (one table + a write in the search path),
-directly informs editorial, and unlocks a whole KPI family. Page-view analytics
-is the larger decision (provider choice, privacy posture) and should be its own
-ticket.
+**Note:** search-query logging (previously the top recommended add) shipped in
+NOA-137 — see §4b. Page-view analytics is the larger remaining decision
+(provider choice, privacy posture) tracked in NOA-138.
 
 ## Reporting cadence & baseline
 
