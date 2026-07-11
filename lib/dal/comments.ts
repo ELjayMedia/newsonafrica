@@ -221,6 +221,8 @@ export interface ModerationCommentItem {
   articleTitle: string | null;
   /** Canonical article path from content_index, when known. */
   articleUrl: string | null;
+  /** Reader-supplied reason when the comment was reported (NOA-23). */
+  reportReason: string | null;
 }
 
 export interface ModerationCommentPage {
@@ -322,6 +324,7 @@ export async function listCommentsForModeration(params: {
           author: authors.get(row.user_id) ?? null,
           articleTitle: article?.title ?? null,
           articleUrl: article?.urlPath ?? null,
+          reportReason: row.report_reason ?? null,
         };
       }),
       page,

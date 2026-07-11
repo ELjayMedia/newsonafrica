@@ -16,10 +16,13 @@ import {
   deleteCommentSchema,
   editCommentSchema,
   postCommentSchema,
+  REPORT_REASONS,
+  reportCommentSchema,
 } from "@/lib/comments/validation";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { createLogger } from "@/lib/log";
 import { getRateLimiter, rateLimitMessage, type RateLimitAction } from "@/lib/rate-limit";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const log = createLogger("comments:actions");
@@ -169,4 +172,65 @@ export async function deleteCommentAction(_prev: AuthFormState, formData: FormDa
 
   revalidatePath(getArticleUrl(parsed.data.country, parsed.data.slug));
   return { status: "success", message: "Comment deleted." };
+}
+
+/**
+ * Reports another reader's comment for moderation (NOA-23). Flagging is a
+ * moderation transition reserved for the service role (the status-guard
+ * trigger), so this uses the admin client after an explicit signed-in +
+ * not-own check, then records who reported it and why. The flagged comment
+ * drops out of public view (RLS) until a moderator reviews it in
+ * /account/admin/comments.
+ */
+export async function reportCommentAction(_prev: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const user = await getUser();
+  if (!user) return { status: "error", message: "Sign in to report a comment." };
+
+  const parsed = reportCommentSchema.safeParse({
+    commentId: formData.get("commentId"),
+    country: formData.get("country"),
+    slug: formData.get("slug"),
+    reason: formData.get("reason"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: "Pick a reason to report this comment." };
+  }
+
+  const limited = checkCommentRateLimit("comments:report", user.id);
+  if (limited) return limited;
+
+  const { commentId, country, slug, reason } = parsed.data;
+  const supabase = createAdminClient();
+
+  const { data: existing, error: lookupError } = await supabase
+    .from("comments")
+    .select("user_id, status")
+    .eq("id", commentId)
+    .maybeSingle();
+
+  if (lookupError || !existing) {
+    return { status: "error", message: "That comment could not be found." };
+  }
+  if (existing.user_id === user.id) {
+    return { status: "error", message: "You can't report your own comment." };
+  }
+  // Already out of public view / under review — treat as done (don't overwrite
+  // an existing report or resurface a moderated comment).
+  if (existing.status !== "active" && existing.status !== "approved" && existing.status !== "pending") {
+    return { status: "success", message: "Thanks — this comment is already under review." };
+  }
+
+  const { error } = await supabase
+    .from("comments")
+    .update({ status: "flagged", reported_by: user.id, report_reason: REPORT_REASONS[reason] })
+    .eq("id", commentId);
+
+  if (error) {
+    log.warn("Comment report failed", { commentId, error: error.message });
+    return { status: "error", message: "Could not submit your report. Please try again." };
+  }
+
+  revalidatePath(getArticleUrl(country, slug));
+  return { status: "success", message: "Reported. Thanks — a moderator will take a look." };
 }

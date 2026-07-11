@@ -183,7 +183,9 @@ export type CommentRow = {
 export type CommentInsert = Pick<CommentRow, "edition_code" | "wp_post_id" | "user_id" | "body"> &
   Partial<Pick<CommentRow, "id" | "parent_id" | "status">>;
 
-export type CommentUpdate = Partial<Pick<CommentRow, "body" | "status" | "edited_at">>;
+export type CommentUpdate = Partial<
+  Pick<CommentRow, "body" | "status" | "edited_at" | "reported_by" | "report_reason" | "reviewed_at" | "reviewed_by">
+>;
 
 // Matches the live `most_read_content` RPC return: keyed by `edition_code`,
 // ordered internally by the RPC (returns `rank`, not a `view_count` column).

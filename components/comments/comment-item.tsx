@@ -6,8 +6,8 @@ import { useActionState } from "react";
 import { FieldErrors, FormAlert } from "@/components/auth/form-alert";
 import { Button } from "@/components/ui/button";
 import { CommentForm } from "@/components/comments/comment-form";
-import { deleteCommentAction, updateCommentAction } from "@/lib/comments/actions";
-import { COMMENT_MAX_LENGTH } from "@/lib/comments/validation";
+import { deleteCommentAction, reportCommentAction, updateCommentAction } from "@/lib/comments/actions";
+import { COMMENT_MAX_LENGTH, REPORT_REASONS } from "@/lib/comments/validation";
 import { initialAuthFormState } from "@/lib/auth/validation";
 import type { CommentTreeItem } from "@/lib/dal/comments";
 import { formatDate } from "@/lib/format";
@@ -119,10 +119,70 @@ function DeleteCommentForm({
   );
 }
 
+function ReportCommentForm({
+  commentId,
+  country,
+  slug,
+  onDone,
+}: {
+  commentId: string;
+  country: string;
+  slug: string;
+  onDone: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(reportCommentAction, initialAuthFormState);
+
+  if (state.status === "success") {
+    return (
+      <p role="status" className="body-sm text-muted-foreground">
+        {state.message}
+      </p>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex flex-wrap items-center gap-2" noValidate>
+      <input type="hidden" name="commentId" value={commentId} />
+      <input type="hidden" name="country" value={country} />
+      <input type="hidden" name="slug" value={slug} />
+      <label htmlFor={`comment-report-${commentId}`} className="sr-only">
+        Reason for reporting
+      </label>
+      <select
+        id={`comment-report-${commentId}`}
+        name="reason"
+        defaultValue=""
+        required
+        className="ui-sm rounded-md border border-input bg-background px-2 py-1 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <option value="" disabled>
+          Reason…
+        </option>
+        {Object.entries(REPORT_REASONS).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <Button type="submit" size="sm" variant="outline" disabled={pending}>
+        {pending ? "Reporting…" : "Submit report"}
+      </Button>
+      <Button type="button" size="sm" variant="ghost" onClick={onDone}>
+        Cancel
+      </Button>
+      {state.status === "error" && state.message ? (
+        <span role="alert" className="body-sm text-destructive">
+          {state.message}
+        </span>
+      ) : null}
+    </form>
+  );
+}
+
 /**
  * One comment plus its nested replies (NOA-101). Authors get edit/delete on
- * their own comments; signed-in readers get reply. Deleted comments render
- * as neutral stubs so threads keep their shape.
+ * their own comments; signed-in readers get reply and report. Deleted
+ * comments render as neutral stubs so threads keep their shape.
  */
 export function CommentItem({
   comment,
@@ -141,6 +201,7 @@ export function CommentItem({
 }) {
   const [replying, setReplying] = React.useState(false);
   const [editing, setEditing] = React.useState(false);
+  const [reporting, setReporting] = React.useState(false);
 
   const isOwn = currentUserId !== null && currentUserId === comment.userId;
   const isDeleted = comment.status === "deleted";
@@ -208,7 +269,25 @@ export function CommentItem({
                   <DeleteCommentForm commentId={comment.id} country={country} slug={slug} />
                 </>
               ) : null}
+              {currentUserId && !isOwn ? (
+                <button
+                  type="button"
+                  onClick={() => setReporting((value) => !value)}
+                  className="ui-sm font-medium text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  {reporting ? "Cancel report" : "Report"}
+                </button>
+              ) : null}
             </div>
+          ) : null}
+
+          {reporting ? (
+            <ReportCommentForm
+              commentId={comment.id}
+              country={country}
+              slug={slug}
+              onDone={() => setReporting(false)}
+            />
           ) : null}
 
           {replying ? (
