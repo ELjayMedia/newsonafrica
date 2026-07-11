@@ -48,12 +48,15 @@ function fixturePost(id) {
 
 function fixtureGraphQLPost(id) {
   const iso = isoFor(id);
+  // Post 2 is "updated" two days after publishing so the article page exercises
+  // the visible "Updated" line (NOA-139); every other post keeps modified==date.
+  const modified = id === 2 ? new Date(Date.UTC(2026, 0, id + 2, 12, 0, 0)).toISOString() : iso;
   return {
     databaseId: id,
     slug: `stub-headline-${id}`,
     status: "publish",
     date: iso,
-    modified: iso,
+    modified,
     title: `Stub headline ${id}`,
     excerpt: `<p>Excerpt for stub headline ${id}.</p>`,
     content: `<p>Body for stub headline ${id}.</p>`,

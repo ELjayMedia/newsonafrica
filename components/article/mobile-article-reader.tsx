@@ -2,10 +2,12 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { ArticleBody } from "@/components/article/article-body";
+import { CorrectionNotice } from "@/components/article/correction-notice";
 import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { CommentSection } from "@/components/comments/comment-section";
+import { shouldShowUpdatedTimestamp } from "@/lib/article/revision";
 import { COUNTRIES } from "@/lib/countries";
 import { formatDate } from "@/lib/format";
 import type { Post, PostSummary } from "@/lib/dal/types";
@@ -34,6 +36,8 @@ export function MobileArticleReader({
 }: MobileArticleReaderProps) {
   const category = post.categories[0];
   const countryName = COUNTRIES[post.country].name;
+  const showUpdated = shouldShowUpdatedTimestamp(post.publishedAt, post.updatedAt);
+  const corrections = post.corrections ?? [];
 
   return (
     <article className="space-y-5 pb-8 md:hidden">
@@ -89,6 +93,11 @@ export function MobileArticleReader({
                 <span aria-hidden> · </span>
                 {countryName}
               </p>
+              {showUpdated ? (
+                <p className="ui-sm text-muted-foreground">
+                  Updated <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -105,6 +114,8 @@ export function MobileArticleReader({
           </div>
         </div>
       </header>
+
+      {corrections.length > 0 ? <CorrectionNotice entries={corrections} /> : null}
 
       {post.featuredImage ? (
         <figure className="space-y-2">
