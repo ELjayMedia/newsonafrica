@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ArticleBody } from "@/components/article/article-body";
+import { CorrectionNotice } from "@/components/article/correction-notice";
 import { MobileArticleReader } from "@/components/article/mobile-article-reader";
 import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
@@ -14,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Container } from "@/components/ui/container";
 import { RailLayout } from "@/components/ui/rail-layout";
 import { getUser } from "@/lib/auth/session";
+import { shouldShowUpdatedTimestamp } from "@/lib/article/revision";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { COUNTRIES } from "@/lib/countries";
 import { getPostBySlugWithFallback, getRelatedPosts, isValidCountry } from "@/lib/dal";
@@ -92,6 +94,9 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
   const user = await getUser();
   const bookmarked = user ? await isBookmarked(countryCode, post.id) : false;
 
+  const showUpdated = shouldShowUpdatedTimestamp(post.publishedAt, post.updatedAt);
+  const corrections = post.corrections ?? [];
+
   return (
     <Container className="py-8 max-md:py-0">
       {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
@@ -146,6 +151,12 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                     <time dateTime={post.publishedAt} className="text-muted-foreground">
                       {formatDate(post.publishedAt)}
                     </time>
+                    {showUpdated ? (
+                      <p className="text-muted-foreground">
+                        Updated{" "}
+                        <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
+                      </p>
+                    ) : null}
                   </div>
                 </div>
 
@@ -161,6 +172,8 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                 </div>
               </div>
             </header>
+
+            {corrections.length > 0 ? <CorrectionNotice entries={corrections} /> : null}
 
             {post.featuredImage ? (
               // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image

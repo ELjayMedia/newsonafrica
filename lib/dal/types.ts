@@ -34,6 +34,20 @@ export interface AuthorSummary {
   avatarUrl?: string;
 }
 
+/**
+ * A dated correction or post-publication update note surfaced on the article
+ * (NOA-139). Populated from a WordPress custom field once exposed via WPGraphQL;
+ * absent until then, so the field is optional.
+ */
+export interface CorrectionEntry {
+  /** ISO date the correction/update was made. */
+  date: string;
+  /** Reader-facing note, e.g. "An earlier version misstated the date." */
+  note: string;
+  /** A factual correction vs a substantive update to a developing story. */
+  kind: "correction" | "update";
+}
+
 export interface Post {
   /** WordPress post ID (`wp_post_id` in the content index). */
   id: number;
@@ -50,6 +64,8 @@ export interface Post {
   categories: CategorySummary[];
   tags: TagSummary[];
   author: AuthorSummary | null;
+  /** Dated correction/update notes, newest first (NOA-139). */
+  corrections?: CorrectionEntry[];
 }
 
 /** Lightweight post shape for listing surfaces (home feed, category feed, most-read). */
