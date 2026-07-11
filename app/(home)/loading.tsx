@@ -5,6 +5,12 @@ import { Skeleton } from "@/components/ui/skeleton";
  * Loading placeholder for the pan-African home (NOA-21). The home fans out a
  * WordPress feed request per edition, so a route-level skeleton avoids a blank
  * frame while those resolve. Mirrors the hero + story grid + rail layout.
+ *
+ * Scoped to the `(home)` route group on purpose: a root `app/loading.tsx`
+ * wraps every route (including `/[countryCode]`) in a streaming Suspense
+ * boundary, which flushes a 200 shell before `notFound()` in the country
+ * layout can set a 404 — regressing unknown-edition pages from 404 to 200.
+ * Keeping the boundary inside `(home)` limits it to the `/` home page.
  */
 export default function HomeLoading() {
   return (
