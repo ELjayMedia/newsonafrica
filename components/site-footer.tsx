@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { Container } from "@/components/ui/container";
 
@@ -20,7 +22,12 @@ export function SiteFooter() {
           <p className="body-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} News on Africa. All rights reserved.
           </p>
-          <p className="ui-sm text-muted-foreground">Independent African journalism.</p>
+          <div className="flex items-center gap-4">
+            <Link href="/privacy" className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+              Privacy Policy
+            </Link>
+            <p className="ui-sm text-muted-foreground">Independent African journalism.</p>
+          </div>
         </div>
       </Container>
     </footer>
