@@ -28,12 +28,12 @@ actual deploying.
 
 These are the settings to verify immediately before launch:
 
-| Blocker | Required action |
-| --- | --- |
-| Vercel project live flag | Enable the Vercel project live state so `live` changes from `false` to `true`. |
-| Production domain | Attach `app.newsonafrica.com` to the project and set both `SITE_URL` and `NEXT_PUBLIC_SITE_URL` to `https://app.newsonafrica.com`. |
-| Nigeria WP endpoints | Set `NEXT_PUBLIC_WP_NG_REST_BASE` and `NEXT_PUBLIC_WP_NG_GRAPHQL` in Vercel Production and Preview. If unset, the app falls back to `${WORDPRESS_API_URL}/ng/wp-json/wp/v2` and `${WORDPRESS_API_URL}/ng/graphql`. |
-| SZ GraphQL socket timeouts | Keep `WORDPRESS_RETRY_ATTEMPTS=4` and `WORDPRESS_RETRY_BACKOFF_MS=750` unless production logs show a different tuning requirement. |
+| Blocker                    | Required action                                                                                                                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Vercel project live flag   | Enable the Vercel project live state so `live` changes from `false` to `true`.                                                                                                                                     |
+| Production domain          | Attach `app.newsonafrica.com` to the project and set both `SITE_URL` and `NEXT_PUBLIC_SITE_URL` to `https://app.newsonafrica.com`.                                                                                 |
+| Nigeria WP endpoints       | Set `NEXT_PUBLIC_WP_NG_REST_BASE` and `NEXT_PUBLIC_WP_NG_GRAPHQL` in Vercel Production and Preview. If unset, the app falls back to `${WORDPRESS_API_URL}/ng/wp-json/wp/v2` and `${WORDPRESS_API_URL}/ng/graphql`. |
+| SZ GraphQL socket timeouts | Keep `WORDPRESS_RETRY_ATTEMPTS=4` and `WORDPRESS_RETRY_BACKOFF_MS=750` unless production logs show a different tuning requirement.                                                                                 |
 
 ## 3. Environment variables
 
@@ -41,24 +41,24 @@ Every variable in `.env.example`, what it does, and where it is set. "Vercel"
 means Project Settings → Environment Variables; scope each to Production/Preview
 as noted. Local development uses `.env.local`.
 
-| Variable | Required | Exposed to browser | Purpose | Where set |
-| --- | --- | --- | --- | --- |
-| `SITE_URL` | yes | no (server) | Canonical public origin, no trailing slash. Used for canonical URLs, OG tags, sitemaps, share links. | Vercel: `https://app.newsonafrica.com` in Production. Local: `http://localhost:3000`. |
-| `NEXT_PUBLIC_SITE_URL` | recommended | yes | Public equivalent of `SITE_URL` for deployment metadata and client-safe URL generation. | Vercel Production/Preview. |
-| `NEXT_PUBLIC_SUPABASE_URL` | yes | yes | Supabase project URL. | Vercel (both scopes). Supabase Dashboard → Project Settings → API. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | yes | Supabase anon/publishable key — safe to expose, RLS enforces access. | Vercel (both scopes), same dashboard page. |
-| `SUPABASE_SERVICE_ROLE_KEY` | yes | **never** | Privileged key used server-side by content sync and moderation. Mark as **Sensitive** in Vercel. | Vercel (both scopes), same dashboard page. |
-| `WORDPRESS_API_URL` | yes | no | Base URL of the WordPress multisite (no trailing slash). Country editions live at `${WORDPRESS_API_URL}/<country>/wp-json/wp/v2`. | Vercel (both scopes; Preview may point at a staging CMS). |
-| `NEXT_PUBLIC_WP_NG_REST_BASE` | launch blocker | yes | Explicit Nigeria REST base override. | Vercel Production/Preview. |
-| `NEXT_PUBLIC_WP_NG_GRAPHQL` | launch blocker | yes | Explicit Nigeria WPGraphQL endpoint override. | Vercel Production/Preview. |
-| `WORDPRESS_API_AUTH_HEADER` | no | no | Optional `Authorization` header for a private/staging CMS. | Vercel, usually Preview only. |
-| `WORDPRESS_REQUEST_TIMEOUT_MS` | no | no | Per-request CMS timeout override (defaults: 10s dev / 20s prod). | Vercel, only if needed. |
-| `WORDPRESS_RETRY_ATTEMPTS` | no | no | Retry attempts for transient WordPress network/socket errors. Defaults to 4. | Vercel Production/Preview if overriding. |
-| `WORDPRESS_RETRY_BACKOFF_MS` | no | no | Initial retry backoff for transient WordPress failures. Defaults to 750ms. | Vercel Production/Preview if overriding. |
-| `WORDPRESS_WEBHOOK_SECRET` | yes | **never** | Shared secret authorizing `/api/webhooks/wordpress`. Generate long random values, different per environment. | Vercel (Sensitive) **and** the WordPress webhook plugin config. |
-| `CONTENT_SYNC_SECRET` | yes | **never** | Shared secret for the admin backfill/status routes `/api/admin/content-sync/*` and `scripts/backfill-content-index.ts`. | Vercel (Sensitive); locally in `.env.local` when running the backfill script. |
-| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | no (deferred) | yes | Paystack checkout — monetization phase, not yet wired. | Leave unset until that phase. |
-| `PAYSTACK_SECRET_KEY` | no (deferred) | **never** | Paystack server verification — deferred. | Leave unset until that phase. |
+| Variable                          | Required       | Exposed to browser | Purpose                                                                                                                           | Where set                                                                             |
+| --------------------------------- | -------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `SITE_URL`                        | yes            | no (server)        | Canonical public origin, no trailing slash. Used for canonical URLs, OG tags, sitemaps, share links.                              | Vercel: `https://app.newsonafrica.com` in Production. Local: `http://localhost:3000`. |
+| `NEXT_PUBLIC_SITE_URL`            | recommended    | yes                | Public equivalent of `SITE_URL` for deployment metadata and client-safe URL generation.                                           | Vercel Production/Preview.                                                            |
+| `NEXT_PUBLIC_SUPABASE_URL`        | yes            | yes                | Supabase project URL.                                                                                                             | Vercel (both scopes). Supabase Dashboard → Project Settings → API.                    |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | yes            | yes                | Supabase anon/publishable key — safe to expose, RLS enforces access.                                                              | Vercel (both scopes), same dashboard page.                                            |
+| `SUPABASE_SERVICE_ROLE_KEY`       | yes            | **never**          | Privileged key used server-side by content sync and moderation. Mark as **Sensitive** in Vercel.                                  | Vercel (both scopes), same dashboard page.                                            |
+| `WORDPRESS_API_URL`               | yes            | no                 | Base URL of the WordPress multisite (no trailing slash). Country editions live at `${WORDPRESS_API_URL}/<country>/wp-json/wp/v2`. | Vercel (both scopes; Preview may point at a staging CMS).                             |
+| `NEXT_PUBLIC_WP_NG_REST_BASE`     | launch blocker | yes                | Explicit Nigeria REST base override.                                                                                              | Vercel Production/Preview.                                                            |
+| `NEXT_PUBLIC_WP_NG_GRAPHQL`       | launch blocker | yes                | Explicit Nigeria WPGraphQL endpoint override.                                                                                     | Vercel Production/Preview.                                                            |
+| `WORDPRESS_API_AUTH_HEADER`       | no             | no                 | Optional `Authorization` header for a private/staging CMS.                                                                        | Vercel, usually Preview only.                                                         |
+| `WORDPRESS_REQUEST_TIMEOUT_MS`    | no             | no                 | Per-request CMS timeout override (defaults: 10s dev / 20s prod).                                                                  | Vercel, only if needed.                                                               |
+| `WORDPRESS_RETRY_ATTEMPTS`        | no             | no                 | Retry attempts for transient WordPress network/socket errors. Defaults to 4.                                                      | Vercel Production/Preview if overriding.                                              |
+| `WORDPRESS_RETRY_BACKOFF_MS`      | no             | no                 | Initial retry backoff for transient WordPress failures. Defaults to 750ms.                                                        | Vercel Production/Preview if overriding.                                              |
+| `WORDPRESS_WEBHOOK_SECRET`        | yes            | **never**          | Shared secret authorizing `/api/webhooks/wordpress`. Generate long random values, different per environment.                      | Vercel (Sensitive) **and** the WordPress webhook plugin config.                       |
+| `CONTENT_SYNC_SECRET`             | yes            | **never**          | Shared secret for the admin backfill/status routes `/api/admin/content-sync/*` and `scripts/backfill-content-index.ts`.           | Vercel (Sensitive); locally in `.env.local` when running the backfill script.         |
+| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | no (deferred)  | yes                | Paystack checkout — monetization phase, not yet wired.                                                                            | Leave unset until that phase.                                                         |
+| `PAYSTACK_SECRET_KEY`             | no (deferred)  | **never**          | Paystack server verification — deferred.                                                                                          | Leave unset until that phase.                                                         |
 
 Optional runtime knob not in `.env.example`: `LOG_LEVEL`
 (`debug|info|warn|error|silent`) tunes `lib/log.ts`; production defaults to
@@ -110,13 +110,13 @@ Each row (keyed by `edition_code`) records `sync_status`, `last_synced_at`,
 
 **Status values** (`sync_status`, text):
 
-| Value | Meaning |
-| --- | --- |
-| `running` | A backfill/sync is in progress for the edition. |
-| `completed` | The last sync finished with no page errors; `last_synced_at` is set. |
-| `failed` | The last sync hit an error; `error_message` explains it. |
-| `idle` | Reserved initial/quiescent state. |
-| _(no row)_ | Edition present in `content_index` but never tracked by a sync run — shown as **Never synced**. |
+| Value       | Meaning                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| `running`   | A backfill/sync is in progress for the edition.                                                 |
+| `completed` | The last sync finished with no page errors; `last_synced_at` is set.                            |
+| `failed`    | The last sync hit an error; `error_message` explains it.                                        |
+| `idle`      | Reserved initial/quiescent state.                                                               |
+| _(no row)_  | Edition present in `content_index` but never tracked by a sync run — shown as **Never synced**. |
 
 **Where to check it:**
 
@@ -126,6 +126,55 @@ Each row (keyed by `edition_code`) records `sync_status`, `last_synced_at`,
 Successful syncs update `last_synced_at`; failures populate `error_message`, so
 a stale `last_synced_at` or a non-null `error_message` is the signal that an
 edition's indexing needs attention.
+
+### Content-index health report (NOA-29)
+
+A one-shot report over `content_index` + `content_sync_cursor` — row count,
+full-text coverage, tag/category/content coverage, published-date span, and sync
+status per edition. Run it in the Supabase SQL editor, via the MCP
+`execute_sql` tool, or `psql`:
+
+```sql
+select
+  ci.edition_code,
+  count(*)                                                              as rows,
+  count(*) filter (where ci.search_vector is null)                     as missing_vector,
+  round(100.0 * count(*) filter (where coalesce(array_length(ci.tags,1),0) > 0)       / nullif(count(*),0)) as pct_tags,
+  round(100.0 * count(*) filter (where coalesce(array_length(ci.categories,1),0) > 0) / nullif(count(*),0)) as pct_categories,
+  round(100.0 * count(*) filter (where ci.content_plain is not null)   / nullif(count(*),0)) as pct_content,
+  min(ci.published_at)::date                                           as oldest,
+  max(ci.published_at)::date                                           as newest,
+  c.sync_status, c.last_synced_at, c.error_message
+from public.content_index ci
+left join public.content_sync_cursor c on c.edition_code = ci.edition_code
+group by ci.edition_code, c.sync_status, c.last_synced_at, c.error_message
+order by rows desc;
+```
+
+Editions with a cursor row but **no** `content_index` rows (never populated) are
+found with:
+
+```sql
+select edition_code, sync_status, last_synced_at, error_message
+from public.content_sync_cursor c
+where not exists (select 1 from public.content_index ci where ci.edition_code = c.edition_code);
+```
+
+**What "healthy" looks like at launch** (per edition that is meant to be live):
+
+| Metric           | Healthy target                                | Why                                                              |
+| ---------------- | --------------------------------------------- | ---------------------------------------------------------------- |
+| `rows`           | ≥ ~200 (editions with a real catalogue)       | Enough breadth for meaningful search across categories           |
+| `missing_vector` | **0**                                         | Every row must be searchable (the `search_vector` trigger fired) |
+| `pct_categories` | ~100%                                         | Faceted / category search                                        |
+| `pct_tags`       | ≥ 80%                                         | Tag facets + sponsored-content targeting                         |
+| `newest`         | within the sync cadence (≈24–25h of now)      | Confirms incremental sync is current                             |
+| `oldest`         | well before `newest`                          | Confirms the historical backfill ran                             |
+| `sync_status`    | `completed` (or `idle`), `error_message` null | No failed/stuck syncs                                            |
+
+A row count near zero, an old `newest`, or a non-null `error_message` marks an
+edition that needs a (re-)backfill or investigation. The subset of this report
+(status, counts, errors) is also visible at `/account/admin/content-sync`.
 
 ## 5. WordPress webhook configuration
 
