@@ -47,3 +47,22 @@ export const deleteCommentSchema = z.object({
   country: z.string().refine(isValidCountry, "Unsupported country"),
   slug: articleSlugSchema,
 });
+
+/** Reader report reasons (NOA-23), with the human label stored on the comment. */
+export const REPORT_REASONS = {
+  spam: "Spam or advertising",
+  harassment: "Harassment or abuse",
+  hate: "Hate speech",
+  misinformation: "Misinformation",
+  off_topic: "Off-topic",
+  other: "Other",
+} as const;
+
+export type ReportReason = keyof typeof REPORT_REASONS;
+
+export const reportCommentSchema = z.object({
+  commentId: z.string().uuid(),
+  country: z.string().refine(isValidCountry, "Unsupported country"),
+  slug: articleSlugSchema,
+  reason: z.enum(Object.keys(REPORT_REASONS) as [ReportReason, ...ReportReason[]]),
+});
