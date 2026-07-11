@@ -231,6 +231,20 @@ export type NewsletterSubscriberInsert = Pick<NewsletterSubscriberRow, "email"> 
     >
   >;
 
+// Search query logging (NOA-137). Written server-side (service role); no client
+// access. Feeds top-queries / zero-result-rate reporting.
+export type SearchQueryLogRow = {
+  id: string;
+  query: string;
+  edition_code: string | null;
+  result_count: number;
+  user_id: string | null;
+  created_at: string;
+};
+
+export type SearchQueryLogInsert = Pick<SearchQueryLogRow, "query"> &
+  Partial<Pick<SearchQueryLogRow, "edition_code" | "result_count" | "user_id">>;
+
 export type Database = {
   public: {
     Tables: {
@@ -268,6 +282,12 @@ export type Database = {
         Row: NewsletterSubscriberRow;
         Insert: NewsletterSubscriberInsert;
         Update: Partial<NewsletterSubscriberInsert>;
+        Relationships: [];
+      };
+      search_query_log: {
+        Row: SearchQueryLogRow;
+        Insert: SearchQueryLogInsert;
+        Update: Partial<SearchQueryLogInsert>;
         Relationships: [];
       };
     };
