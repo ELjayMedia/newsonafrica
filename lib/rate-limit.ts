@@ -38,6 +38,8 @@ export const RATE_LIMITS = {
   "comments:edit": { capacity: 6, refillIntervalMs: 10_000 },
   /** Saving/unsaving bookmarks (cheap, idempotent — generous). */
   "bookmarks:mutate": { capacity: 20, refillIntervalMs: 3_000 },
+  /** Newsletter sign-up (anonymous, keyed by client IP — curb spam bursts). */
+  "newsletter:signup": { capacity: 5, refillIntervalMs: 60_000 },
 } as const satisfies Record<string, TokenBucketConfig>;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;

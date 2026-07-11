@@ -199,6 +199,36 @@ export type MostReadRow = {
   published_at: string;
 };
 
+// Newsletter capture (NOA-129). First-party owned-audience storage; writes go
+// through the service-role server action only (RLS locks out client access).
+export type NewsletterStatus = "pending" | "confirmed" | "unsubscribed";
+
+export type NewsletterSubscriberRow = {
+  id: string;
+  email: string;
+  status: NewsletterStatus;
+  /** Edition the reader signed up from (`sz`/`za`/`ng`), or null for pan-African. */
+  edition_code: string | null;
+  /** Editorial/commercial vertical the capture point sits in (e.g. `business`). */
+  source_vertical: string | null;
+  /** Campaign tag for attribution (utm-style). */
+  source_campaign: string | null;
+  /** Where the sign-up happened (e.g. `footer`, `/sz`). */
+  source_path: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  confirmed_at: string | null;
+  unsubscribed_at: string | null;
+};
+
+export type NewsletterSubscriberInsert = Pick<NewsletterSubscriberRow, "email"> &
+  Partial<
+    Pick<
+      NewsletterSubscriberRow,
+      "status" | "edition_code" | "source_vertical" | "source_campaign" | "source_path" | "metadata"
+    >
+  >;
+
 export type Database = {
   public: {
     Tables: {
@@ -230,6 +260,12 @@ export type Database = {
         Row: CommentRow;
         Insert: CommentInsert;
         Update: CommentUpdate;
+        Relationships: [];
+      };
+      newsletter_subscribers: {
+        Row: NewsletterSubscriberRow;
+        Insert: NewsletterSubscriberInsert;
+        Update: Partial<NewsletterSubscriberInsert>;
         Relationships: [];
       };
     };

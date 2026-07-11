@@ -9,7 +9,8 @@ test("login page renders the sign-in form", async ({ page }) => {
   await page.goto("/login");
 
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
-  await expect(page.getByLabel("Email")).toBeVisible();
+  // exact: the global footer newsletter field is labelled "Email address".
+  await expect(page.getByLabel("Email", { exact: true })).toBeVisible();
   await expect(page.getByLabel("Password", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Forgot password?" })).toBeVisible();
