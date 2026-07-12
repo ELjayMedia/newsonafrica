@@ -70,43 +70,80 @@ bubblewrap init \
 
 Answer the prompts; the manifest maps to TWA settings as follows:
 
-| Web manifest field (`app/manifest.ts`)  | TWA / Bubblewrap setting              |
-| --------------------------------------- | ------------------------------------- |
-| `name` ("News on Africa")               | App name (launcher + Play listing)    |
-| `short_name`                            | Short launcher name                   |
-| `start_url` (`/`)                       | Host + start path of the activity     |
-| `theme_color` (brand green `#16a34a`)   | Status-bar color                      |
-| `background_color` (white)              | Splash-screen background              |
-| `icons` 512 `any` / `maskable`          | Launcher icon / adaptive icon         |
-| `display: standalone`                   | `displayMode` (fullscreen chrome-less) |
-| `orientation: portrait-primary`         | Locked orientation                    |
-| Package id                              | `com.newsonafrica.app` (enter manually) |
+| Web manifest field (`app/manifest.ts`) | TWA / Bubblewrap setting                |
+| -------------------------------------- | --------------------------------------- |
+| `name` ("News on Africa")              | App name (launcher + Play listing)      |
+| `short_name`                           | Short launcher name                     |
+| `start_url` (`/`)                      | Host + start path of the activity       |
+| `theme_color` (brand green `#16a34a`)  | Status-bar color                        |
+| `background_color` (white)             | Splash-screen background                |
+| `icons` 512 `any` / `maskable`         | Launcher icon / adaptive icon           |
+| `display: standalone`                  | `displayMode` (fullscreen chrome-less)  |
+| `orientation: portrait-primary`        | Locked orientation                      |
+| Package id                             | `com.newsonafrica.app` (enter manually) |
 
-## 3. Signing key
+## 3. Signing key and release environment
 
-Bubblewrap offers to create a keystore during `init`. Either:
+Bubblewrap offers to create a keystore during `init`, but the committed
+Gradle project builds release bundles from explicit `NOA_ANDROID_*` signing
+inputs so secrets never need to enter the repo. Either:
 
 - **Play App Signing (recommended):** upload with your generated keystore;
   Google re-signs releases. The fingerprint that must go into
   `assetlinks.json` is then the **App signing key certificate** from Play
   Console → Setup → App integrity (NOT your upload key).
-- **Self-managed key:** keep `android.keystore` out of git, back it up, and
-  use its fingerprint directly.
+- **Self-managed key:** keep the keystore out of git, back it up, and use its
+  fingerprint directly.
+
+Generate a new upload key only if there is no existing Play/App signing key:
+
+```bash
+mkdir -p "$NOA_ANDROID_SIGNING_DIR"
+keytool -genkeypair \
+  -storetype PKCS12 \
+  -keystore "$NOA_ANDROID_SIGNING_DIR/newsonafrica-upload.keystore" \
+  -alias noa_upload \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 9125 \
+  -dname "CN=News on Africa, OU=Mobile, O=Eljay Media, L=Mbabane, ST=Hhohho, C=SZ"
+```
+
+Store the keystore and passwords in a private password manager or secure
+storage location outside this repository. Start from the committed non-secret
+template:
+
+```bash
+cp scripts/android-release-env.example /tmp/noa-android-release-env
+```
+
+Edit the copied file with private values, then source it before release builds:
+
+```bash
+source /tmp/noa-android-release-env
+```
+
+For PKCS12 keystores, Java uses the same password for the store and key; set
+`NOA_ANDROID_KEY_PASSWORD` to the same value as
+`NOA_ANDROID_KEYSTORE_PASSWORD`.
 
 Get a local keystore's SHA-256 fingerprint:
 
 ```bash
-keytool -list -v -keystore android.keystore -alias android | grep SHA256
-# or, once initialised:
-bubblewrap fingerprint list
+keytool -list -v \
+  -keystore "$NOA_ANDROID_KEYSTORE" \
+  -alias "$NOA_ANDROID_KEY_ALIAS" \
+  -storepass "$NOA_ANDROID_KEYSTORE_PASSWORD" |
+  sed -n 's/^[[:space:]]*SHA256: //p'
 ```
 
-## 4. Update the asset links (REQUIRED before release)
+## 4. Update the asset links (REQUIRED before production release)
 
-`public/.well-known/assetlinks.json` currently contains a **placeholder**
-all-zero `sha256_cert_fingerprints` value — the TWA will show the browser
-URL bar until it is replaced with the real signing-certificate fingerprint
-from step 3. Replace the placeholder, deploy, then verify:
+`public/.well-known/assetlinks.json` must contain the SHA-256 certificate
+fingerprints that are trusted to handle `https://app.newsonafrica.com` URLs for
+`com.newsonafrica.app`. The TWA will show the browser URL bar if this file is
+left with an all-zero placeholder or a certificate that does not match the
+installed app. Update the fingerprint list, deploy, then verify:
 
 ```bash
 curl "https://app.newsonafrica.com/.well-known/assetlinks.json"
@@ -114,9 +151,13 @@ curl "https://app.newsonafrica.com/.well-known/assetlinks.json"
 # https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://app.newsonafrica.com&relation=delegate_permission/common.handle_all_urls
 ```
 
-If you use Play App Signing you will typically list **both** the app
-signing key and the upload/debug key fingerprints in the array while
-testing.
+If you use Play App Signing, the final production value must include the
+**App signing key certificate** SHA-256 from Play Console -> Setup -> App
+integrity. That value can differ from the upload key used to produce the
+`.aab`. You can list upload/debug fingerprints as additional array entries
+while testing, but do not treat the upload-key fingerprint alone as production
+Digital Asset Links verification unless it is also the certificate used to sign
+the installed app.
 
 ## 5. Build & test
 
@@ -137,10 +178,13 @@ For release signing after NOA-136:
 
 ```bash
 cd android
-bubblewrap build
+source /tmp/noa-android-release-env
+./gradlew clean bundleRelease
+jarsigner -verify -verbose -certs app/build/outputs/bundle/release/app-release.aab
 ```
 
-That produces release APK/AAB artifacts, which must stay out of git.
+That produces `android/app/build/outputs/bundle/release/app-release.aab`, which
+must stay out of git.
 
 ## 6. Release
 
