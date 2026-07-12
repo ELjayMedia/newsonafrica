@@ -10,6 +10,10 @@ test.describe("privacy policy", () => {
     await page.goto("/privacy");
     await expect(page.getByRole("heading", { level: 1, name: "Privacy Policy" })).toBeVisible();
     await expect(page.getByText(/Last updated:/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "the account deletion page" })).toHaveAttribute(
+      "href",
+      "/account-deletion",
+    );
   });
 
   test("is reachable from the footer link", async ({ page }) => {

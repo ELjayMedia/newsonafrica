@@ -34,7 +34,15 @@ export type ContentIndexRow = {
 
 export type ContentIndexInsert = Omit<
   ContentIndexRow,
-  "id" | "updated_at" | "search_vector" | "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
+  | "id"
+  | "updated_at"
+  | "search_vector"
+  | "categories"
+  | "tags"
+  | "excerpt"
+  | "content_plain"
+  | "author"
+  | "featured_image_url"
 > &
   Partial<
     Pick<
@@ -110,7 +118,22 @@ export type ProfileInsert = Pick<ProfileRow, "id"> &
   Partial<Pick<ProfileRow, "full_name" | "avatar_url" | "country">>;
 
 export type ProfileUpdate = Partial<
-  Pick<ProfileRow, "full_name" | "avatar_url" | "country">
+  Pick<
+    ProfileRow,
+    | "full_name"
+    | "avatar_url"
+    | "username"
+    | "handle"
+    | "email"
+    | "website"
+    | "bio"
+    | "country"
+    | "location"
+    | "interests"
+    | "preferences"
+    | "onboarded"
+    | "role"
+  >
 >;
 
 /** Reading progress on a saved article (live `read_status` enum). */
@@ -143,19 +166,22 @@ export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "wp_post_id" | "editi
   Partial<
     Pick<
       BookmarkRow,
-      "id" | "slug" | "title" | "excerpt" | "category" | "tags" | "note" | "collection_id" | "read_state" | "created_at"
+      | "id"
+      | "slug"
+      | "title"
+      | "excerpt"
+      | "category"
+      | "tags"
+      | "note"
+      | "collection_id"
+      | "read_state"
+      | "created_at"
     >
   >;
 
 /** Moderation states — the live `comment_status` enum. */
 export type CommentStatus =
-  | "active"
-  | "flagged"
-  | "hidden"
-  | "deleted"
-  | "pending"
-  | "approved"
-  | "spam";
+  "active" | "flagged" | "hidden" | "deleted" | "pending" | "approved" | "spam";
 
 // Article comment — matches the live `comments` schema: keyed by edition_code,
 // threaded purely by parent_id (no `root_id` column), with moderation/report
@@ -184,7 +210,16 @@ export type CommentInsert = Pick<CommentRow, "edition_code" | "wp_post_id" | "us
   Partial<Pick<CommentRow, "id" | "parent_id" | "status">>;
 
 export type CommentUpdate = Partial<
-  Pick<CommentRow, "body" | "status" | "edited_at" | "reported_by" | "report_reason" | "reviewed_at" | "reviewed_by">
+  Pick<
+    CommentRow,
+    | "body"
+    | "status"
+    | "edited_at"
+    | "reported_by"
+    | "report_reason"
+    | "reviewed_at"
+    | "reviewed_by"
+  >
 >;
 
 // Matches the live `most_read_content` RPC return: keyed by `edition_code`,
