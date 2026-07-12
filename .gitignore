@@ -37,3 +37,12 @@ next-env.d.ts
 /playwright-report
 /test-results
 /.playwright
+
+# android wrapper
+/android/.gradle/
+/android/**/build/
+/android/local.properties
+/android/*.keystore
+/android/*.jks
+/android/**/*.apk
+/android/**/*.aab

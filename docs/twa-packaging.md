@@ -1,11 +1,10 @@
-# TWA packaging for app stores (NOA-110)
+# TWA packaging for app stores (NOA-132)
 
 How to wrap the News on Africa PWA in a Trusted Web Activity (TWA) with
 [Bubblewrap](https://github.com/GoogleChromeLabs/bubblewrap) and ship it to
-the Google Play Store. `${SITE_URL}` below is the canonical production
-origin (the `SITE_URL` / `NEXT_PUBLIC_SITE_URL` env var from `lib/env.ts`,
-e.g. `https://newsonafrica.com`) — no live domain is required to prepare
-any of this.
+the Google Play Store. The Android wrapper project is committed in `android/`
+and points at the canonical production app origin:
+`https://app.newsonafrica.com`.
 
 ## Prerequisites (already in place)
 
@@ -23,6 +22,30 @@ any of this.
 `com.newsonafrica.app` (matches the legacy manifest's
 `related_applications` entry). Reverse-DNS, owned domain, no hyphens.
 
+## Committed wrapper project
+
+NOA-132 generated the wrapper at `android/` from:
+
+```bash
+bubblewrap init \
+  --manifest="https://app.newsonafrica.com/manifest.webmanifest" \
+  --directory="android"
+```
+
+Current wrapper identity:
+
+- Package/application ID: `com.newsonafrica.app`
+- App name: `News on Africa`
+- Launcher name: `News Africa`
+- Host/start URL: `https://app.newsonafrica.com/`
+- Display/orientation: `standalone`, `portrait-primary`
+- Version metadata: `versionCode 1`, `versionName "1"`
+- Signing key placeholder: `android.keystore` / alias `android`
+
+The real release keystore and deployed Digital Asset Links fingerprint are
+owned by NOA-136. Do not commit keystores, APKs, AABs, `local.properties`, or
+Gradle build output.
+
 ## 1. Install Bubblewrap
 
 ```bash
@@ -30,12 +53,19 @@ npm i -g @bubblewrap/cli
 bubblewrap doctor   # installs/locates JDK + Android SDK on first run
 ```
 
-## 2. Initialise the Android project
+Bubblewrap expects JDK 17. The generated project currently compiles with
+Android `compileSdkVersion 36`, targets SDK 35, and Bubblewrap's signing tools
+expect Android build-tools `34.0.0`.
 
-Run outside this repo (the Android project is not committed here):
+## 2. Regenerate or update the Android project
+
+The project is already committed under `android/`. Regenerate only when the
+manifest identity changes materially:
 
 ```bash
-bubblewrap init --manifest="${SITE_URL}/manifest.webmanifest"
+bubblewrap init \
+  --manifest="https://app.newsonafrica.com/manifest.webmanifest" \
+  --directory="android"
 ```
 
 Answer the prompts; the manifest maps to TWA settings as follows:
@@ -79,9 +109,9 @@ URL bar until it is replaced with the real signing-certificate fingerprint
 from step 3. Replace the placeholder, deploy, then verify:
 
 ```bash
-curl "${SITE_URL}/.well-known/assetlinks.json"
+curl "https://app.newsonafrica.com/.well-known/assetlinks.json"
 # and Google's validator:
-# https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=${SITE_URL}&relation=delegate_permission/common.handle_all_urls
+# https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://app.newsonafrica.com&relation=delegate_permission/common.handle_all_urls
 ```
 
 If you use Play App Signing you will typically list **both** the app
@@ -91,13 +121,26 @@ testing.
 ## 5. Build & test
 
 ```bash
-bubblewrap build            # produces app-release-signed.apk + .aab
-bubblewrap install          # side-load the APK onto a connected device
+cd android
+./gradlew assembleDebug
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.newsonafrica.app/.LauncherActivity
 ```
 
-Verify: app opens full-screen (no URL bar) once the deployed asset links
-match, offline fallback renders in airplane mode, and the splash screen
-uses the brand colors.
+Verify: app opens the live News on Africa home screen, article/category/search
+and privacy navigation work, real content renders, and the splash screen uses
+the brand colors. The debug APK uses Android debug signing and may still show
+browser UI until NOA-136 replaces the placeholder asset-links fingerprint with
+the real signing certificate fingerprint.
+
+For release signing after NOA-136:
+
+```bash
+cd android
+bubblewrap build
+```
+
+That produces release APK/AAB artifacts, which must stay out of git.
 
 ## 6. Release
 
