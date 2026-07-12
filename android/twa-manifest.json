@@ -49,7 +49,9 @@
   "fullScopeUrl": "https://app.newsonafrica.com/",
   "minSdkVersion": 21,
   "orientation": "portrait-primary",
-  "fingerprints": [],
+  "fingerprints": [
+    "BB:F9:0F:2E:88:E9:89:EC:64:F4:BC:8F:24:D1:39:E2:E2:03:3F:D3:FF:9A:6D:B9:B1:79:06:61:91:1F:AB:B9"
+  ],
   "additionalTrustedOrigins": [],
   "retainedBundles": [],
   "protocolHandlers": [],

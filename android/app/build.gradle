@@ -50,6 +50,32 @@ def twaManifest = [
     orientation: 'portrait-primary',
 ]
 
+def releaseSigningVarNames = [
+    'NOA_ANDROID_KEYSTORE',
+    'NOA_ANDROID_KEYSTORE_PASSWORD',
+    'NOA_ANDROID_KEY_ALIAS',
+    'NOA_ANDROID_KEY_PASSWORD',
+]
+
+def releaseSigningValue = { name ->
+    def propertyValue = findProperty(name)
+    if (propertyValue != null && propertyValue.toString().trim()) {
+        return propertyValue.toString()
+    }
+    return System.getenv(name)
+}
+
+def missingReleaseSigningValues = {
+    releaseSigningVarNames.findAll { name ->
+        def value = releaseSigningValue(name)
+        value == null || value.toString().trim().isEmpty()
+    }
+}
+
+def hasReleaseSigningValues = {
+    missingReleaseSigningValues().isEmpty()
+}
+
 android {
     compileSdkVersion 36
     namespace "com.newsonafrica.app"
@@ -161,9 +187,27 @@ android {
 
 
     }
+    signingConfigs {
+        release {
+            if (hasReleaseSigningValues()) {
+                storeFile file(releaseSigningValue('NOA_ANDROID_KEYSTORE'))
+                storePassword releaseSigningValue('NOA_ANDROID_KEYSTORE_PASSWORD')
+                keyAlias releaseSigningValue('NOA_ANDROID_KEY_ALIAS')
+                keyPassword releaseSigningValue('NOA_ANDROID_KEY_PASSWORD')
+
+                def keyStoreType = releaseSigningValue('NOA_ANDROID_KEYSTORE_TYPE')
+                if (keyStoreType != null && keyStoreType.toString().trim()) {
+                    storeType keyStoreType
+                }
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled true
+            if (hasReleaseSigningValues()) {
+                signingConfig signingConfigs.release
+            }
         }
     }
     compileOptions {
@@ -211,6 +255,31 @@ task generateShorcutsFile {
 }
 
 preBuild.dependsOn(generateShorcutsFile)
+
+tasks.register('validateReleaseSigning') {
+    doLast {
+        def missing = missingReleaseSigningValues()
+        if (!missing.isEmpty()) {
+            throw new GradleException(
+                'Release signing is required. Missing: ' + missing.join(', ') +
+                '. Set them as environment variables or Gradle properties; see android/README.md.'
+            )
+        }
+
+        def keystoreFile = file(releaseSigningValue('NOA_ANDROID_KEYSTORE'))
+        if (!keystoreFile.isFile()) {
+            throw new GradleException(
+                'NOA_ANDROID_KEYSTORE does not point to a readable file: ' + keystoreFile
+            )
+        }
+    }
+}
+
+tasks.matching { task ->
+    task.name in ['preReleaseBuild', 'assembleRelease', 'bundleRelease', 'signReleaseBundle']
+}.configureEach {
+    dependsOn tasks.named('validateReleaseSigning')
+}
 
 repositories {
 

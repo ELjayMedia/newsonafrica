@@ -1,0 +1,10 @@
+# Copy this to a private shell or password manager entry and replace the
+# placeholders. Never commit real values or paste them into Jira.
+
+export NOA_ANDROID_KEYSTORE="/absolute/path/outside/the/repo/newsonafrica-upload.keystore"
+export NOA_ANDROID_KEYSTORE_PASSWORD="replace-with-private-store-password"
+export NOA_ANDROID_KEY_ALIAS="noa_upload"
+export NOA_ANDROID_KEY_PASSWORD="replace-with-private-key-password"
+
+# Optional. Leave unset unless the keystore requires an explicit type.
+# export NOA_ANDROID_KEYSTORE_TYPE="pkcs12"
