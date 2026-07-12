@@ -2,9 +2,9 @@
 
 Paste-ready copy and questionnaire answers for the News on Africa Play Console
 submission. Everything here reflects the app's **actual** behaviour (verified
-against the codebase 2026-07-12) — no placeholder claims. Items only you can
-provide (visual assets, account, final contact email) are marked **[YOU]**;
-remaining non-code gaps before submission are marked **⚠️**.
+against the codebase 2026-07-13) — no placeholder claims. Items only the Play
+Console account owner can confirm are marked **[YOU]**; remaining console-side
+gaps before submission are marked **⚠️**.
 
 ---
 
@@ -49,22 +49,30 @@ business, culture
 
 **[YOU] Contact details**
 
-- Support email: **⚠️ confirm** — the privacy page currently uses
-  `privacy@newsonafrica.com`; use a monitored inbox.
+- Support email: **⚠️ confirm in Play Console** — the privacy page currently
+  uses `privacy@newsonafrica.com`; use a monitored inbox.
 - Website: `https://app.newsonafrica.com` (after NOA-121)
 - Privacy policy URL: `https://app.newsonafrica.com/privacy` (live — NOA-135)
 - Account/data deletion URL: `https://app.newsonafrica.com/account-deletion`
 
-## 2. Graphic assets — **[YOU]**
+## 2. Graphic assets
 
-Play requires (I can write exact specs/alt text, but the images are yours):
+Prepared NOA-134 output packet:
+`/Users/lethu/Documents/Codex/2026-07-12/ge/outputs/noa-134-play-submission/`
 
 - **App icon** 512×512 — reuse `public/icons/icon-512.png`.
-- **Feature graphic** 1024×500 — **needed** (brand green, wordmark). ⚠️ to create.
-- **Phone screenshots** ×2–8 (min 320px, 16:9 or 9:16) — home, an article,
-  search, saved articles, comments. Capture from the live app after NOA-121.
+- **Feature graphic** 1024×500 — prepared at
+  `feature-graphic-1024x500.png`.
+- **Phone screenshots** ×5, 1080×2340 — release-signed TWA screenshots captured
+  from the live production app:
+  - home
+  - article
+  - search
+  - privacy policy
+  - account deletion
 - (Optional) 7" / 10" tablet screenshots.
-  No placeholder or mocked screenshots — capture from the real app.
+
+No placeholder or mocked screenshots are used in the prepared packet.
 
 ## 3. Data safety questionnaire
 
@@ -130,17 +138,26 @@ via the questionnaire result.
   self-registration is open.
 - **Data deletion:** provide `https://app.newsonafrica.com/account-deletion`.
 
-## 6. ⚠️ Pre-submission gaps to close
+## 6. ⚠️ Remaining Play Console/account-owner gaps
 
-1. **Feature graphic + real screenshots** — needs the live domain (NOA-121) and
-   your brand asset.
-2. **Confirm the support/privacy email.**
-3. **Nigeria edition** should be serving real content (NOA-121 NG env overrides)
-   before you screenshot `/ng`.
+1. **Confirm the support/privacy email** to use for the store listing.
+2. **Confirm release pricing**. The intended launch model is free; if Play
+   Console is currently set to paid, switch it to free unless the account owner
+   intentionally wants merchant-account/payment setup.
+3. **Provide Play review access**: a review test account, or confirmation that
+   self-registration is open and acceptable for review.
+4. **Choose the release track**: internal, closed testing, open testing, or
+   production.
+5. **After AAB upload**, check Play Console -> Setup -> App integrity. If Google
+   Play App Signing shows a different App signing certificate SHA-256 than the
+   upload certificate, add that fingerprint to
+   `public/.well-known/assetlinks.json`, deploy, and re-run Digital Asset Links
+   verification.
 
 ---
 
-**Dependencies:** most of this can be entered once **NOA-121** (live domain) and
-**NOA-136** (signed AAB + asset links) are done. The text and questionnaire
-answers above are ready to paste now; the visual assets, test account, and the
-remaining submission assets (§6) are the remaining blockers.
+**Dependencies:** **NOA-121** (live domain), **NOA-136** (signed AAB + asset
+links), and **NOA-149** (account/data deletion) are complete. The text,
+questionnaire answers, feature graphic, phone screenshots, privacy URL, and
+deletion URL are ready for Play Console entry now. The remaining blockers are
+console-side confirmations and the actual Play upload/submission.
