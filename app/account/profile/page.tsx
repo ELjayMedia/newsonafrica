@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { DeleteAccountForm } from "@/components/account/delete-account-form";
 import { ProfileForm } from "@/components/account/profile-form";
 import { buttonVariants } from "@/components/ui/button";
 import { signOutAction } from "@/lib/auth/actions";
@@ -62,6 +63,15 @@ export default async function ProfilePage() {
             Sign out
           </button>
         </form>
+      </section>
+
+      <section className="rounded-xl border border-destructive/30 bg-destructive/5 p-5">
+        <h2 className="heading-sm">Delete account</h2>
+        <p className="body-sm mt-2 max-w-2xl text-muted-foreground">
+          This removes your sign-in account, profile details, saved articles, newsletter
+          subscription tied to this email, and reader activity tied to your account.
+        </p>
+        <DeleteAccountForm />
       </section>
     </div>
   );

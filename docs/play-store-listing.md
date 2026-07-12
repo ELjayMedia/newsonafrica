@@ -4,7 +4,7 @@ Paste-ready copy and questionnaire answers for the News on Africa Play Console
 submission. Everything here reflects the app's **actual** behaviour (verified
 against the codebase 2026-07-12) — no placeholder claims. Items only you can
 provide (visual assets, account, final contact email) are marked **[YOU]**;
-policy gaps that need a decision/build before submission are marked **⚠️**.
+remaining non-code gaps before submission are marked **⚠️**.
 
 ---
 
@@ -48,20 +48,23 @@ policy gaps that need a decision/build before submission are marked **⚠️**.
 business, culture
 
 **[YOU] Contact details**
+
 - Support email: **⚠️ confirm** — the privacy page currently uses
   `privacy@newsonafrica.com`; use a monitored inbox.
 - Website: `https://app.newsonafrica.com` (after NOA-121)
 - Privacy policy URL: `https://app.newsonafrica.com/privacy` (live — NOA-135)
+- Account/data deletion URL: `https://app.newsonafrica.com/account-deletion`
 
 ## 2. Graphic assets — **[YOU]**
 
 Play requires (I can write exact specs/alt text, but the images are yours):
+
 - **App icon** 512×512 — reuse `public/icons/icon-512.png`.
 - **Feature graphic** 1024×500 — **needed** (brand green, wordmark). ⚠️ to create.
 - **Phone screenshots** ×2–8 (min 320px, 16:9 or 9:16) — home, an article,
   search, saved articles, comments. Capture from the live app after NOA-121.
 - (Optional) 7" / 10" tablet screenshots.
-No placeholder or mocked screenshots — capture from the real app.
+  No placeholder or mocked screenshots — capture from the real app.
 
 ## 3. Data safety questionnaire
 
@@ -70,14 +73,14 @@ data is shared with third parties, sold, or used for third-party ads/analytics**
 (there is no third-party ad or analytics SDK in the app). Everything is
 **encrypted in transit** (HTTPS/TLS).
 
-| Data type (Play category) | Collected | Why | What it is |
-| ------------------------- | --------- | --- | ---------- |
-| **Name** (Personal info) | Yes (optional) | App functionality, Account management | Profile display name |
-| **Email address** (Personal info) | Yes (required for account) | App functionality, Account management | Sign-in identity; newsletter |
-| **Photos** (Photos and videos) | Yes (optional) | App functionality | Profile avatar you upload |
-| **App interactions** (App activity) | Yes | App functionality, Analytics | Bookmarks; searches |
-| **Search history** (App activity) | Yes | Analytics, App functionality | Search terms (logged without your identity) |
-| **Other user-generated content** (App activity) | Yes | App functionality | Comments you post |
+| Data type (Play category)                       | Collected                  | Why                                   | What it is                                  |
+| ----------------------------------------------- | -------------------------- | ------------------------------------- | ------------------------------------------- |
+| **Name** (Personal info)                        | Yes (optional)             | App functionality, Account management | Profile display name                        |
+| **Email address** (Personal info)               | Yes (required for account) | App functionality, Account management | Sign-in identity; newsletter                |
+| **Photos** (Photos and videos)                  | Yes (optional)             | App functionality                     | Profile avatar you upload                   |
+| **App interactions** (App activity)             | Yes                        | App functionality, Analytics          | Bookmarks; searches                         |
+| **Search history** (App activity)               | Yes                        | Analytics, App functionality          | Search terms (logged without your identity) |
+| **Other user-generated content** (App activity) | Yes                        | App functionality                     | Comments you post                           |
 
 **Answer "No / not collected" for:** precise or approximate **location** (the
 profile "country" is a self-selected text preference, not device location),
@@ -86,15 +89,18 @@ messages), contacts, calendar, web browsing history, device/other IDs for
 tracking.
 
 **Security section answers:**
+
 - Is data encrypted in transit? **Yes.**
-- Can users request that data be deleted? **⚠️ Yes — but see §6.** Google requires
-  an account/data-deletion pathway; there is no in-app "delete account" flow yet.
+- Can users request that data be deleted? **Yes.** Use
+  `https://app.newsonafrica.com/account-deletion`; signed-in users can delete
+  their account from profile settings.
 - Data collection is **required** for account features and **optional** for
   browsing (you can read without an account).
 
 ## 4. Content rating questionnaire (IARC)
 
 Answer honestly; IARC computes the rating. Guidance for a news app with UGC:
+
 - App type: **News / information app.**
 - Violence, sexual content, profanity, gambling, drugs **in the app's own
   content:** none — but news articles may reference real-world events. Answer the
@@ -122,20 +128,14 @@ via the questionnaire result.
   need a free account. Provide Play review with a **[YOU] test account**
   (email + password) so reviewers can exercise the gated features, or note that
   self-registration is open.
-- **Data deletion:** provide the deletion method — see §6.
+- **Data deletion:** provide `https://app.newsonafrica.com/account-deletion`.
 
 ## 6. ⚠️ Pre-submission gaps to close
 
-1. **Account / data deletion (Play policy).** Google requires either an in-app
-   "delete account" action or a public deletion-request URL. Today the app has
-   neither (only per-comment soft-delete). **Options:** (a) I build a simple
-   in-app "Delete my account" flow + a `/privacy`-linked deletion request, or
-   (b) you commit to a monitored `privacy@newsonafrica.com` deletion process and
-   document it on the privacy page. Recommend (a) before launch — I can do it.
-2. **Feature graphic + real screenshots** — needs the live domain (NOA-121) and
+1. **Feature graphic + real screenshots** — needs the live domain (NOA-121) and
    your brand asset.
-3. **Confirm the support/privacy email.**
-4. **Nigeria edition** should be serving real content (NOA-121 NG env overrides)
+2. **Confirm the support/privacy email.**
+3. **Nigeria edition** should be serving real content (NOA-121 NG env overrides)
    before you screenshot `/ng`.
 
 ---
@@ -143,4 +143,4 @@ via the questionnaire result.
 **Dependencies:** most of this can be entered once **NOA-121** (live domain) and
 **NOA-136** (signed AAB + asset links) are done. The text and questionnaire
 answers above are ready to paste now; the visual assets, test account, and the
-data-deletion decision (§6) are the remaining blockers.
+remaining submission assets (§6) are the remaining blockers.
