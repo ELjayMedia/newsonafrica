@@ -54,6 +54,7 @@ business, culture
 - Website: `https://app.newsonafrica.com` (after NOA-121)
 - Privacy policy URL: `https://app.newsonafrica.com/privacy` (live — NOA-135)
 - Account/data deletion URL: `https://app.newsonafrica.com/account-deletion`
+- Editorial guidelines URL: `https://app.newsonafrica.com/editorial-guidelines`
 
 ## 2. Graphic assets
 
@@ -125,6 +126,10 @@ via the questionnaire result.
 ## 5. App content declarations
 
 - **News app:** Yes — declare as a news app if prompted.
+- **Published editorial guidelines:** Yes —
+  `https://app.newsonafrica.com/editorial-guidelines`.
+- **Associated with journalistic standards groups or initiatives:** No — do not
+  claim membership unless the business confirms a real current affiliation.
 - **User-generated content:** Yes. Moderation exists (`/account/admin/comments`
   — approve/hide/delete) and readers can **report** comments (NOA-23), which is
   the Play requirement for UGC apps. State that UGC is moderated and reportable.

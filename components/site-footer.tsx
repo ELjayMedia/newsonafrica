@@ -22,8 +22,17 @@ export function SiteFooter() {
           <p className="body-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} News on Africa. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
-            <Link href="/privacy" className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
+            <Link
+              href="/editorial-guidelines"
+              className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Editorial Guidelines
+            </Link>
+            <Link
+              href="/privacy"
+              className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
               Privacy Policy
             </Link>
             <p className="ui-sm text-muted-foreground">Independent African journalism.</p>
