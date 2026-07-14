@@ -50,7 +50,11 @@ export function MobileArticleReader({
           >
             ←
           </Link>
-          <Link href={`/${countryCode}`} className="noa-wordmark heading-md text-foreground" aria-label="News On Africa home">
+          <Link
+            href={`/${countryCode}`}
+            className="noa-wordmark heading-md text-foreground"
+            aria-label="News On Africa home"
+          >
             NOA
           </Link>
           <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border ui-sm text-muted-foreground">
@@ -73,7 +77,11 @@ export function MobileArticleReader({
           <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
             {post.author?.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted avatar
-              <img src={post.author.avatarUrl} alt="" className="h-11 w-11 rounded-full object-cover" />
+              <img
+                src={post.author.avatarUrl}
+                alt=""
+                className="h-11 w-11 rounded-full object-cover"
+              />
             ) : (
               <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 ui-md text-primary">
                 {post.author?.name.charAt(0) ?? "N"}
@@ -93,6 +101,7 @@ export function MobileArticleReader({
                 <span aria-hidden> · </span>
                 {countryName}
               </p>
+              <p className="ui-sm text-muted-foreground">Publisher: News on Africa</p>
               {showUpdated ? (
                 <p className="ui-sm text-muted-foreground">
                   Updated <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
@@ -102,7 +111,11 @@ export function MobileArticleReader({
           </div>
 
           <div className="space-y-3">
-            <ShareButtons title={post.title} url={shareUrl} className="flex-nowrap overflow-x-auto pb-1" />
+            <ShareButtons
+              title={post.title}
+              url={shareUrl}
+              className="flex-nowrap overflow-x-auto pb-1"
+            />
             <BookmarkButton
               country={countryCode}
               slug={slug}
@@ -125,12 +138,19 @@ export function MobileArticleReader({
             alt={post.featuredImage.alt || post.title}
             className="aspect-[16/11] w-full rounded-2xl object-cover shadow-sm"
           />
-          {post.featuredImage.alt ? <figcaption className="ui-sm text-muted-foreground">{post.featuredImage.alt}</figcaption> : null}
+          {post.featuredImage.alt ? (
+            <figcaption className="ui-sm text-muted-foreground">
+              {post.featuredImage.alt}
+            </figcaption>
+          ) : null}
         </figure>
       ) : null}
 
       {post.excerpt ? (
-        <section className="rounded-2xl border border-border bg-card p-4 shadow-sm" aria-labelledby="story-at-a-glance">
+        <section
+          className="rounded-2xl border border-border bg-card p-4 shadow-sm"
+          aria-labelledby="story-at-a-glance"
+        >
           <h2 id="story-at-a-glance" className="heading-sm">
             Story at a glance
           </h2>
@@ -143,6 +163,10 @@ export function MobileArticleReader({
             <div className="rounded-xl bg-muted p-3">
               <p className="ui-sm text-muted-foreground">Published</p>
               <p className="ui-md text-foreground">{formatDate(post.publishedAt)}</p>
+            </div>
+            <div className="col-span-2 rounded-xl bg-muted p-3">
+              <p className="ui-sm text-muted-foreground">Source</p>
+              <p className="ui-md text-foreground">News on Africa</p>
             </div>
           </div>
         </section>
@@ -165,7 +189,12 @@ export function MobileArticleReader({
       ) : null}
 
       <RelatedArticles posts={related} />
-      <CommentSection country={countryCode} slug={slug} wpPostId={post.id} cursorParam={commentsCursor} />
+      <CommentSection
+        country={countryCode}
+        slug={slug}
+        wpPostId={post.id}
+        cursorParam={commentsCursor}
+      />
     </article>
   );
 }
