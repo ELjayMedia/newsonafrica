@@ -101,10 +101,10 @@ export default function EditorialGuidelinesPage() {
           <li>
             Questions about editorial standards, privacy or data can be sent to{" "}
             <a
-              href="mailto:privacy@newsonafrica.com"
+              href="mailto:info@newsonafrica.com"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              privacy@newsonafrica.com
+              info@newsonafrica.com
             </a>
             .
           </li>

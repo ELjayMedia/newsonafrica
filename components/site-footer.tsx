@@ -30,6 +30,12 @@ export function SiteFooter() {
               Editorial Guidelines
             </Link>
             <Link
+              href="/contact"
+              className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Contact
+            </Link>
+            <Link
               href="/privacy"
               className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >

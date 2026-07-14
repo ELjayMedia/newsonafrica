@@ -138,10 +138,10 @@ export default function PrivacyPolicyPage() {
         <p className="body-md text-foreground">
           Questions about this policy or your data? Email us at{" "}
           <a
-            href="mailto:privacy@newsonafrica.com"
+            href="mailto:info@newsonafrica.com"
             className="font-medium text-primary underline-offset-4 hover:underline"
           >
-            privacy@newsonafrica.com
+            info@newsonafrica.com
           </a>
           .
         </p>
