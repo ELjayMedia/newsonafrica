@@ -43,9 +43,9 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const url = getArticleUrl(countryCode, slug);
   const description = post.excerpt || post.title;
 
-  // og:image / twitter:image come from the branded card in
-  // ./opengraph-image.tsx (NOA-115) — file-convention images take
-  // precedence over config-based ones, so none are declared here.
+  // og:image / twitter:image come from ./opengraph-image.tsx (NOA-115):
+  // the file-convention route renders the featured image when available and
+  // falls back to a branded card, so no config-based images are declared here.
   return {
     title: post.title,
     description,
