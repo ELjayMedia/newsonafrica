@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { COUNTRY_LIST, type CountryCode } from "@/lib/countries";
+import { PUBLIC_COUNTRY_LIST, type CountryCode } from "@/lib/countries";
 
 /** Flag emoji per supported edition (regional-indicator pairs). */
 const FLAG: Record<CountryCode, string> = {
@@ -25,8 +25,8 @@ function Chip({ href, flag, label }: { href: string; flag: string; label: string
 
 /**
  * "Explore Africa" block (homepage mockup): country-edition chips that jump to
- * each supported edition, plus an "All editions" chip back to the pan-African
- * home. Reads the real edition catalogue so a new edition appears automatically.
+ * each launch-ready edition, plus an "All editions" chip back to the
+ * pan-African home.
  */
 export function ExploreAfrica() {
   return (
@@ -43,7 +43,7 @@ export function ExploreAfrica() {
         Discover news from across the continent with our country-specific editions.
       </p>
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {COUNTRY_LIST.map((country) => (
+        {PUBLIC_COUNTRY_LIST.map((country) => (
           <Chip
             key={country.code}
             href={`/${country.code}`}

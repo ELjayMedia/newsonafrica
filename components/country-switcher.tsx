@@ -3,7 +3,13 @@
 import * as React from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-import { COUNTRY_LIST, isValidCountry, type CountryCode } from "@/lib/countries";
+import {
+  COUNTRIES,
+  PUBLIC_COUNTRY_LIST,
+  isPublicCountry,
+  isValidCountry,
+  type CountryCode,
+} from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
 function countryFromPath(pathname: string): CountryCode | null {
@@ -12,7 +18,11 @@ function countryFromPath(pathname: string): CountryCode | null {
 }
 
 /** Swap the leading `/[countryCode]` path segment, preserving the rest of the path. */
-function replaceCountryInPath(pathname: string, current: CountryCode | null, next: CountryCode): string {
+function replaceCountryInPath(
+  pathname: string,
+  current: CountryCode | null,
+  next: CountryCode,
+): string {
   if (!current) return `/${next}`;
   const segments = pathname.split("/");
   segments[1] = next;
@@ -29,6 +39,10 @@ export function CountrySwitcher({ className }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const current = countryFromPath(pathname);
+  const countryOptions =
+    current && !isPublicCountry(current)
+      ? [COUNTRIES[current], ...PUBLIC_COUNTRY_LIST]
+      : PUBLIC_COUNTRY_LIST;
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const next = event.target.value;
@@ -59,7 +73,7 @@ export function CountrySwitcher({ className }: { className?: string }) {
             Edition
           </option>
         ) : null}
-        {COUNTRY_LIST.map((country) => (
+        {countryOptions.map((country) => (
           <option key={country.code} value={country.code}>
             {country.name}
           </option>

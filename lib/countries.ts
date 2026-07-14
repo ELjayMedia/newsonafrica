@@ -29,4 +29,16 @@ export const COUNTRIES: Record<CountryCode, CountryConfig> = {
 
 export const COUNTRY_LIST: CountryConfig[] = Object.values(COUNTRIES);
 
+// Publicly advertised editions for the Google Play launch review. Keep stale
+// editions supported behind direct URLs/admin tooling, but do not guide app
+// reviewers into them until fresh content is published there.
+export const PUBLIC_COUNTRY_CODES = ["sz", "za"] as const satisfies readonly CountryCode[];
+export const PUBLIC_COUNTRY_LIST: CountryConfig[] = PUBLIC_COUNTRY_CODES.map(
+  (code) => COUNTRIES[code],
+);
+
+export function isPublicCountry(code: CountryCode): boolean {
+  return (PUBLIC_COUNTRY_CODES as readonly CountryCode[]).includes(code);
+}
+
 export const DEFAULT_COUNTRY: CountryCode = "sz";
