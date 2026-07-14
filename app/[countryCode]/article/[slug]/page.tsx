@@ -104,7 +104,9 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
       <BreadcrumbJsonLd
         items={[
           { name: COUNTRIES[countryCode].name, path: `/${countryCode}` },
-          ...(category ? [{ name: category.name, path: `/${countryCode}/category/${category.slug}` }] : []),
+          ...(category
+            ? [{ name: category.name, path: `/${countryCode}/category/${category.slug}` }]
+            : []),
           { name: post.title },
         ]}
       />
@@ -138,12 +140,19 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                 <div className="flex items-center gap-3">
                   {post.author?.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted avatar
-                    <img src={post.author.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+                    <img
+                      src={post.author.avatarUrl}
+                      alt=""
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
                   ) : null}
                   <div className="ui-md">
                     {post.author ? (
                       <p className="font-semibold text-foreground">
-                        <Link href={`/${countryCode}/author/${post.author.slug}`} className="hover:text-primary">
+                        <Link
+                          href={`/${countryCode}/author/${post.author.slug}`}
+                          className="hover:text-primary"
+                        >
                           {post.author.name}
                         </Link>
                       </p>
@@ -153,10 +162,10 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                     </time>
                     {showUpdated ? (
                       <p className="text-muted-foreground">
-                        Updated{" "}
-                        <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
+                        Updated <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
                       </p>
                     ) : null}
+                    <p className="text-muted-foreground">Publisher: News on Africa</p>
                   </div>
                 </div>
 
@@ -200,7 +209,12 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
               </div>
             ) : null}
 
-            <CommentSection country={countryCode} slug={slug} wpPostId={post.id} cursorParam={commentsCursor} />
+            <CommentSection
+              country={countryCode}
+              slug={slug}
+              wpPostId={post.id}
+              cursorParam={commentsCursor}
+            />
 
             <RelatedArticles posts={related} />
           </article>
