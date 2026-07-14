@@ -10,7 +10,7 @@ import { AvatarPicker } from "@/components/account/avatar-picker";
 import { FieldErrors, FormAlert } from "@/components/auth/form-alert";
 import { updateProfileAction } from "@/lib/auth/profile";
 import { initialAuthFormState } from "@/lib/auth/validation";
-import { COUNTRY_LIST } from "@/lib/countries";
+import { COUNTRIES, PUBLIC_COUNTRY_LIST, isPublicCountry, isValidCountry } from "@/lib/countries";
 
 /** Profile settings form (NOA-99), driven by `updateProfileAction`. */
 export function ProfileForm({
@@ -26,6 +26,10 @@ export function ProfileForm({
 }) {
   const [state, formAction, pending] = useActionState(updateProfileAction, initialAuthFormState);
   const [displayName, setDisplayName] = React.useState(initialDisplayName);
+  const countryOptions =
+    isValidCountry(initialPreferredCountry) && !isPublicCountry(initialPreferredCountry)
+      ? [COUNTRIES[initialPreferredCountry], ...PUBLIC_COUNTRY_LIST]
+      : PUBLIC_COUNTRY_LIST;
 
   return (
     <Card>
@@ -37,12 +41,18 @@ export function ProfileForm({
       </CardHeader>
       <CardContent>
         <form action={formAction} className="flex flex-col gap-5" noValidate>
-          {state.status === "error" && state.message ? <FormAlert tone="error">{state.message}</FormAlert> : null}
+          {state.status === "error" && state.message ? (
+            <FormAlert tone="error">{state.message}</FormAlert>
+          ) : null}
           {state.status === "success" && state.message ? (
             <FormAlert tone="success">{state.message}</FormAlert>
           ) : null}
 
-          <AvatarPicker userId={userId} displayName={displayName} initialAvatarUrl={initialAvatarUrl} />
+          <AvatarPicker
+            userId={userId}
+            displayName={displayName}
+            initialAvatarUrl={initialAvatarUrl}
+          />
 
           <div>
             <label htmlFor="profile-display-name" className="ui-sm mb-1 block font-medium">
@@ -75,13 +85,16 @@ export function ProfileForm({
               className="ui-md h-10 w-full rounded-md border border-input bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <option value="">No preference</option>
-              {COUNTRY_LIST.map((country) => (
+              {countryOptions.map((country) => (
                 <option key={country.code} value={country.code}>
                   {country.name}
                 </option>
               ))}
             </select>
-            <FieldErrors id="profile-preferred-country-errors" errors={state.fieldErrors?.preferredCountry} />
+            <FieldErrors
+              id="profile-preferred-country-errors"
+              errors={state.fieldErrors?.preferredCountry}
+            />
             <p className="body-sm mt-1 text-muted-foreground">
               We&apos;ll open this edition by default when you visit.
             </p>

@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { FieldErrors, FormAlert } from "@/components/auth/form-alert";
 import { updateProfileAction } from "@/lib/auth/profile";
 import { initialAuthFormState } from "@/lib/auth/validation";
-import { COUNTRY_LIST, DEFAULT_COUNTRY } from "@/lib/countries";
+import {
+  COUNTRIES,
+  DEFAULT_COUNTRY,
+  PUBLIC_COUNTRY_LIST,
+  isPublicCountry,
+  isValidCountry,
+} from "@/lib/countries";
 
 /**
  * Minimal onboarding form (NOA-99). Reuses `updateProfileAction` with
@@ -22,6 +28,10 @@ export function OnboardingForm({
   initialPreferredCountry: string;
 }) {
   const [state, formAction, pending] = useActionState(updateProfileAction, initialAuthFormState);
+  const countryOptions =
+    isValidCountry(initialPreferredCountry) && !isPublicCountry(initialPreferredCountry)
+      ? [COUNTRIES[initialPreferredCountry], ...PUBLIC_COUNTRY_LIST]
+      : PUBLIC_COUNTRY_LIST;
 
   return (
     <Card>
@@ -34,7 +44,9 @@ export function OnboardingForm({
       <CardContent>
         <form action={formAction} className="flex flex-col gap-5" noValidate>
           <input type="hidden" name="intent" value="onboarding" />
-          {state.status === "error" && state.message ? <FormAlert tone="error">{state.message}</FormAlert> : null}
+          {state.status === "error" && state.message ? (
+            <FormAlert tone="error">{state.message}</FormAlert>
+          ) : null}
 
           <div>
             <label htmlFor="onboarding-display-name" className="ui-sm mb-1 block font-medium">
@@ -50,7 +62,10 @@ export function OnboardingForm({
               aria-describedby="onboarding-display-name-errors"
               aria-invalid={Boolean(state.fieldErrors?.displayName)}
             />
-            <FieldErrors id="onboarding-display-name-errors" errors={state.fieldErrors?.displayName} />
+            <FieldErrors
+              id="onboarding-display-name-errors"
+              errors={state.fieldErrors?.displayName}
+            />
           </div>
 
           <div>
@@ -65,13 +80,16 @@ export function OnboardingForm({
               aria-invalid={Boolean(state.fieldErrors?.preferredCountry)}
               className="ui-md h-10 w-full rounded-md border border-input bg-background px-3 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              {COUNTRY_LIST.map((country) => (
+              {countryOptions.map((country) => (
                 <option key={country.code} value={country.code}>
                   {country.name}
                 </option>
               ))}
             </select>
-            <FieldErrors id="onboarding-preferred-country-errors" errors={state.fieldErrors?.preferredCountry} />
+            <FieldErrors
+              id="onboarding-preferred-country-errors"
+              errors={state.fieldErrors?.preferredCountry}
+            />
           </div>
 
           <Button type="submit" disabled={pending} className="self-start">
