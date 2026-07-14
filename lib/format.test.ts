@@ -31,8 +31,18 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime(new Date("2026-07-02T09:00:00Z"), now)).toBe("3 hours ago");
   });
 
-  it("reports days ago", () => {
-    expect(formatRelativeTime(new Date("2026-06-29T12:00:00Z"), now)).toBe("3 days ago");
+  it("uses a date for stories older than 24 hours", () => {
+    expect(formatRelativeTime(new Date("2026-06-29T12:00:00Z"), now)).toBe("29 June 2026");
+  });
+
+  it("keeps relative time for stories under 24 hours old", () => {
+    expect(formatRelativeTime(new Date("2026-07-01T13:00:00Z"), now)).toBe("23 hours ago");
+  });
+
+  it("treats timezone-less CMS timestamps as GMT+2", () => {
+    const nowInUtc = new Date("2026-07-14T17:05:00Z");
+
+    expect(formatRelativeTime("2026-07-14T18:57:26", nowInUtc)).toBe("8 minutes ago");
   });
 
   it("falls back to the raw string for unparseable input", () => {
