@@ -49,8 +49,9 @@ business, culture
 
 **[YOU] Contact details**
 
-- Support email: **⚠️ confirm in Play Console** — the privacy page currently
-  uses `privacy@newsonafrica.com`; use a monitored inbox.
+- Support email: `info@newsonafrica.com`
+- In-app/public contact page: `https://app.newsonafrica.com/contact`
+- Phone contacts: `+268 7696 7131`, `+27 83 942 793`
 - Website: `https://app.newsonafrica.com` (after NOA-121)
 - Privacy policy URL: `https://app.newsonafrica.com/privacy` (live — NOA-135)
 - Account/data deletion URL: `https://app.newsonafrica.com/account-deletion`
@@ -145,15 +146,14 @@ via the questionnaire result.
 
 ## 6. ⚠️ Remaining Play Console/account-owner gaps
 
-1. **Confirm the support/privacy email** to use for the store listing.
-2. **Confirm release pricing**. The intended launch model is free; if Play
+1. **Confirm release pricing**. The intended launch model is free; if Play
    Console is currently set to paid, switch it to free unless the account owner
    intentionally wants merchant-account/payment setup.
-3. **Provide Play review access**: a review test account, or confirmation that
+2. **Provide Play review access**: a review test account, or confirmation that
    self-registration is open and acceptable for review.
-4. **Choose the release track**: internal, closed testing, open testing, or
+3. **Choose the release track**: internal, closed testing, open testing, or
    production.
-5. **After AAB upload**, check Play Console -> Setup -> App integrity. If Google
+4. **After AAB upload**, check Play Console -> Setup -> App integrity. If Google
    Play App Signing shows a different App signing certificate SHA-256 than the
    upload certificate, add that fingerprint to
    `public/.well-known/assetlinks.json`, deploy, and re-run Digital Asset Links
