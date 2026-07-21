@@ -147,6 +147,7 @@ describe("deleteAccountAction", () => {
         mutationBuilder(),
         mutationBuilder(),
         mutationBuilder(),
+        mutationBuilder(),
       ],
       { deleteUserResult: { error: { message: "auth unavailable" } } },
     );
@@ -182,6 +183,7 @@ describe("deleteAccountAction", () => {
       mutationBuilder(),
       mutationBuilder(),
       mutationBuilder(),
+      mutationBuilder(),
     ]);
     mocks.createAdminClient.mockReturnValue(admin);
 
@@ -193,6 +195,7 @@ describe("deleteAccountAction", () => {
     expect(result.status).toBe("success");
     expect(admin.remove).toHaveBeenCalledWith(["avatars/user-1-avatar.png"]);
     expect(commentDelete.payload).toEqual({
+      user_id: null,
       status: "deleted",
       body: "",
       reported_by: null,

@@ -106,11 +106,20 @@ async function deleteAccountData({
   );
   if (!bookmarkDelete.ok) return bookmarkDelete;
 
+  // Detach the leaving reader's comments from their identity BEFORE deleting
+  // the Auth user. Setting user_id to null (in addition to soft-deleting) is
+  // load-bearing: comments.user_id carries an ON DELETE CASCADE FK to profiles
+  // (comments_user_id_profiles_fkey), so if these rows still pointed at the
+  // profile when the Auth user — and, by cascade, the profile — is deleted,
+  // they would be hard-deleted, cascading through comments.parent_id and taking
+  // other readers' replies with them. Nulling user_id first leaves them as
+  // authorless "deleted" stubs that survive the cascade, so reply threads stay
+  // intact. Requires the nullable user_id migration (20260721000000).
   const commentAnonymise = await expectMutation(
-    "delete comments",
+    "anonymise comments",
     supabase
       .from("comments")
-      .update({ status: "deleted", body: "", reported_by: null, report_reason: null })
+      .update({ user_id: null, status: "deleted", body: "", reported_by: null, report_reason: null })
       .eq("user_id", userId),
   );
   if (!commentAnonymise.ok) return commentAnonymise;
@@ -123,6 +132,14 @@ async function deleteAccountData({
       .eq("reported_by", userId),
   );
   if (!reportAnonymise.ok) return reportAnonymise;
+
+  // comments.reviewed_by references auth.users with NO ACTION, so any comment
+  // this user moderated would otherwise block the Auth-user delete. Clear it.
+  const reviewAnonymise = await expectMutation(
+    "clear comment reviews",
+    supabase.from("comments").update({ reviewed_by: null }).eq("reviewed_by", userId),
+  );
+  if (!reviewAnonymise.ok) return reviewAnonymise;
 
   const searchLogAnonymise = await expectMutation(
     "disconnect search logs",

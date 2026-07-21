@@ -209,6 +209,9 @@ export type CommentRow = {
 export type CommentInsert = Pick<CommentRow, "edition_code" | "wp_post_id" | "user_id" | "body"> &
   Partial<Pick<CommentRow, "id" | "parent_id" | "status">>;
 
+// `user_id` is nullable on update only: account deletion anonymises authored
+// comments (user_id → null) so they detach from the profile before the
+// auth-user delete cascades, keeping other readers' replies intact.
 export type CommentUpdate = Partial<
   Pick<
     CommentRow,
@@ -220,7 +223,7 @@ export type CommentUpdate = Partial<
     | "reviewed_at"
     | "reviewed_by"
   >
->;
+> & { user_id?: string | null };
 
 // Matches the live `most_read_content` RPC return: keyed by `edition_code`,
 // ordered internally by the RPC (returns `rank`, not a `view_count` column).
