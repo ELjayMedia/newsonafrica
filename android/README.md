@@ -9,7 +9,7 @@ Bubblewrap-generated Trusted Web Activity wrapper for the production PWA at
 - App name: `News on Africa`
 - Launcher name: `News Africa`
 - Start URL: `https://app.newsonafrica.com/`
-- Version: `versionCode 2`, `versionName "1.0.1"`
+- Version: `versionCode 3`, `versionName "1.0.2"`
 
 ## Local Debug Build
 
