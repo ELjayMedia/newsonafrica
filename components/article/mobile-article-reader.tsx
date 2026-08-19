@@ -69,66 +69,36 @@ export function MobileArticleReader({
             </Link>
           ) : null}
 
-          <div className="space-y-3">
-            <h1 className="heading-lg font-display text-foreground">{post.title}</h1>
-            {post.excerpt ? <p className="body-md text-muted-foreground">{post.excerpt}</p> : null}
-          </div>
+          <h1 className="heading-lg font-display text-foreground">{post.title}</h1>
 
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm">
-            {post.author?.avatarUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted avatar
-              <img
-                src={post.author.avatarUrl}
-                alt=""
-                className="h-11 w-11 rounded-full object-cover"
-              />
-            ) : (
-              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-primary/10 ui-md text-primary">
-                {post.author?.name.charAt(0) ?? "N"}
-              </div>
-            )}
-            <div className="min-w-0 flex-1">
+          <div className="space-y-1.5">
+            <p className="ui-sm flex flex-wrap items-center gap-x-1.5 text-muted-foreground">
               {post.author ? (
                 <Link
                   href={`/${countryCode}/author/${post.author.slug}`}
-                  className="ui-md font-semibold text-foreground hover:text-primary"
+                  className="font-semibold text-foreground hover:text-primary"
                 >
                   {post.author.name}
                 </Link>
-              ) : null}
+              ) : (
+                <span className="font-semibold text-foreground">News on Africa</span>
+              )}
+              <span aria-hidden>·</span>
+              <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+              <span aria-hidden>·</span>
+              <span>{countryName}</span>
+            </p>
+            <p className="ui-sm text-muted-foreground">
+              Source: News on Africa <span aria-hidden>·</span> Publisher: News on Africa
+            </p>
+            {showUpdated ? (
               <p className="ui-sm text-muted-foreground">
-                <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
-                <span aria-hidden> · </span>
-                {countryName}
+                Updated <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
               </p>
-              <p className="ui-sm text-muted-foreground">Publisher: News on Africa</p>
-              {showUpdated ? (
-                <p className="ui-sm text-muted-foreground">
-                  Updated <time dateTime={post.updatedAt}>{formatDate(post.updatedAt)}</time>
-                </p>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <ShareButtons
-              title={post.title}
-              url={shareUrl}
-              className="flex-nowrap overflow-x-auto pb-1"
-            />
-            <BookmarkButton
-              country={countryCode}
-              slug={slug}
-              wpPostId={post.id}
-              initialBookmarked={bookmarked}
-              signedIn={signedIn}
-              className="items-start"
-            />
+            ) : null}
           </div>
         </div>
       </header>
-
-      {corrections.length > 0 ? <CorrectionNotice entries={corrections} /> : null}
 
       {post.featuredImage ? (
         <figure className="space-y-2">
@@ -146,31 +116,19 @@ export function MobileArticleReader({
         </figure>
       ) : null}
 
-      {post.excerpt ? (
-        <section
-          className="rounded-2xl border border-border bg-card p-4 shadow-sm"
-          aria-labelledby="story-at-a-glance"
-        >
-          <h2 id="story-at-a-glance" className="heading-sm">
-            Story at a glance
-          </h2>
-          <p className="body-sm mt-2 text-muted-foreground">{post.excerpt}</p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-muted p-3">
-              <p className="ui-sm text-muted-foreground">Section</p>
-              <p className="ui-md text-foreground">{category?.name ?? "News"}</p>
-            </div>
-            <div className="rounded-xl bg-muted p-3">
-              <p className="ui-sm text-muted-foreground">Published</p>
-              <p className="ui-md text-foreground">{formatDate(post.publishedAt)}</p>
-            </div>
-            <div className="col-span-2 rounded-xl bg-muted p-3">
-              <p className="ui-sm text-muted-foreground">Source</p>
-              <p className="ui-md text-foreground">News on Africa</p>
-            </div>
-          </div>
-        </section>
-      ) : null}
+      <div className="space-y-3 border-b border-border pb-5">
+        <ShareButtons title={post.title} url={shareUrl} compact />
+        <BookmarkButton
+          country={countryCode}
+          slug={slug}
+          wpPostId={post.id}
+          initialBookmarked={bookmarked}
+          signedIn={signedIn}
+          className="items-start"
+        />
+      </div>
+
+      {corrections.length > 0 ? <CorrectionNotice entries={corrections} /> : null}
 
       <ArticleBody html={post.content} />
 
