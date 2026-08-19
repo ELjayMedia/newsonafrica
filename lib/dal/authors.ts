@@ -38,7 +38,7 @@ const AUTHOR_FIELDS = /* GraphQL */ `
 
 const AUTHORS_QUERY = /* GraphQL */ `
   query Authors($first: Int!) {
-    users(first: $first, where: { orderby: NAME, order: ASC }) {
+    users(first: $first, where: { orderby: { field: DISPLAY_NAME, order: ASC } }) {
       pageInfo {
         hasNextPage
       }
