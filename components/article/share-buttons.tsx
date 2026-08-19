@@ -43,9 +43,7 @@ export function ShareButtons({ title, url, className, compact = false }: ShareBu
   };
 
   if (compact) {
-    const compactLinks = links.filter(
-      (link) => link.label === "WhatsApp" || link.label === "Facebook",
-    );
+    const compactLinks = [links[2], links[0]];
 
     return (
       <div
