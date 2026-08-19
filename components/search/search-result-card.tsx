@@ -17,12 +17,12 @@ export function SearchResultCard({ result }: { result: SearchResult }) {
   const countryName = COUNTRIES[result.country]?.name ?? result.country;
 
   return (
-    <article className="group flex gap-4 border-b border-border pb-6 sm:gap-6">
+    <article className="group flex gap-3 border-b border-border pb-5 sm:gap-6 sm:pb-6">
       <Link
         href={result.url}
         tabIndex={-1}
         aria-hidden
-        className="relative block aspect-[4/3] w-28 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:w-40 md:w-48"
+        className="relative block aspect-[4/3] w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:w-40 md:w-48"
       >
         {result.featuredImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted images; see components/article/article-card.tsx header
@@ -34,11 +34,14 @@ export function SearchResultCard({ result }: { result: SearchResult }) {
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" aria-hidden />
+          <div
+            className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20"
+            aria-hidden
+          />
         )}
       </Link>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-2">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="outline">{countryName}</Badge>
           {category ? <Badge variant="secondary">{category}</Badge> : null}
@@ -50,11 +53,15 @@ export function SearchResultCard({ result }: { result: SearchResult }) {
           </Link>
         </h3>
 
-        {result.excerpt ? <p className="body-sm line-clamp-2 text-muted-foreground">{result.excerpt}</p> : null}
+        {result.excerpt ? (
+          <p className="body-sm hidden text-muted-foreground sm:line-clamp-2 sm:block">
+            {result.excerpt}
+          </p>
+        ) : null}
 
         <div className="mt-auto flex items-center gap-2 ui-sm text-muted-foreground">
-          {result.author ? <span>{result.author}</span> : null}
-          {result.author ? <span aria-hidden>&middot;</span> : null}
+          {result.author ? <span className="hidden sm:inline">{result.author}</span> : null}
+          {result.author ? <span className="hidden sm:inline" aria-hidden>&middot;</span> : null}
           <time dateTime={result.publishedAt}>{formatDate(result.publishedAt)}</time>
         </div>
       </div>
