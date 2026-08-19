@@ -89,7 +89,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
     getHomeRailData(countryCode),
   ]);
 
-  const shareUrl = `${publicEnv.SITE_URL}${getArticleUrl(countryCode, slug)}`;
+  const shareUrl = new URL(getArticleUrl(countryCode, slug), publicEnv.SITE_URL).toString();
 
   const user = await getUser();
   const bookmarked = user ? await isBookmarked(countryCode, post.id) : false;
