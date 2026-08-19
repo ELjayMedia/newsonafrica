@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { HomeRail } from "@/components/home/home-rail";
+import { ThumbRow } from "@/components/home/story-card";
 import { Pagination } from "@/components/pagination";
 import { SearchResultCard } from "@/components/search/search-result-card";
 import { Container } from "@/components/ui/container";
@@ -47,7 +48,11 @@ function CountryFilter({ query, active }: { query: string; active: CountryCode |
 
   return (
     <nav aria-label="Filter results by country" className="flex flex-wrap items-center gap-2">
-      <Link href={buildSearchUrl({ query })} className={pillClass(active === null)} aria-current={active === null ? "true" : undefined}>
+      <Link
+        href={buildSearchUrl({ query })}
+        className={pillClass(active === null)}
+        aria-current={active === null ? "true" : undefined}
+      >
         All countries
       </Link>
       {COUNTRY_LIST.map((country) => (
@@ -113,12 +118,43 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
       <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
         {!query ? (
-          <p className="body-lg text-muted-foreground">Enter a search term to find stories from across our editions.</p>
+          <>
+            <section className="space-y-4 lg:hidden" aria-labelledby="mobile-search-latest">
+              <div className="space-y-1">
+                <p className="ui-sm font-semibold uppercase tracking-wide text-primary">Latest</p>
+                <h2 id="mobile-search-latest" className="heading-md">
+                  Latest stories
+                </h2>
+              </div>
+
+              {rail.latest.length > 0 ? (
+                <div className="divide-y divide-border border-y border-border">
+                  {rail.latest.map((post) => (
+                    <div key={`${post.country}-${post.id}`} className="py-4">
+                      <ThumbRow post={post} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="body-sm text-muted-foreground">
+                  Latest stories are temporarily unavailable. You can still search across our
+                  editions above.
+                </p>
+              )}
+            </section>
+
+            <p className="body-lg hidden text-muted-foreground lg:block">
+              Enter a search term to find stories from across our editions.
+            </p>
+          </>
         ) : result && result.items.length > 0 ? (
           <div className="space-y-8">
             <p className="ui-sm text-muted-foreground" role="status">
-              {result.total.toLocaleString("en")} {result.total === 1 ? "result" : "results"} for &ldquo;{query}&rdquo;
-              {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}
+              {result.total.toLocaleString("en")} {result.total === 1 ? "result" : "results"} for
+              &ldquo;{query}&rdquo;
+              {country
+                ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}`
+                : ""}
             </p>
 
             <div className="flex flex-col gap-6">
@@ -138,7 +174,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <div className="space-y-2">
             <p className="body-lg text-muted-foreground" role="status">
               No results for &ldquo;{query}&rdquo;
-              {country ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}` : ""}.
+              {country
+                ? ` in ${COUNTRY_LIST.find((c) => c.code === country)?.name ?? country}`
+                : ""}
+              .
             </p>
             <p className="body-sm text-muted-foreground">
               Try a different search term{country ? ", or search all countries" : ""}.
