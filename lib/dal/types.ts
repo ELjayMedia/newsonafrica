@@ -48,6 +48,14 @@ export interface CorrectionEntry {
   kind: "correction" | "update";
 }
 
+export interface SponsorInfo {
+  isSponsored: boolean;
+  sponsorName: string;
+  sponsorTier?: string;
+  disclosureLabel: string;
+  campaignId?: string;
+}
+
 export interface Post {
   /** WordPress post ID (`wp_post_id` in the content index). */
   id: number;
@@ -66,6 +74,8 @@ export interface Post {
   author: AuthorSummary | null;
   /** Dated correction/update notes, newest first (NOA-139). */
   corrections?: CorrectionEntry[];
+  /** Sponsor metadata (NOA-141). */
+  sponsor?: SponsorInfo;
 }
 
 /** Lightweight post shape for listing surfaces (home feed, category feed, most-read). */

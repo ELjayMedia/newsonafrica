@@ -60,6 +60,13 @@ const POST_FIELDS = /* GraphQL */ `
       kind
     }
   }
+  sponsor {
+    isSponsored
+    sponsorName
+    sponsorTier
+    disclosureLabel
+    campaignId
+  }
 `;
 
 const POSTS_LIST_QUERY = /* GraphQL */ `
@@ -110,6 +117,13 @@ const POST_BY_ID_QUERY = /* GraphQL */ `
 type GqlTerm = { databaseId?: number | null; name?: string | null; slug?: string | null };
 type GqlAuthor = { databaseId?: number | null; name?: string | null; slug?: string | null; avatar?: { url?: string | null } | null };
 type GqlCorrection = { date?: string | null; note?: string | null; kind?: string | null };
+type GqlSponsor = {
+  isSponsored?: boolean | null;
+  sponsorName?: string | null;
+  sponsorTier?: string | null;
+  disclosureLabel?: string | null;
+  campaignId?: string | null;
+};
 type GqlPost = {
   databaseId?: number | null;
   slug?: string | null;
@@ -124,6 +138,7 @@ type GqlPost = {
   tags?: { nodes?: GqlTerm[] | null } | null;
   author?: { node?: GqlAuthor | null } | null;
   corrections?: { nodes?: GqlCorrection[] | null } | null;
+  sponsor?: GqlSponsor | null;
 };
 
 type PostsListData = { posts?: { pageInfo?: { hasNextPage?: boolean }; nodes?: GqlPost[] | null } | null };
@@ -159,6 +174,17 @@ function mapCorrections(corrections?: { nodes?: GqlCorrection[] | null } | null)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
+function mapSponsor(sponsor?: GqlSponsor | null): Post["sponsor"] {
+  if (!sponsor?.isSponsored) return undefined;
+  return {
+    isSponsored: true,
+    sponsorName: sponsor.sponsorName ?? "Sponsor",
+    sponsorTier: sponsor.sponsorTier ?? undefined,
+    disclosureLabel: sponsor.disclosureLabel ?? "Paid partnership",
+    campaignId: sponsor.campaignId ?? undefined,
+  };
+}
+
 function mapGraphQLPost(raw: GqlPost, country: CountryCode | string): Post {
   const image = raw.featuredImage?.node;
   return {
@@ -183,6 +209,7 @@ function mapGraphQLPost(raw: GqlPost, country: CountryCode | string): Post {
     tags: (raw.tags?.nodes ?? []).map(mapTerm),
     author: mapAuthor(raw.author?.node),
     corrections: mapCorrections(raw.corrections),
+    sponsor: mapSponsor(raw.sponsor),
   };
 }
 
