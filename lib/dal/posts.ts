@@ -53,6 +53,13 @@ const POST_FIELDS = /* GraphQL */ `
       }
     }
   }
+  corrections {
+    nodes {
+      date
+      note
+      kind
+    }
+  }
 `;
 
 const POSTS_LIST_QUERY = /* GraphQL */ `
@@ -102,6 +109,7 @@ const POST_BY_ID_QUERY = /* GraphQL */ `
 
 type GqlTerm = { databaseId?: number | null; name?: string | null; slug?: string | null };
 type GqlAuthor = { databaseId?: number | null; name?: string | null; slug?: string | null; avatar?: { url?: string | null } | null };
+type GqlCorrection = { date?: string | null; note?: string | null; kind?: string | null };
 type GqlPost = {
   databaseId?: number | null;
   slug?: string | null;
@@ -115,6 +123,7 @@ type GqlPost = {
   categories?: { nodes?: GqlTerm[] | null } | null;
   tags?: { nodes?: GqlTerm[] | null } | null;
   author?: { node?: GqlAuthor | null } | null;
+  corrections?: { nodes?: GqlCorrection[] | null } | null;
 };
 
 type PostsListData = { posts?: { pageInfo?: { hasNextPage?: boolean }; nodes?: GqlPost[] | null } | null };
@@ -136,6 +145,18 @@ function mapAuthor(author?: GqlAuthor | null): AuthorSummary | null {
     slug: author.slug ?? "",
     avatarUrl: author.avatar?.url ?? undefined,
   };
+}
+
+function mapCorrections(corrections?: { nodes?: GqlCorrection[] | null } | null): Post["corrections"] {
+  if (!corrections?.nodes?.length) return undefined;
+  return corrections.nodes
+    .filter((c) => c.date && c.note && c.kind)
+    .map((c) => ({
+      date: c.date!,
+      note: c.note!,
+      kind: c.kind === "update" ? "update" as const : "correction" as const,
+    }))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 function mapGraphQLPost(raw: GqlPost, country: CountryCode | string): Post {
@@ -161,11 +182,11 @@ function mapGraphQLPost(raw: GqlPost, country: CountryCode | string): Post {
     categories: (raw.categories?.nodes ?? []).map(mapTerm),
     tags: (raw.tags?.nodes ?? []).map(mapTerm),
     author: mapAuthor(raw.author?.node),
+    corrections: mapCorrections(raw.corrections),
   };
 }
 
 function mapGraphQLPostSummary(raw: GqlPost, country: CountryCode | string): PostSummary {
-  // Drop the heavy `content` field; PostSummary is `Omit<Post, "content">`.
   const { content: _content, ...summary } = mapGraphQLPost(raw, country);
   void _content;
   return summary;
@@ -190,6 +211,7 @@ export async function listPosts(params: PostListParams): Promise<PaginatedResult
   if (params.categorySlug) tags.push(cacheTags.category(params.country, params.categorySlug));
   if (params.tagSlug) tags.push(cacheTags.tag(params.country, params.tagSlug));
   if (params.authorSlug) tags.push(cacheTags.author(params.country, params.authorSlug));
+  if (params.search) tags.push(cacheTags.search(params.country, params.search));
 
   const data = await graphQL<PostsListData>(
     params.country,
@@ -285,14 +307,6 @@ export async function getPostById(country: CountryCode | string, id: number): Pr
   return data.post ? mapGraphQLPost(data.post, country) : null;
 }
 
-/**
- * Page through a country's posts (with body content) for the content-sync
- * backfill/index (NOA-87). Uses the same WPGraphQL read path as the site —
- * REST does not serve content on this install — so the search index is
- * populated from the source the app actually reads. Fetched uncached since
- * backfill always wants the freshest content. Returns fully-mapped domain
- * `Post`s plus pagination so the sync routine knows when to stop.
- */
 export async function listPostsForSync(
   country: CountryCode | string,
   { page = 1, perPage = 50 }: { page?: number; perPage?: number } = {},
