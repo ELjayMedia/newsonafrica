@@ -4,7 +4,6 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check } from "lucide-react";
 
 const PLANS = [
   {
@@ -68,7 +67,7 @@ export function SubscribeForm() {
               <ul className="flex flex-col gap-2">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-center gap-2 text-sm">
-                    <Check className="h-4 w-4 text-primary" />
+                    <span aria-hidden="true" className="text-primary">✓</span>
                     {feature}
                   </li>
                 ))}
