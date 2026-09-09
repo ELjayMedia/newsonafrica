@@ -50,4 +50,5 @@ export const cacheTags = {
   author: (country: CountryInput, slug: IdentifierInput) => countryEntity(country, "author", slug),
   tags: (country: CountryInput) => countryScope(country, "tags"),
   tag: (country: CountryInput, slug: IdentifierInput) => countryEntity(country, "tag", slug),
+  search: (country: CountryInput, query: IdentifierInput) => countryEntity(country, "search", query),
 } as const;
