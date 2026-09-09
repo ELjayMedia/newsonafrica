@@ -1,19 +1,15 @@
 /**
- * Hand-written types for the tables/functions this phase introduces
- * (`supabase/migrations/20260702120000_content_index.sql`). Narrow by
- * design — extend as more Supabase-backed features land, or replace with
- * `supabase gen types typescript` output once the schema stabilizes.
+ * Hand-written Supabase types for the active application schema.
+ *
+ * Keep this file aligned with the live project whenever new migrations add
+ * tables/RPCs. The September 2026 additions below were reconciled against
+ * `supabase gen types typescript` output from the production project.
  *
  * NOTE: these must be `type` aliases, not `interface`s. supabase-js's
  * `SupabaseClient<Database>` generic only resolves table types when each
- * Row/Insert/Update structurally satisfies `Record<string, unknown>`, which
- * plain interfaces (lacking an index signature) fail — silently collapsing
- * every `.from(...)` call to `never`.
+ * Row/Insert/Update structurally satisfies `Record<string, unknown>`.
  */
 
-// Matches the live `content_index` schema (NOA-87): the edition is keyed by
-// `edition_code` (not `country`), and the live table has no `status`/`view_count`
-// columns — only published content is indexed, and view counts aren't tracked here.
 export type ContentIndexRow = {
   id: string;
   wp_post_id: number;
@@ -62,9 +58,20 @@ export type ContentSyncCursorRow = {
   updated_at: string;
 };
 
-// Matches the live `search_content` RPC return: keyed by `edition_code`, with a
-// windowed `total_count` (same on every row) for exact pagination — restored by
-// migration 20260710000000_search_content_total_count.sql.
+export type ContentIndexHealthRow = {
+  edition_code: string;
+  rows: number;
+  missing_vector: number;
+  pct_tags: number;
+  pct_categories: number;
+  pct_content: number;
+  oldest: string;
+  newest: string;
+  sync_status: string;
+  last_synced_at: string;
+  error_message: string;
+};
+
 export type SearchContentRow = {
   id: string;
   edition_code: string;
@@ -79,7 +86,6 @@ export type SearchContentRow = {
   url_path: string;
   featured_image_url: string | null;
   rank: number;
-  /** Count of ALL rows matching the query/filters (same on every row). */
   total_count: number;
 };
 
@@ -90,9 +96,6 @@ export type SearchSuggestionRow = {
   url_path: string;
 };
 
-// Reader profile row — matches the live `profiles` schema. The reader's name
-// is stored in `full_name` (not `display_name`) and their edition preference in
-// `country` (not `preferred_country`); several richer profile fields exist too.
 export type ProfileRow = {
   id: string;
   full_name: string | null;
@@ -106,7 +109,6 @@ export type ProfileRow = {
   location: string | null;
   interests: string[] | null;
   preferences: Record<string, unknown> | null;
-  /** Moderation gate (NOA-102) — set via SQL/service role only. */
   is_admin: boolean | null;
   onboarded: boolean | null;
   role: string | null;
@@ -136,13 +138,8 @@ export type ProfileUpdate = Partial<
   >
 >;
 
-/** Reading progress on a saved article (live `read_status` enum). */
 export type ReadStatus = "unread" | "in_progress" | "read";
 
-// Saved article — matches the live `bookmarks` schema: keyed by
-// (user_id, wp_post_id, edition_code), with the article metadata snapshotted
-// onto the row (title/slug/excerpt/featured_image/category/tags) plus reading
-// state (read_state/read_at/note/collection_id).
 export type BookmarkRow = {
   id: string;
   user_id: string;
@@ -179,13 +176,9 @@ export type BookmarkInsert = Pick<BookmarkRow, "user_id" | "wp_post_id" | "editi
     >
   >;
 
-/** Moderation states — the live `comment_status` enum. */
 export type CommentStatus =
   "active" | "flagged" | "hidden" | "deleted" | "pending" | "approved" | "spam";
 
-// Article comment — matches the live `comments` schema: keyed by edition_code,
-// threaded purely by parent_id (no `root_id` column), with moderation/report
-// metadata and engagement counters on the row.
 export type CommentRow = {
   id: string;
   wp_post_id: number;
@@ -222,8 +215,6 @@ export type CommentUpdate = Partial<
   >
 >;
 
-// Matches the live `most_read_content` RPC return: keyed by `edition_code`,
-// ordered internally by the RPC (returns `rank`, not a `view_count` column).
 export type MostReadRow = {
   id: string;
   edition_code: string;
@@ -236,21 +227,15 @@ export type MostReadRow = {
   published_at: string;
 };
 
-// Newsletter capture (NOA-129). First-party owned-audience storage; writes go
-// through the service-role server action only (RLS locks out client access).
 export type NewsletterStatus = "pending" | "confirmed" | "unsubscribed";
 
 export type NewsletterSubscriberRow = {
   id: string;
   email: string;
   status: NewsletterStatus;
-  /** Edition the reader signed up from (`sz`/`za`/`ng`), or null for pan-African. */
   edition_code: string | null;
-  /** Editorial/commercial vertical the capture point sits in (e.g. `business`). */
   source_vertical: string | null;
-  /** Campaign tag for attribution (utm-style). */
   source_campaign: string | null;
-  /** Where the sign-up happened (e.g. `footer`, `/sz`). */
   source_path: string | null;
   metadata: Record<string, unknown>;
   created_at: string;
@@ -266,8 +251,6 @@ export type NewsletterSubscriberInsert = Pick<NewsletterSubscriberRow, "email"> 
     >
   >;
 
-// Search query logging (NOA-137). Written server-side (service role); no client
-// access. Feeds top-queries / zero-result-rate reporting.
 export type SearchQueryLogRow = {
   id: string;
   query: string;
@@ -279,6 +262,145 @@ export type SearchQueryLogRow = {
 
 export type SearchQueryLogInsert = Pick<SearchQueryLogRow, "query"> &
   Partial<Pick<SearchQueryLogRow, "edition_code" | "result_count" | "user_id">>;
+
+export type PressCredentialStatus = "active" | "expired" | "suspended" | "revoked" | "lost" | "stolen";
+export type PressCredentialRole =
+  | "journalist"
+  | "editor"
+  | "photographer"
+  | "videographer"
+  | "freelancer"
+  | "contributor";
+
+export type PressCredentialRow = {
+  id: string;
+  credential_number: string;
+  holder_name: string;
+  holder_email: string | null;
+  holder_phone: string | null;
+  role: string;
+  department: string | null;
+  photo_url: string | null;
+  id_card_url: string | null;
+  issue_date: string;
+  expiry_date: string;
+  status: string;
+  verifying_editor: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PressCredentialInsert = Pick<PressCredentialRow, "holder_name" | "role" | "expiry_date"> &
+  Partial<Omit<PressCredentialRow, "holder_name" | "role" | "expiry_date">>;
+
+export type CredentialVerificationRow = {
+  id: string;
+  credential_id: string | null;
+  verified_at: string;
+  verified_by: string | null;
+  verification_method: string | null;
+  ip_address: unknown;
+  result: string;
+};
+
+export type CredentialVerificationInsert = Pick<CredentialVerificationRow, "result"> &
+  Partial<Omit<CredentialVerificationRow, "result">>;
+
+export type CrewMemberRow = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+  role: string;
+  skills: string[] | null;
+  availability: string | null;
+  credential_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CrewMemberInsert = Pick<CrewMemberRow, "full_name" | "role"> &
+  Partial<Omit<CrewMemberRow, "full_name" | "role">>;
+
+export type EquipmentRow = {
+  id: string;
+  asset_tag: string;
+  name: string;
+  category: string;
+  manufacturer: string | null;
+  model: string | null;
+  serial_number: string | null;
+  status: string;
+  assigned_to: string | null;
+  purchase_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type EquipmentInsert = Pick<EquipmentRow, "asset_tag" | "name" | "category"> &
+  Partial<Omit<EquipmentRow, "asset_tag" | "name" | "category">>;
+
+export type SubscriptionRow = {
+  id: string;
+  user_id: string;
+  plan: string;
+  status: string;
+  start_date: string;
+  end_date: string | null;
+  renewal_date: string | null;
+  payment_provider: string;
+  payment_id: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionInsert = Pick<SubscriptionRow, "user_id" | "plan" | "payment_id"> &
+  Partial<Omit<SubscriptionRow, "user_id" | "plan" | "payment_id">>;
+
+export type AdEventRow = {
+  id: string;
+  created_at: string;
+  event_type: string;
+  placement_type: string;
+  campaign_id: string | null;
+  sponsor_name: string | null;
+  edition_code: string;
+  vertical: string | null;
+  country: string;
+  article_id: number | null;
+  session_id: string | null;
+  user_agent: string | null;
+  ip_hash: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
+export type AdEventInsert = Pick<AdEventRow, "event_type" | "placement_type" | "edition_code" | "country"> &
+  Partial<Omit<AdEventRow, "event_type" | "placement_type" | "edition_code" | "country">>;
+
+export type WebhookEventRow = {
+  id: string;
+  source: string;
+  payload_hash: string;
+  created_at: string;
+};
+
+export type WebhookEventInsert = Pick<WebhookEventRow, "payload_hash"> &
+  Partial<Omit<WebhookEventRow, "payload_hash">>;
+
+export type CampaignSummaryRow = {
+  campaign_id: string | null;
+  sponsor_name: string | null;
+  edition_code: string | null;
+  placement_type: string | null;
+  impressions: number | null;
+  clicks: number | null;
+  ctr_percent: number | null;
+  first_event_at: string | null;
+  last_event_at: string | null;
+};
 
 export type Database = {
   public: {
@@ -325,8 +447,57 @@ export type Database = {
         Update: Partial<SearchQueryLogInsert>;
         Relationships: [];
       };
+      press_credentials: {
+        Row: PressCredentialRow;
+        Insert: PressCredentialInsert;
+        Update: Partial<PressCredentialInsert>;
+        Relationships: [];
+      };
+      credential_verifications: {
+        Row: CredentialVerificationRow;
+        Insert: CredentialVerificationInsert;
+        Update: Partial<CredentialVerificationInsert>;
+        Relationships: [];
+      };
+      crew_members: {
+        Row: CrewMemberRow;
+        Insert: CrewMemberInsert;
+        Update: Partial<CrewMemberInsert>;
+        Relationships: [];
+      };
+      equipment: {
+        Row: EquipmentRow;
+        Insert: EquipmentInsert;
+        Update: Partial<EquipmentInsert>;
+        Relationships: [];
+      };
+      subscriptions: {
+        Row: SubscriptionRow;
+        Insert: SubscriptionInsert;
+        Update: Partial<SubscriptionInsert>;
+        Relationships: [];
+      };
+      ad_events: {
+        Row: AdEventRow;
+        Insert: AdEventInsert;
+        Update: Partial<AdEventInsert>;
+        Relationships: [];
+      };
+      webhook_events: {
+        Row: WebhookEventRow;
+        Insert: WebhookEventInsert;
+        Update: Partial<WebhookEventInsert>;
+        Relationships: [];
+      };
     };
-    Views: Record<string, never>;
+    Views: {
+      campaign_summary: {
+        Row: CampaignSummaryRow;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+    };
     Functions: {
       search_content: {
         Args: {
@@ -352,6 +523,37 @@ export type Database = {
           limit_count?: number;
         };
         Returns: MostReadRow[];
+      };
+      content_index_health_report: {
+        Args: Record<string, never>;
+        Returns: ContentIndexHealthRow[];
+      };
+      user_has_active_subscription: {
+        Args: { p_user_id: string };
+        Returns: boolean;
+      };
+      get_active_subscription: {
+        Args: { p_user_id: string };
+        Returns: SubscriptionRow[];
+      };
+      log_ad_event: {
+        Args: {
+          p_event_type: string;
+          p_placement_type: string;
+          p_edition_code: string;
+          p_country: string;
+          p_campaign_id?: string | null;
+          p_sponsor_name?: string | null;
+          p_vertical?: string | null;
+          p_article_id?: number | null;
+          p_session_id?: string | null;
+          p_metadata?: Record<string, unknown> | null;
+        };
+        Returns: string;
+      };
+      refresh_campaign_summary: {
+        Args: Record<string, never>;
+        Returns: undefined;
       };
     };
   };

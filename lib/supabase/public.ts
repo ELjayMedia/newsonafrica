@@ -13,7 +13,28 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { publicEnv } from "@/lib/env";
 import type { Database } from "@/lib/supabase/types";
 
+const PUBLIC_READ_TIMEOUT_MS = 3_000;
+
 let publicClient: SupabaseClient<Database> | undefined;
+
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PUBLIC_READ_TIMEOUT_MS);
+
+  if (init?.signal) {
+    if (init.signal.aborted) {
+      controller.abort();
+    } else {
+      init.signal.addEventListener("abort", () => controller.abort(), { once: true });
+    }
+  }
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
 
 export function createPublicClient(): SupabaseClient<Database> {
   publicClient ??= createSupabaseClient<Database>(
@@ -22,6 +43,7 @@ export function createPublicClient(): SupabaseClient<Database> {
     {
       auth: { autoRefreshToken: false, persistSession: false },
       global: {
+        fetch: fetchWithTimeout,
         headers: {
           "x-application-name": "news-on-africa-reading",
         },

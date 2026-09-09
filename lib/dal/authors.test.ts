@@ -40,7 +40,9 @@ describe("listAuthors", () => {
       expect(result.items).toHaveLength(1);
       expect(mocks.fetchWordPressGraphQL).toHaveBeenCalledTimes(1);
 
-      const [, query, variables, options] = mocks.fetchWordPressGraphQL.mock.calls[0];
+      const call = mocks.fetchWordPressGraphQL.mock.calls[0];
+      expect(call).toBeDefined();
+      const [, query, variables, options] = call!;
       expect(query).toContain("orderby: { field: DISPLAY_NAME, order: ASC }");
       expect(query).not.toContain("orderby: NAME");
       expect(variables).toEqual({ first: 10 });

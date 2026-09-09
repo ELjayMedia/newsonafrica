@@ -74,8 +74,14 @@ export default async function AdminCrewEquipmentPage() {
                 <CardContent className="flex flex-col gap-2 p-4">
                   <div className="flex items-center justify-between">
                     <span className="font-medium">{member.full_name}</span>
-                    <Badge variant={AVAILABILITY_VARIANT[member.availability] || "outline"}>
-                      {member.availability}
+                    <Badge
+                      variant={
+                        member.availability
+                          ? AVAILABILITY_VARIANT[member.availability] || "outline"
+                          : "outline"
+                      }
+                    >
+                      {member.availability ?? "unknown"}
                     </Badge>
                   </div>
                   <p className="body-sm text-muted-foreground">{member.role}</p>
