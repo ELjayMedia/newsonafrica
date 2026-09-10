@@ -1,8 +1,8 @@
 # Newsletter capture & audience journey (NOA-129)
 
 The first newsletter product for News on Africa — the sign-up promise, where we
-capture, how subscribers are stored and attributed, the weekly structure, and how
-leads route into Studio 2411 / Ticketiv. Owned-audience capture is built and live
+capture, how subscribers are stored and attributed, the weekly structure, and where
+newsletter leads are intended to route. Owned-audience capture is built and live
 (first-party in Supabase); the sending/ESP layer is a documented decision below.
 
 > Positions NoA as a distribution + lead-gen asset (AGENCY-31), leading with
@@ -70,25 +70,37 @@ over time) — feeds the audience-growth metrics in
 3. **One culture / creative-economy feature.**
 4. **Upcoming events / Ticketiv-linked opportunities.**
 5. **Sponsor slot / partner message** (§7 disclosure).
-6. **CTA:** work with Studio 2411, or list an event on Ticketiv, where relevant.
+6. **CTA:** work with Macon, or list an event on Ticketiv, where relevant.
 
 Content sourcing leans on the existing `content_index` (headlines by
 edition/category) so the weekly can be assembled from indexed articles.
 
-## 6. Lead routing to Studio 2411 & Ticketiv
+## 6. Intended lead routing (Macon & Ticketiv)
 
-The newsletter is a lead pathway, not just distribution:
+The newsletter is meant to be a lead pathway, not just distribution.
+
+> **Status: documentation-only.** Nothing in this section is implemented. There is
+> no lead-routing integration in this repository — no Macon/Perfex or Ticketiv
+> client, endpoint or webhook — and the newsletter is not sending yet (§8). The
+> subscriber table and its attribution columns (§3, §4) are the only parts of this
+> journey that exist in code today.
+
+Within the EljayMedia portfolio, marketing-services work sits with **Macon**, the
+current consultancy proposition; **Ticketiv** is the EljayMedia ticketing platform.
+Studio 2411 is a retired identity and should not be used in new work.
+
+Intended routing, once the newsletter sends:
 
 - **Ticketiv** — the events/opportunities block and any "list your event" CTA
-  link to Ticketiv with campaign tags; event-interest clicks are attributable via
-  `source_campaign`. Enterprise/event profiles in the newsletter link through.
-- **Studio 2411** — the "work with Studio 2411" CTA routes to a Studio 2411
-  intake (form/URL) with a `source=noa-newsletter` tag so leads are traceable to
-  the newsletter.
+  would link to Ticketiv with campaign tags, making event-interest clicks
+  attributable via `source_campaign`.
+- **Macon** — a "work with Macon" CTA would link to a Macon intake with a
+  `source=noa-newsletter` tag so leads stay traceable to the newsletter.
 
-**Decision needed (business):** the concrete intake endpoints/CRM for each
-(a form URL, a CRM inbox, or an API). Until those exist, CTAs are tagged links;
-wiring them into a CRM is a follow-up (§8).
+**Decision needed (business):** the concrete intake endpoint for each (a form URL,
+a CRM inbox, or an API), and whether Macon intake lands in its Perfex CRM. Until
+those are confirmed, both remain plain tagged links; wiring them to a CRM is a
+follow-up (§8).
 
 ## 7. Newsletter sponsorship inventory
 
@@ -112,9 +124,9 @@ tracking. Remaining (filed as follow-ups):
 - **Select the ESP / sending platform** and sync `newsletter_subscribers` to it;
   add **double opt-in confirmation** (`pending` → `confirmed`) and an
   **unsubscribe** flow (`status = unsubscribed`).
-- **Wire CRM lead-routing** endpoints for Studio 2411 and Ticketiv.
+- **Wire CRM lead-routing** endpoints for Macon and Ticketiv (§6 — nothing built yet).
 - **Weekly content workflow** sign-off (who curates, send cadence/day).
 - Optional: an admin view of subscriber counts by source (builds on §4).
 
 Owner sign-off needed on: the sign-up promise copy, the weekly structure, ESP
-choice, sponsorship pricing, and the Studio 2411 / Ticketiv intake targets.
+choice, sponsorship pricing, and the Macon / Ticketiv intake targets.
