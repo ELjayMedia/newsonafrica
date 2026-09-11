@@ -45,7 +45,10 @@ NOA-136, so do not commit keystores, APKs, or AABs.
 ## Signed Release AAB
 
 Release builds require signing values through environment variables or matching
-Gradle properties. Start from the non-secret template:
+Gradle properties. The `scripts/setup-android-release-secrets.sh` script
+generates a keystore and prints the GitHub secrets to set.
+
+Start from the non-secret template:
 
 ```bash
 cp ../scripts/android-release-env.example /tmp/noa-android-release-env

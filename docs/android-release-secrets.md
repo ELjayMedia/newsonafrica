@@ -22,6 +22,18 @@ repository level: **Settings → Secrets and variables → Actions**.
 
 ## How to generate each secret
 
+The `scripts/setup-android-release-secrets.sh` script automates keystore
+generation and prints the GitHub secrets to set. Run it once on a machine
+with Java 17+:
+
+```bash
+bash scripts/setup-android-release-secrets.sh /secure/backup/dir
+```
+
+It generates a PKCS12 keystore, prints the base64-encoded value for
+`NOA_ANDROID_KEYSTORE`, and reminds you to back up the keystore and
+passwords.
+
 ### NOA_ANDROID_KEYSTORE
 
 ```bash
