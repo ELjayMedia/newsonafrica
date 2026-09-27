@@ -23,7 +23,9 @@ export const commercialEnquirySchema = z.object({
   notes: z.string().trim().max(2000).optional(),
   sourcePath: z.string().trim().max(512).optional(),
   sourceCampaign: z.string().trim().max(120).optional(),
-  consent: z.literal(true, { errorMap: () => ({ message: "Please agree to be contacted about this enquiry." }) }),
+  consent: z
+    .boolean()
+    .refine((value) => value, "Please agree to be contacted about this enquiry."),
 });
 
 export type CommercialEnquiryInput = z.input<typeof commercialEnquirySchema>;
