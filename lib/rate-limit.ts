@@ -44,6 +44,8 @@ export const RATE_LIMITS = {
   "analytics:view": { capacity: 60, refillIntervalMs: 1_000 },
   /** Commercial lead form: low-frequency, anonymous and attractive to spam bots. */
   "commercial:enquiry": { capacity: 3, refillIntervalMs: 300_000 },
+  /** Paid-placement telemetry: enough for normal navigation/clicks, bounded for abuse. */
+  "ads:event": { capacity: 120, refillIntervalMs: 1_000 },
   /** Reporting a comment for moderation review. */
   "comments:report": { capacity: 5, refillIntervalMs: 30_000 },
 } as const satisfies Record<string, TokenBucketConfig>;
