@@ -263,6 +263,30 @@ export type SearchQueryLogRow = {
 export type SearchQueryLogInsert = Pick<SearchQueryLogRow, "query"> &
   Partial<Pick<SearchQueryLogRow, "edition_code" | "result_count" | "user_id">>;
 
+export type AnalyticsPageViewRow = {
+  id: string;
+  created_at: string;
+  path: string;
+  edition_code: string | null;
+  content_type: string;
+  article_id: number | null;
+  session_id: string;
+  referrer_host: string | null;
+  device_class: string;
+  metadata: Record<string, unknown>;
+};
+
+export type AnalyticsPageViewInsert = Pick<
+  AnalyticsPageViewRow,
+  "path" | "session_id"
+> &
+  Partial<
+    Pick<
+      AnalyticsPageViewRow,
+      "edition_code" | "content_type" | "article_id" | "referrer_host" | "device_class" | "metadata"
+    >
+  >;
+
 export type PressCredentialStatus = "active" | "expired" | "suspended" | "revoked" | "lost" | "stolen";
 export type PressCredentialRole =
   | "journalist"
@@ -445,6 +469,12 @@ export type Database = {
         Row: SearchQueryLogRow;
         Insert: SearchQueryLogInsert;
         Update: Partial<SearchQueryLogInsert>;
+        Relationships: [];
+      };
+      analytics_page_views: {
+        Row: AnalyticsPageViewRow;
+        Insert: AnalyticsPageViewInsert;
+        Update: Partial<AnalyticsPageViewInsert>;
         Relationships: [];
       };
       press_credentials: {
