@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils";
 
 /**
  * Advertising is a first-class citizen (design system §05). These are the
- * labelled IAB placeholders that appear across the homepage: a billboard under
- * the nav, a mid-rail MPU and a sticky half-page in the right rail. They render
- * as clearly-marked empty frames now; a real ad server (GPT/Prebid) drops its
- * creative into the inner slot later without changing the surrounding layout.
+ * IAB inventory frames used by commercial preview and, later, the ad server.
+ * Unfilled production inventory collapses by default: placeholder frames must
+ * never be mistaken for a live advertiser campaign (NOA-180).
  *
  * Every unit carries an "Advertisement" micro-label so paid inventory is always
  * disclosed, per the design system's "first-class, clearly-labelled" rule.
@@ -32,6 +31,8 @@ export interface AdSlotProps {
   label?: string;
   /** Sticks the unit to the top of its column as the page scrolls (half-page). */
   sticky?: boolean;
+  /** Explicitly opt into rendering demo/real inventory. Unfilled production slots collapse. */
+  enabled?: boolean;
   className?: string;
 }
 
@@ -39,8 +40,11 @@ export function AdSlot({
   format,
   label = "Advertisement",
   sticky = false,
+  enabled = false,
   className,
 }: AdSlotProps) {
+  if (!enabled) return null;
+
   const { w, h, caption, note } = FORMAT[format];
 
   return (

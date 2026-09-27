@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/editorial-guidelines" },
 };
 
-const LAST_UPDATED = "13 July 2026";
+const LAST_UPDATED = "27 September 2026";
 
 export default function EditorialGuidelinesPage() {
   return (
@@ -92,7 +92,8 @@ export default function EditorialGuidelinesPage() {
         <ul className="body-md list-disc space-y-2 pl-5 text-foreground">
           <li>
             News on Africa does not currently use third-party advertising or analytics trackers in
-            the app.
+            the app. We use privacy-safe first-party page-view measurement to understand aggregate
+            readership and content performance.
           </li>
           <li>
             Readers can create accounts, save articles, comment, and request account deletion

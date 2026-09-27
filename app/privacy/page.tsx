@@ -10,13 +10,13 @@ export const metadata: Metadata = {
 };
 
 /** Last substantive review of this policy. Update when the policy changes. */
-const LAST_UPDATED = "12 July 2026";
+const LAST_UPDATED = "27 September 2026";
 
 /**
  * Privacy policy (NOA-135). A live, accessible privacy route is required for
  * PWA/TWA readiness and Google Play submission. The content reflects the app's
- * actual data practices (Supabase auth/storage, first-party newsletter, no
- * third-party analytics at time of writing).
+ * actual data practices (Supabase auth/storage, first-party newsletter and
+ * privacy-safe first-party audience measurement).
  */
 export default function PrivacyPolicyPage() {
   return (
@@ -52,14 +52,27 @@ export default function PrivacyPolicyPage() {
             address and the page or campaign you signed up from.
           </li>
           <li>
+            <span className="font-semibold">Commercial enquiries.</span> If you ask about advertising
+            or partnerships, we store the business contact details and campaign brief you submit so
+            our commercial team can respond and manage the opportunity.
+          </li>
+          <li>
+            <span className="font-semibold">Audience measurement.</span> We record first-party page
+            views using the page path, country edition, coarse device class, external referrer
+            hostname and a random browser-session identifier. We do not store query strings,
+            account identifiers, email addresses, full referrer URLs or raw IP addresses in the
+            audience analytics table.
+          </li>
+          <li>
             <span className="font-semibold">Technical data.</span> Standard server and security logs
             (such as IP address and request metadata) generated when you access the service, used to
             operate and protect it.
           </li>
         </ul>
         <p className="body-sm text-muted-foreground">
-          We do not currently use third-party advertising or analytics trackers. If that changes, we
-          will update this policy first.
+          We do not currently use third-party advertising or analytics trackers. Our audience
+          measurement is first-party and honours browser Do Not Track and Global Privacy Control
+          signals.
         </p>
       </section>
 
@@ -68,6 +81,7 @@ export default function PrivacyPolicyPage() {
         <ul className="body-md list-disc space-y-2 pl-5 text-foreground">
           <li>To provide the service — sign-in, your profile, saved articles, and comments.</li>
           <li>To send the newsletter you subscribed to, and let you unsubscribe.</li>
+          <li>To understand aggregate readership, content performance and edition usage.</li>
           <li>
             To moderate comments and keep the community safe (including handling reported comments).
           </li>

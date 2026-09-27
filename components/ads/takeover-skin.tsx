@@ -18,9 +18,9 @@ import { cn } from "@/lib/utils";
  * once the viewport is wide enough (≥1440px) for the gutters to breathe; below
  * that the page reads as a normal centred sheet on paper.
  *
- * The rails are labelled placeholders: they demonstrate the format at full
- * fidelity but carry neutral demo copy and an "Advertisement" label rather than
- * a specific advertiser's campaign — real skin creative slots in unchanged.
+ * The rails are preview inventory only until a real campaign is supplied.
+ * Production defaults to disabled so demo creative is never presented as paid
+ * advertising (NOA-180).
  */
 function isHomeRoute(pathname: string): boolean {
   const segments = pathname.split("/").filter(Boolean);
@@ -71,7 +71,7 @@ export interface TakeoverSkinProps {
   enabled?: boolean;
 }
 
-export function TakeoverSkin({ enabled = true }: TakeoverSkinProps) {
+export function TakeoverSkin({ enabled = false }: TakeoverSkinProps) {
   const pathname = usePathname();
   if (!enabled || !isHomeRoute(pathname)) return null;
 

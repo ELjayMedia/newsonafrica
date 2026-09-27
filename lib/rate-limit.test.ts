@@ -12,6 +12,8 @@ const LIMITS: Record<RateLimitAction, TokenBucketConfig> = {
   "comments:edit": { capacity: 6, refillIntervalMs: 10_000 },
   "bookmarks:mutate": { capacity: 2, refillIntervalMs: 5_000 },
   "newsletter:signup": { capacity: 5, refillIntervalMs: 60_000 },
+  "analytics:view": { capacity: 60, refillIntervalMs: 1_000 },
+  "commercial:enquiry": { capacity: 3, refillIntervalMs: 300_000 },
   "comments:report": { capacity: 5, refillIntervalMs: 30_000 },
 };
 

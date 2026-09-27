@@ -6,16 +6,14 @@ be able to report. This is the business/editorial layer; the **mobile display-ad
 UX rules** live in [mobile-ad-behavior.md](./mobile-ad-behavior.md) and the
 in-code ad primitives are described in [§5](#5-technical-state--requirements).
 
-> **Grounding.** Written against the current rebuild (verified 2026-07-11). The
-> stack already treats advertising as "a first-class, clearly-labelled citizen"
-> (design system §05): `components/ads/ad-slot.tsx` (IAB display units),
-> `components/ads/takeover-skin.tsx` (home takeover), and
-> `components/home/sponsored-card.tsx` (in-feed native with a gold "SPONSORED" +
-> "Paid partnership" label). These render today as **labelled placeholders** —
-> real creative/CMS wiring is the follow-up work in §5. Earlier NOA-27 planning
-> referenced pre-rebuild paths (`ArticleCard.tsx`, `types/wpgraphql.ts`,
-> `lib/entitlements.ts`, Paystack) that don't match the current tree; the
-> reconciled, accurate technical picture is in §5.
+> **Grounding.** Reconciled against the current rebuild on **27 September 2026**
+> under NOA-178. The stack treats advertising as a first-class, clearly-labelled
+> citizen: `AdSlot`, `TakeoverSkin` and `SponsoredCard` define the core
+> display/native surfaces. Unfilled production inventory now **collapses by
+> default**; demo creative must never masquerade as a paid campaign. Sponsor/ad
+> event logging (NOA-142) and first-party page-view measurement (NOA-138) now
+> exist. Revive trafficking, the full sponsored-story template and advertiser
+> reporting remain P1/P2 work.
 
 ## Editorial separation (the non-negotiable)
 
@@ -37,7 +35,25 @@ package below inherits this rule.
 
 Tiering (entry → premium) maps roughly: Package 1/2 = entry, 3/4 = mid, 5 =
 premium. **Pricing and a rate card are a business decision** (owner: sales) and
-are intentionally not fixed here.
+are intentionally not fixed here. Until buyer validation is complete, quote
+pricing case-by-case rather than publishing unsupported rates.
+
+### 1b. Operational inventory catalogue
+
+| SKU | Product | Creative / delivery specification | Primary measurement | Readiness |
+| --- | --- | --- | --- | --- |
+| NOA-DSP-BB | Billboard | 970×250 desktop; may collapse to 728×90 | impressions, clicks, CTR | inventory defined; automated trafficking P2 |
+| NOA-DSP-MPU | MPU | 300×250 | impressions, clicks, CTR | inventory defined; automated trafficking P2 |
+| NOA-DSP-HP | Half-page | 300×600 desktop rail | impressions, clicks, CTR | inventory defined; automated trafficking P2 |
+| NOA-HOME-TKO | Homepage / edition takeover | skin + billboard bundle | impressions, clicks, CTR, dates | premium inventory defined; Revive P2 |
+| NOA-NAT-STORY | Sponsored story | article + feed disclosure + optional CTA | article views, CTA clicks, engaged metrics where available | sponsor metadata foundation built; template P1 |
+| NOA-VERT-SP | Vertical sponsorship | category/vertical ownership strip + agreed supporting units | section views, unit delivery, clicks | product defined; sponsor strip still required |
+| NOA-PARTNER | Partner series | multiple clearly-disclosed stories under one campaign identity | story views, campaign delivery, CTA clicks | product defined; template/reporting P1 |
+| NOA-NL-SP | Newsletter sponsorship | labelled newsletter placement | sends, delivered/open/click metrics supported by ESP | P2 after newsletter sending is activated |
+
+Every booking needs: campaign ID, advertiser, product/SKU, edition/vertical,
+start/end dates, booked delivery or duration, creative owner, disclosure label,
+destination URL (if any), and reporting owner.
 
 ## 2. Disclosure standards
 
@@ -116,37 +132,41 @@ Each paid placement should be able to report: placement **dates**, **edition &
 vertical**, **impressions**, **clicks / CTR**, **article views** for sponsored
 stories, engagement actions where relevant, and **delivery vs booked inventory**.
 
-**Reality check:** the rebuild has **no ad/sponsor event logging today** —
-impressions and clicks are not captured, and there is no analytics provider (same
-gap family as NOA-30 / NOA-138). Sponsored-article *views* likewise depend on the
-page-view instrumentation that doesn't yet exist. So campaign reporting is
-**blocked on instrumentation**, captured as a follow-up in §5.
+**Current state (27 September 2026):** NOA-142 provides service-role-only
+campaign impression/click event storage and campaign summaries. NOA-138 now
+provides privacy-safe first-party page views (pathname, edition/content type,
+coarse device class, external referrer hostname and a random browser-session ID).
+The remaining gap is the **buyer-facing reporting layer** that joins campaign
+delivery to sponsored-story readership; that work is NOA-183.
 
 ## 5. Technical state & requirements
 
-**What exists (labelled placeholders, ready for real wiring):**
+**What exists now:**
 
-- `AdSlot` — billboard / leaderboard / MPU / half-page IAB frames, each with an
-  "Advertisement" micro-label; drop-in for a real ad server (GPT/Prebid).
-- `TakeoverSkin` — the premium home takeover canvas.
-- `SponsoredCard` — in-feed native with gold "SPONSORED · [advertiser]" + "Paid
-  partnership" disclosure. **Currently demo/hardcoded props**, not CMS-driven.
+- `AdSlot` — billboard / leaderboard / MPU / half-page IAB frames. Unfilled
+  production slots collapse; an explicit campaign/preview must enable inventory.
+- `TakeoverSkin` — premium home takeover canvas, disabled by default unless
+  explicitly activated.
+- `SponsoredCard` — native surface that no longer falls back to fictional
+  advertiser copy.
+- NOA-141 sponsor metadata foundation and NOA-142 campaign-event foundation.
+- NOA-138 first-party page-view measurement.
+- Public `/advertise` proposition + qualified commercial enquiry capture.
 - Mobile ad-density and placement rules ([mobile-ad-behavior.md](./mobile-ad-behavior.md)).
 
-**What needs building (→ follow-up tickets):**
+**What still needs building (→ active commercial-readiness tickets):**
 
-- **(a) CMS-driven sponsor metadata + data-driven disclosure labels.** Add
-  WordPress custom fields (`is_sponsored`, `sponsor_name`, `sponsor_tier`,
-  `disclosure_label`, `campaign_id`), expose them via WPGraphQL, map them onto the
-  DAL `Post` type, and render a real sponsored label near the article
-  headline/byline and on feed cards — so `SponsoredCard` and sponsored articles
-  are driven by real data instead of demo props.
-- **(b) Sponsor / ad event logging.** Capture impressions and clicks per
-  placement (edition, vertical, campaign) to make the §4b reporting possible.
-  Overlaps the analytics decision in NOA-138.
-- **(c) Section / vertical sponsor slot.** A sponsor strip in the category header
-  driven by sponsorship config (WP option/taxonomy), for Package 3.
-- **(d) Advertiser report template** built on (b).
+- **(a) Capability-aware sponsor metadata + sponsored-story template (NOA-182).**
+  The sponsor schema exists conceptually and in parts of the DAL, but optional
+  WPGraphQL extensions must never be allowed to break the core article feed.
+- **(b) Section / vertical sponsor slot.** A sponsor strip in the category header
+  driven by sponsorship config for Package 3.
+- **(c) Advertiser reporting (NOA-183).** Join NOA-142 campaign events with
+  NOA-138 readership signals into a buyer-safe view/export.
+- **(d) Demo campaign (NOA-184).** Prove briefing → preview → delivery → tracking
+  → reporting before claiming the workflow is repeatable.
+- **(e) Revive delivery automation (NOA-185).** Replace manual/preview enablement
+  with campaign-controlled trafficking and safe fallback behaviour.
 
 **§5c — search inclusion (policy toggle).** Sponsored posts sync into
 `content_index` like any article and are identifiable by tag:
@@ -172,6 +192,6 @@ the **NOA advertising policy page** that disclosure footers link to.
   system ("Advertisement" on display, "SPONSORED / Paid partnership" on native).
 - Inventory maps to real components; mobile UX is governed by the existing
   mobile-ad standard.
-- The gating dependency for launch-quality commercial content is
-  **instrumentation** (CMS sponsor fields + ad-event logging) — raised as
-  follow-ups, not blockers to documenting the model.
+- The instrumentation foundation now exists. The next commercial proof is a
+  complete sponsored template + advertiser report + demo campaign, followed by
+  Revive/CRM/workflow automation only after that proof.
