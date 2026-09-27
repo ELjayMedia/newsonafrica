@@ -404,6 +404,38 @@ export type AdEventRow = {
 export type AdEventInsert = Pick<AdEventRow, "event_type" | "placement_type" | "edition_code" | "country"> &
   Partial<Omit<AdEventRow, "event_type" | "placement_type" | "edition_code" | "country">>;
 
+export type CommercialEnquiryRow = {
+  id: string;
+  created_at: string;
+  updated_at: string;
+  status: string;
+  organisation: string;
+  contact_name: string;
+  email: string;
+  phone: string | null;
+  market: string;
+  objective: string;
+  campaign_timing: string | null;
+  budget_range: string | null;
+  product_interest: string[];
+  notes: string | null;
+  source_path: string | null;
+  source_campaign: string | null;
+  consent_at: string;
+  metadata: Record<string, unknown>;
+};
+
+export type CommercialEnquiryInsert = Pick<
+  CommercialEnquiryRow,
+  "organisation" | "contact_name" | "email" | "market" | "objective"
+> &
+  Partial<
+    Pick<
+      CommercialEnquiryRow,
+      "status" | "phone" | "campaign_timing" | "budget_range" | "product_interest" | "notes" | "source_path" | "source_campaign" | "metadata"
+    >
+  >;
+
 export type WebhookEventRow = {
   id: string;
   source: string;
@@ -511,6 +543,12 @@ export type Database = {
         Row: AdEventRow;
         Insert: AdEventInsert;
         Update: Partial<AdEventInsert>;
+        Relationships: [];
+      };
+      commercial_enquiries: {
+        Row: CommercialEnquiryRow;
+        Insert: CommercialEnquiryInsert;
+        Update: Partial<CommercialEnquiryInsert>;
         Relationships: [];
       };
       webhook_events: {
