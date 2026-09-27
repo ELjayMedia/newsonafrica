@@ -53,20 +53,10 @@ const POST_FIELDS = /* GraphQL */ `
       }
     }
   }
-  corrections {
-    nodes {
-      date
-      note
-      kind
-    }
-  }
-  sponsor {
-    isSponsored
-    sponsorName
-    sponsorTier
-    disclosureLabel
-    campaignId
-  }
+  # Keep the core post query compatible with every production edition.
+  # Optional CMS extensions (corrections / sponsor metadata) must be queried
+  # through capability-aware enrichment rather than making the entire feed fail
+  # when an edition has not installed the extension yet (NOA-179/182).
 `;
 
 const POSTS_LIST_QUERY = /* GraphQL */ `
