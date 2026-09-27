@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireAdmin } from "@/lib/auth/admin";
-import { getContentSyncStatus } from "@/lib/content-sync/status";
+import { getContentSyncStatus, type CountrySyncStatus } from "@/lib/content-sync/status";
 import type { ContentSyncStatus } from "@/lib/supabase/types";
 import { COUNTRIES, isValidCountry } from "@/lib/countries";
 import { formatDate } from "@/lib/format";
@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   description: "Per-edition content indexing health.",
 };
 
-/** Human label for each sync status; `null` = no cursor row (never synced). */
 const STATUS_LABEL: Record<ContentSyncStatus, string> = {
   idle: "Idle",
   running: "Running",
@@ -22,20 +21,35 @@ const STATUS_LABEL: Record<ContentSyncStatus, string> = {
   failed: "Failed",
 };
 
-function statusBadge(status: ContentSyncStatus | null) {
-  if (status === "completed") return { label: STATUS_LABEL.completed, variant: "default" as const, className: "" };
-  if (status === "running") return { label: STATUS_LABEL.running, variant: "secondary" as const, className: "" };
-  if (status === "failed")
+function statusBadge(edition: CountrySyncStatus) {
+  if (edition.syncStatus === "failed") {
     return { label: STATUS_LABEL.failed, variant: "outline" as const, className: "border-destructive text-destructive" };
-  if (status === "idle") return { label: STATUS_LABEL.idle, variant: "outline" as const, className: "" };
+  }
+  if (edition.freshness === "stale") {
+    return { label: "Stale", variant: "outline" as const, className: "border-destructive text-destructive" };
+  }
+  if (edition.freshness === "source-unavailable") {
+    return { label: "Source unavailable", variant: "outline" as const, className: "border-amber-500 text-amber-700" };
+  }
+  if (edition.freshness === "fresh") {
+    return { label: "Fresh", variant: "default" as const, className: "" };
+  }
+  if (edition.freshness === "empty") {
+    return { label: "Empty", variant: "secondary" as const, className: "" };
+  }
+  if (edition.syncStatus === "running") {
+    return { label: STATUS_LABEL.running, variant: "secondary" as const, className: "" };
+  }
+  if (edition.syncStatus === "idle") {
+    return { label: STATUS_LABEL.idle, variant: "outline" as const, className: "" };
+  }
   return { label: "Never synced", variant: "outline" as const, className: "text-muted-foreground" };
 }
 
 /**
- * Content-sync monitoring (NOA-15). Admin-gated view of `content_sync_cursor`
- * (per-edition sync status/errors) joined with live `content_index` counts, so
- * indexing failures and stale editions are visible at a glance. The same data
- * is available as JSON at `GET /api/admin/content-sync/status` (secret-gated).
+ * Admin-gated content-sync monitoring. Historical cursor status is shown
+ * alongside a live WordPress-vs-index freshness probe so a months-old
+ * "completed" backfill cannot masquerade as a healthy mirror (NOA-191).
  */
 export default async function ContentSyncStatusPage() {
   await requireAdmin("/account/admin/content-sync");
@@ -43,10 +57,14 @@ export default async function ContentSyncStatusPage() {
 
   const stats: Array<{ label: string; value: number; tone?: "danger" }> = [
     { label: "Editions", value: summary.total },
-    { label: "Completed", value: summary.completed },
-    { label: "Running", value: summary.running },
-    { label: "Failed", value: summary.failed, tone: summary.failed > 0 ? "danger" : undefined },
-    { label: "Never synced", value: summary.neverSynced },
+    { label: "Fresh", value: summary.fresh },
+    { label: "Stale", value: summary.stale, tone: summary.stale > 0 ? "danger" : undefined },
+    {
+      label: "Source unavailable",
+      value: summary.sourceUnavailable,
+      tone: summary.sourceUnavailable > 0 ? "danger" : undefined,
+    },
+    { label: "Failed syncs", value: summary.failed, tone: summary.failed > 0 ? "danger" : undefined },
     { label: "Indexed articles", value: summary.totalIndexed },
   ];
 
@@ -55,7 +73,7 @@ export default async function ContentSyncStatusPage() {
       <div>
         <h1 className="heading-lg">Content sync</h1>
         <p className="body-sm mt-1 text-muted-foreground">
-          Per-edition indexing health, checked {formatDate(checkedAt)}.
+          Live WordPress-to-index freshness, checked {formatDate(checkedAt)}.
         </p>
       </div>
 
@@ -86,7 +104,7 @@ export default async function ContentSyncStatusPage() {
             const name = isValidCountry(edition.country)
               ? COUNTRIES[edition.country].name
               : edition.country.toUpperCase();
-            const badge = statusBadge(edition.syncStatus);
+            const badge = statusBadge(edition);
 
             return (
               <li key={edition.country}>
@@ -98,20 +116,37 @@ export default async function ContentSyncStatusPage() {
                         {badge.label}
                       </Badge>
                     </div>
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3">
+                    <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-5">
                       <div>
                         <dt className="body-sm text-muted-foreground">Indexed</dt>
                         <dd className="ui-sm">{edition.indexedCount.toLocaleString("en")}</dd>
                       </div>
                       <div>
-                        <dt className="body-sm text-muted-foreground">Last synced</dt>
+                        <dt className="body-sm text-muted-foreground">Latest WordPress</dt>
+                        <dd className="ui-sm">
+                          {edition.latestWordPressPublishedAt ? formatDate(edition.latestWordPressPublishedAt) : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="body-sm text-muted-foreground">Latest indexed</dt>
+                        <dd className="ui-sm">
+                          {edition.latestIndexedPublishedAt ? formatDate(edition.latestIndexedPublishedAt) : "—"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="body-sm text-muted-foreground">Last backfill</dt>
                         <dd className="ui-sm">{edition.lastSyncedAt ? formatDate(edition.lastSyncedAt) : "—"}</dd>
                       </div>
                       <div>
-                        <dt className="body-sm text-muted-foreground">Updated</dt>
-                        <dd className="ui-sm">{edition.updatedAt ? formatDate(edition.updatedAt) : "—"}</dd>
+                        <dt className="body-sm text-muted-foreground">Cursor status</dt>
+                        <dd className="ui-sm">{edition.syncStatus ? STATUS_LABEL[edition.syncStatus] : "Never synced"}</dd>
                       </div>
                     </dl>
+                    {edition.freshness !== "fresh" ? (
+                      <p role="alert" className="body-sm text-destructive">
+                        {edition.freshnessReason}
+                      </p>
+                    ) : null}
                     {edition.errorMessage ? (
                       <p role="alert" className="body-sm text-destructive">
                         {edition.errorMessage}
