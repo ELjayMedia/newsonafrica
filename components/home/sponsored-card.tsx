@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
  * In-feed native ad (design system §05: "Advertising is a first-class citizen").
  * A sponsored unit styled to sit in the story flow but clearly marked with a
  * gold "SPONSORED" label and a "Paid partnership" disclosure, per the design
- * system's disclosure rule. Renders as demo inventory now; an ad server drops
- * real creative in without changing the frame.
+ * system's disclosure rule. It renders only when real/explicit preview campaign
+ * data is supplied; production never falls back to fictional sponsor copy.
  */
 export interface SponsoredCardProps {
   advertiser?: string;
@@ -15,11 +15,13 @@ export interface SponsoredCardProps {
 }
 
 export function SponsoredCard({
-  advertiser = "Acme Telecom",
-  headline = "5G is rewriting how Africa connects — here's what it means for your business.",
+  advertiser,
+  headline,
   disclosure = "Paid partnership",
   className,
 }: SponsoredCardProps) {
+  if (!advertiser || !headline) return null;
+
   return (
     <aside
       aria-label="Sponsored content"
