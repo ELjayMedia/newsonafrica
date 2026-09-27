@@ -11,6 +11,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { SiteJsonLd } from "@/components/seo/json-ld";
 import { colorTokens } from "@/lib/design-tokens";
 import { publicEnv } from "@/lib/env";
@@ -113,6 +114,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
           <BottomNavigation />
           <ServiceWorkerRegistration />
+          <PageViewTracker />
         </ThemeProvider>
       </body>
     </html>
