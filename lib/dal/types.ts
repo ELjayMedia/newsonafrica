@@ -54,6 +54,9 @@ export interface SponsorInfo {
   sponsorTier?: string;
   disclosureLabel: string;
   campaignId?: string;
+  /** Optional advertiser CTA; rendered only for http(s) destinations. */
+  ctaLabel?: string;
+  ctaUrl?: string;
 }
 
 export interface Post {
