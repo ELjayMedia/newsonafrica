@@ -52,6 +52,11 @@ export default function PrivacyPolicyPage() {
             address and the page or campaign you signed up from.
           </li>
           <li>
+            <span className="font-semibold">Commercial enquiries.</span> If you ask about advertising
+            or partnerships, we store the business contact details and campaign brief you submit so
+            our commercial team can respond and manage the opportunity.
+          </li>
+          <li>
             <span className="font-semibold">Audience measurement.</span> We record first-party page
             views using the page path, country edition, coarse device class, external referrer
             hostname and a random browser-session identifier. We do not store query strings,
