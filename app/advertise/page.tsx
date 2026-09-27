@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { CommercialEnquiryForm } from "@/components/commercial-enquiry-form";
 import { Container } from "@/components/ui/container";
 
 export const metadata: Metadata = {
@@ -132,15 +133,12 @@ export default function AdvertisePage() {
         <div className="max-w-2xl space-y-3">
           <h2 className="heading-md">Plan a campaign with us</h2>
           <p className="body-md text-muted-foreground">
-            Tell us the market you want to reach, your objective, campaign dates and the type of
-            partnership you are considering. We will shape the right inventory around that brief.
+            Tell us the market you want to reach, your objective, campaign timing and the products
+            you are considering. Your brief will enter our commercial qualification workflow.
           </p>
-          <a
-            href="mailto:info@newsonafrica.com?subject=Advertising%20enquiry%20-%20News%20on%20Africa"
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 py-2.5 font-semibold text-primary-foreground"
-          >
-            Email the commercial team
-          </a>
+        </div>
+        <div className="mt-6">
+          <CommercialEnquiryForm />
         </div>
       </section>
     </Container>
