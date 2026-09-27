@@ -40,6 +40,8 @@ export const RATE_LIMITS = {
   "bookmarks:mutate": { capacity: 20, refillIntervalMs: 3_000 },
   /** Newsletter sign-up (anonymous, keyed by client IP — curb spam bursts). */
   "newsletter:signup": { capacity: 5, refillIntervalMs: 60_000 },
+  /** First-party page views: generous enough for normal navigation, bounded for bots. */
+  "analytics:view": { capacity: 60, refillIntervalMs: 1_000 },
   /** Reporting a comment for moderation review. */
   "comments:report": { capacity: 5, refillIntervalMs: 30_000 },
 } as const satisfies Record<string, TokenBucketConfig>;
