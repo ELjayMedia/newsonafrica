@@ -5,6 +5,7 @@ import { ArticleBody } from "@/components/article/article-body";
 import { CorrectionNotice } from "@/components/article/correction-notice";
 import { RelatedArticles } from "@/components/article/related-articles";
 import { ShareButtons } from "@/components/article/share-buttons";
+import { SponsoredArticleDisclosure } from "@/components/article/sponsored-article-disclosure";
 import { BookmarkButton } from "@/components/bookmark-button";
 import { CommentSection } from "@/components/comments/comment-section";
 import { shouldShowUpdatedTimestamp } from "@/lib/article/revision";
@@ -69,6 +70,15 @@ export function MobileArticleReader({
             </Link>
           ) : null}
 
+          {post.sponsor?.isSponsored ? (
+            <SponsoredArticleDisclosure
+              sponsor={post.sponsor}
+              editionCode={countryCode}
+              articleId={post.id}
+              vertical={category?.slug}
+            />
+          ) : null}
+
           <h1 className="heading-lg font-display text-foreground">{post.title}</h1>
 
           <div className="space-y-1.5">
@@ -131,6 +141,16 @@ export function MobileArticleReader({
       {corrections.length > 0 ? <CorrectionNotice entries={corrections} /> : null}
 
       <ArticleBody html={post.content} />
+
+      {post.sponsor?.isSponsored ? (
+        <SponsoredArticleDisclosure
+          sponsor={post.sponsor}
+          editionCode={countryCode}
+          articleId={post.id}
+          vertical={category?.slug}
+          variant="footer"
+        />
+      ) : null}
 
       {post.tags.length > 0 ? (
         <div className="flex flex-wrap gap-2 border-t border-border pt-5">
