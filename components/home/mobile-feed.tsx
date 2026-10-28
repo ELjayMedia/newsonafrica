@@ -109,6 +109,9 @@ export function MobileFeed({ posts }: { posts: PostSummary[] }) {
 
   return (
     <div className="lg:hidden">
+      {/* The desktop hero's <h1> is display:none below lg; give mobile screen
+          reader users a page heading (this whole tree is hidden from lg up). */}
+      <h1 className="sr-only">Latest news</h1>
       <div className="border-t border-noa-hairline">
         <MobileLeadStory post={lead} />
 

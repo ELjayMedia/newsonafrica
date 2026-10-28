@@ -68,7 +68,7 @@ export function HeroLead({ post }: { post: PostSummary }) {
           </Link>
         ) : null}
 
-        <h1 className="noa-hed text-[clamp(1.125rem,1.5vw,1.625rem)] text-noa-ink">
+        <h1 className="noa-hed text-[clamp(1.5rem,1.1rem+1vw,2rem)] text-noa-ink">
           <Link href={href} className="transition-colors hover:text-noa-green">
             {post.title}
           </Link>

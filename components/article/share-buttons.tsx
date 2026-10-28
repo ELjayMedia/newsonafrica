@@ -16,7 +16,7 @@ export interface ShareButtonsProps {
 const LINK_CLASS =
   "inline-flex h-9 items-center justify-center rounded-full border border-input px-3 ui-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground";
 const COMPACT_LINK_CLASS =
-  "ui-sm font-semibold text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline";
+  "ui-sm inline-flex min-h-11 items-center font-semibold text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline";
 
 /** Social share links + copy-to-clipboard for an article (NOA-90). */
 export function ShareButtons({ title, url, className, compact = false }: ShareButtonsProps) {

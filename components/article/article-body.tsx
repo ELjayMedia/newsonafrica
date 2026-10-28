@@ -47,7 +47,7 @@ function ArticleHtmlChunk({ html, className }: { html: string; className?: strin
 
   return (
     <div
-      className={cn("prose-article max-w-none", className)}
+      className={cn("prose-article max-w-[68ch]", className)}
       // eslint-disable-next-line react/no-danger -- sanitized via DOMPurify (lib/sanitize-html.ts)
       dangerouslySetInnerHTML={{ __html: html }}
     />

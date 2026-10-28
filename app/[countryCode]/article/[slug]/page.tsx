@@ -144,7 +144,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                 />
               ) : null}
 
-              <h1 className="heading-lg font-display text-foreground">{post.title}</h1>
+              <h1 className="display-article text-foreground">{post.title}</h1>
 
               <div className="flex flex-wrap items-center justify-between gap-4 border-y border-border py-4">
                 <div className="flex items-center gap-3">
@@ -224,7 +224,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                   <Link
                     key={tag.slug}
                     href={`/${countryCode}/tag/${tag.slug}`}
-                    className="ui-sm rounded-full border border-input px-3 py-1 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="ui-sm inline-flex min-h-10 items-center rounded-full border border-input px-3.5 text-muted-foreground md:min-h-8 transition-colors hover:bg-accent hover:text-accent-foreground"
                   >
                     #{tag.name}
                   </Link>

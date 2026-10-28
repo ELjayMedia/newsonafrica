@@ -53,7 +53,7 @@ export function MobileArticleReader({
           </Link>
           <Link
             href={`/${countryCode}`}
-            className="noa-wordmark heading-md text-foreground"
+            className="noa-wordmark heading-md inline-flex h-10 items-center text-foreground"
             aria-label="News On Africa home"
           >
             NOA
@@ -79,7 +79,7 @@ export function MobileArticleReader({
             />
           ) : null}
 
-          <h1 className="heading-lg font-display text-foreground">{post.title}</h1>
+          <h1 className="display-article text-foreground">{post.title}</h1>
 
           <div className="space-y-1.5">
             <p className="ui-sm flex flex-wrap items-center gap-x-1.5 text-muted-foreground">
@@ -161,7 +161,7 @@ export function MobileArticleReader({
             <Link
               key={tag.slug}
               href={`/${countryCode}/tag/${tag.slug}`}
-              className="ui-sm rounded-full border border-input px-3 py-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              className="ui-sm inline-flex min-h-10 items-center rounded-full border border-input px-3.5 text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
             >
               #{tag.name}
             </Link>

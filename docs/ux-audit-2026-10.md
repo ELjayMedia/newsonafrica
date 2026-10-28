@@ -212,3 +212,28 @@ SEO surfaces (canonicals, metadata, JSON-LD) were not touched.
    Eswatini and South Africa before building.
 6. **Trust signals.** Do readers notice author, update and corrections cues? Run a quick moderated test
    with 5–8 readers per edition.
+
+---
+
+## Follow-up: text, button and spacing pass
+
+Measured at 360px (mobile) and 1280px (desktop) against the same fixture build. All checks still pass:
+typecheck, lint, 206 unit tests, 16/16 e2e. First-load JS is unchanged.
+
+| Area                                                             | Before                                            | After                                                                                                                     |
+| ---------------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Form fields (search, newsletter, login, comment, edition picker) | 14px on mobile, so iOS Safari zooms on focus      | 16px below `md`, 14px from `md` up                                                                                        |
+| `Button` sizes                                                   | 40 / 36 / 40px (default / sm / icon)              | 44 / 40 / 44px on mobile; unchanged from `md` up                                                                          |
+| Footer and auth-page links                                       | 17px tall, wrapped inline                         | 44px rows (two columns on phones), inline from `sm`                                                                       |
+| Compact share links (mobile article)                             | 17px                                              | 44px                                                                                                                      |
+| Bookmark "Save", article tag pills                               | 36px, 31px                                        | 44px, 40px on mobile                                                                                                      |
+| Pagination, search country filters                               | 36px, 32px                                        | 44px, 40px on mobile                                                                                                      |
+| Hamburger / theme toggle                                         | 40px                                              | 44px                                                                                                                      |
+| Article `<h1>`                                                   | 24px everywhere                                   | `display-article`: 28px mobile, 40px desktop, Archivo 800                                                                 |
+| Desktop lead headline                                            | ≈19px (barely above 18px cards)                   | ≈30px at 1280px                                                                                                           |
+| Mobile home page heading                                         | none exposed                                      | sr-only `<h1>Latest news</h1>`                                                                                            |
+| Article body measure                                             | unbounded (`max-w-none`)                          | capped at 68ch; subheads in the display face; `text-wrap: pretty` on paragraphs and `balance` on headings; long URLs wrap |
+| Page gutters                                                     | `Container` added `lg:px-8`, 8px off the masthead | matches the masthead `px-4 / sm:px-6`; content aligns with the logo                                                       |
+
+Still open: the primary-green fills behind white text (#9, needs brand approval). The 12px category pills
+(21px tall) are left as they are: they pass WCAG 2.5.8 through its spacing exception.

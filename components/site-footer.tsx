@@ -3,6 +3,13 @@ import Link from "next/link";
 import { NewsletterSignup } from "@/components/newsletter-signup";
 import { Container } from "@/components/ui/container";
 
+const FOOTER_LINKS = [
+  { href: "/editorial-guidelines", label: "Editorial Guidelines" },
+  { href: "/advertise", label: "Advertise" },
+  { href: "/contact", label: "Contact" },
+  { href: "/privacy", label: "Privacy Policy" },
+] as const;
+
 export function SiteFooter() {
   return (
     <footer className="mt-auto border-t border-border">
@@ -18,35 +25,27 @@ export function SiteFooter() {
           <NewsletterSignup source="footer" />
         </div>
 
-        <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
-          <p className="body-sm text-muted-foreground">
-            &copy; {new Date().getFullYear()} News on Africa. All rights reserved.
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:justify-end">
-            <Link
-              href="/editorial-guidelines"
-              className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Editorial Guidelines
-            </Link>
-            <Link
-              href="/advertise"
-              className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Advertise
-            </Link>
-            <Link
-              href="/contact"
-              className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Contact
-            </Link>
-            <Link
-              href="/privacy"
-              className="ui-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-            >
-              Privacy Policy
-            </Link>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          {/* Links get 44px rows on touch layouts (two columns on phones) and
+              collapse to an inline row from sm up. */}
+          <nav aria-label="Footer" className="sm:order-2">
+            <ul className="grid grid-cols-2 gap-x-4 sm:flex sm:flex-wrap sm:justify-end sm:gap-x-5 sm:gap-y-2">
+              {FOOTER_LINKS.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="ui-sm inline-flex min-h-11 items-center text-muted-foreground underline-offset-4 hover:text-foreground hover:underline sm:min-h-0"
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div className="space-y-1 sm:order-1">
+            <p className="body-sm text-muted-foreground">
+              &copy; {new Date().getFullYear()} News on Africa. All rights reserved.
+            </p>
             <p className="ui-sm text-muted-foreground">Independent African journalism.</p>
           </div>
         </div>

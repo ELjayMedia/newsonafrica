@@ -64,7 +64,7 @@ export function BookmarkButton({
         disabled={pending}
         aria-pressed={bookmarked}
         aria-label={bookmarked ? "Remove this article from your saved list" : "Save this article"}
-        className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-input px-3 ui-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-70"
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-full border border-input px-4 ui-sm md:h-9 md:px-3 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-70"
       >
         <svg
           aria-hidden
