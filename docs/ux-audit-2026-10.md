@@ -237,3 +237,30 @@ typecheck, lint, 206 unit tests, 16/16 e2e. First-load JS is unchanged.
 
 Still open: the primary-green fills behind white text (#9, needs brand approval). The 12px category pills
 (21px tall) are left as they are: they pass WCAG 2.5.8 through its spacing exception.
+
+---
+
+## Follow-up: article page
+
+The previous build and this one were measured side by side against a realistic demo article (scratch stub
+with 9 paragraphs, two subheads, a pull quote and a featured image). The repo fixture is unchanged.
+
+| Change                                                                                                           | Why                                                                                                                                       | Result                                                                       |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| One responsive article tree replaces the separate mobile and desktop trees (`mobile-article-reader.tsx` removed) | Backlog #15: duplicated HTML, two `<h1>`s, two comment sections                                                                           | Demo article HTML 111.5 KB → 82.3 KB (−26%); one `<h1>`; one body copy       |
+| Visible breadcrumb (Edition › Section) replaces the "← NOA" bar and the category badge                           | Orientation: which edition and section the reader is in                                                                                   | One-tap route back to the edition or section                                 |
+| Standfirst (`excerpt`) shown under the headline                                                                  | Article introduction was missing on article pages                                                                                         | Matches the hierarchy of major publishers                                    |
+| Byline on two lines: "By Author" / date · updated · _n_ min read, plus one publisher line                        | Replaces a stacked four-line block and the duplicate "Source / Publisher" pair (backlog #18); keeps the Play-policy publisher attribution | Reading time comes from `lib/article/reading-time.ts` (200 wpm, unit-tested) |
+| Alt text no longer printed as a caption                                                                          | Backlog #19: alt text is for screen readers, not a caption                                                                                | Still exposed to assistive tech                                              |
+| Featured image full-bleed on phones, rounded from `sm`                                                           | More image per screen on small devices                                                                                                    | Also gets `width`/`height` when WordPress provides them                      |
+| Article end: "Topics" list, a second share row, related stories, then comments                                   | Gives finished readers an obvious next step; related stories had sat below comments on desktop                                            | —                                                                            |
+| Related stories as thumbnail rows (`ArticleCard` `list` variant)                                                 | Three tall stacked cards took about three phone screens                                                                                   | Mobile demo page 4,410px → 3,756px                                           |
+| Rail no longer lists the article being read                                                                      | It appeared as "Latest News" on its own page                                                                                              | —                                                                            |
+
+Verification: typecheck, lint, 210 unit tests (4 new). Playwright e2e: 16/16 in four consecutive runs, one of
+them from a cold start. The first run after rebuilding had one failure in `article.spec.ts` ("Updated" line).
+It did not reproduce and its error output was not captured. The spec now asserts a single "Updated" line,
+since there is one article tree.
+
+Unchanged by design: the mobile in-article sponsored units (#2, awaiting monetisation sign-off) and the colour
+of the primary-green fills (#9).

@@ -1,4 +1,5 @@
 import { SponsoredCard } from "@/components/home/sponsored-card";
+import { countWords } from "@/lib/article/reading-time";
 import { sanitizeArticleHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
 
@@ -14,15 +15,6 @@ const LONG_ARTICLE_WORD_COUNT = 800;
 
 function countParagraphs(html: string): number {
   return html.match(/<\/p>/gi)?.length ?? 0;
-}
-
-function countWords(html: string): number {
-  return html
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
 }
 
 function splitAfterParagraphs(html: string, paragraphCount: number): [string, string] {

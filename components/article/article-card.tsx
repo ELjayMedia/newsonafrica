@@ -25,8 +25,9 @@ const IMAGE_ASPECT: Record<ArticleCardVariant, string> = {
 /**
  * Shared post preview card used by the home feed, category/tag/author
  * listings and the related-articles rail. `variant` controls layout:
- * `grid` (image above text), `list` (image beside text, for horizontal
- * rows), `compact` (small image, no excerpt).
+ * `grid` (image above text), `list` (thumbnail beside text at every width,
+ * for stacked rows such as related stories), `compact` (small image, no
+ * excerpt).
  */
 export function ArticleCard({ post, variant = "grid", priority = false, className }: ArticleCardProps) {
   const href = getArticleUrl(post.country, post.slug);
@@ -34,13 +35,13 @@ export function ArticleCard({ post, variant = "grid", priority = false, classNam
   const isList = variant === "list";
 
   return (
-    <article className={cn("group flex h-full flex-col overflow-hidden", isList && "sm:flex-row", className)}>
+    <article className={cn("group flex h-full overflow-hidden", isList ? "flex-row gap-4" : "flex-col", className)}>
       <Link
         href={href}
         className={cn(
           "relative block flex-shrink-0 overflow-hidden rounded-lg bg-muted",
           IMAGE_ASPECT[variant],
-          isList && "sm:w-40 sm:flex-shrink-0 md:w-48",
+          isList && "w-28 self-start sm:w-40",
         )}
       >
         {post.featuredImage ? (
@@ -58,7 +59,7 @@ export function ArticleCard({ post, variant = "grid", priority = false, classNam
         )}
       </Link>
 
-      <div className={cn("flex flex-1 flex-col gap-2 pt-3", isList && "sm:pt-0 sm:pl-4")}>
+      <div className={cn("flex min-w-0 flex-1 flex-col gap-2", !isList && "pt-3")}>
         {category ? (
           <Link href={`/${post.country}/category/${category.slug}`} className="w-fit">
             <Badge variant="secondary">{category.name}</Badge>
@@ -72,7 +73,9 @@ export function ArticleCard({ post, variant = "grid", priority = false, classNam
         </h3>
 
         {variant !== "compact" && post.excerpt ? (
-          <p className="body-sm line-clamp-2 text-muted-foreground">{post.excerpt}</p>
+          <p className={cn("body-sm line-clamp-2 text-muted-foreground", isList && "max-sm:hidden")}>
+            {post.excerpt}
+          </p>
         ) : null}
 
         <div className="mt-auto flex items-center gap-2 ui-sm text-muted-foreground">
