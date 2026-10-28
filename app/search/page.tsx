@@ -8,7 +8,7 @@ import { SearchResultCard } from "@/components/search/search-result-card";
 import { Container } from "@/components/ui/container";
 import { Input } from "@/components/ui/input";
 import { RailLayout } from "@/components/ui/rail-layout";
-import { COUNTRY_LIST, type CountryCode } from "@/lib/countries";
+import { COUNTRY_LIST, PUBLIC_COUNTRY_LIST, type CountryCode } from "@/lib/countries";
 import { getHomeRailData } from "@/lib/dal/home-rail";
 import { searchContent } from "@/lib/search";
 import {
@@ -55,7 +55,7 @@ function CountryFilter({ query, active }: { query: string; active: CountryCode |
       >
         All countries
       </Link>
-      {COUNTRY_LIST.map((country) => (
+      {PUBLIC_COUNTRY_LIST.map((country) => (
         <Link
           key={country.code}
           href={buildSearchUrl({ query, country: country.code })}

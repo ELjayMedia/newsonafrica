@@ -94,6 +94,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="flex min-h-screen flex-col bg-noa-paper pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
         {/* WebSite + Organization structured data (NOA-114). */}
         <SiteJsonLd />
+        {/* Bypass block (WCAG 2.4.1): first tab stop jumps past the utility
+            bar, masthead and section nav straight to the page content. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-noa-ink focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-noa-white"
+        >
+          Skip to content
+        </a>
         <ThemeProvider>
           {/* Body-level takeover skin (home routes, wide screens): a fixed
               gradient behind everything. The masthead, page content and footer
@@ -109,7 +117,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           />
           <div className="noa-well relative z-10 flex flex-1 flex-col">
             <SiteHeader sections={navSections} />
-            <main className="flex-1">{children}</main>
+            <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
+              {children}
+            </main>
             <SiteFooter />
           </div>
           <BottomNavigation />

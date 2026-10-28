@@ -199,6 +199,9 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
               <img
                 src={post.featuredImage.url}
                 alt={post.featuredImage.alt || post.title}
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
                 className="aspect-video w-full rounded-xl object-cover"
               />
             ) : null}

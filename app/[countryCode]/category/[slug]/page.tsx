@@ -68,11 +68,6 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           </span>
         </div>
         {category.description ? <p className="body-lg text-muted-foreground max-md:body-md">{category.description}</p> : null}
-        <div className="hidden flex-wrap gap-2 pt-2 max-md:flex" aria-label={`${category.name} discovery options`}>
-          <span className="ui-sm rounded-full bg-primary px-3 py-1.5 text-primary-foreground">Latest</span>
-          <span className="ui-sm rounded-full border border-border px-3 py-1.5 text-muted-foreground">Top stories</span>
-          <span className="ui-sm rounded-full border border-border px-3 py-1.5 text-muted-foreground">Analysis</span>
-        </div>
       </header>
 
       <section className="hidden space-y-5 max-md:block" aria-label={`${category.name} mobile stories`}>

@@ -58,9 +58,9 @@ export function MobileArticleReader({
           >
             NOA
           </Link>
-          <span className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-border ui-sm text-muted-foreground">
-            Aa
-          </span>
+          {/* Spacer keeps the wordmark centred. A text-size control was
+              previously drawn here but did nothing when tapped. */}
+          <span className="h-10 w-10" aria-hidden />
         </div>
 
         <div className="space-y-4">
@@ -116,6 +116,9 @@ export function MobileArticleReader({
           <img
             src={post.featuredImage.url}
             alt={post.featuredImage.alt || post.title}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
             className="aspect-[16/11] w-full rounded-2xl object-cover shadow-sm"
           />
           {post.featuredImage.alt ? (

@@ -70,7 +70,7 @@ export function ShareButtons({ title, url, className, compact = false }: ShareBu
         <span aria-hidden className="ui-sm text-muted-foreground">
           ·
         </span>
-        <button type="button" onClick={handleCopy} className={COMPACT_LINK_CLASS}>
+        <button type="button" onClick={handleCopy} className={COMPACT_LINK_CLASS} aria-live="polite">
           {copied ? "Copied" : "Copy link"}
         </button>
       </div>
@@ -94,7 +94,7 @@ export function ShareButtons({ title, url, className, compact = false }: ShareBu
           {link.label}
         </a>
       ))}
-      <button type="button" onClick={handleCopy} className={LINK_CLASS}>
+      <button type="button" onClick={handleCopy} className={LINK_CLASS} aria-live="polite">
         {copied ? "Copied!" : "Copy link"}
       </button>
     </div>

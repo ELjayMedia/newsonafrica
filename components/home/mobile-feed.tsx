@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 
 import { ExploreAfrica } from "@/components/home/explore-africa";
+import { heroFlag } from "@/components/home/hero-lead";
 import { FeedRow } from "@/components/home/story-card";
 import { SponsoredCard } from "@/components/home/sponsored-card";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
@@ -24,6 +25,7 @@ function shouldRenderNativeAdAfter(storyNumber: number, totalStories: number): b
 function MobileLeadStory({ post }: { post: PostSummary }) {
   const href = getArticleUrl(post.country, post.slug);
   const category = post.categories[0];
+  const flag = heroFlag(post);
 
   return (
     <article className="space-y-4 py-5">
@@ -52,6 +54,14 @@ function MobileLeadStory({ post }: { post: PostSummary }) {
 
       <div className="space-y-2.5">
         <div className="flex items-center gap-2">
+          {/* Same newsroom LIVE/BREAKING tag flag as the desktop hero, shown
+              as text (not over the image) so it survives image-off loads. */}
+          {flag ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded bg-noa-live px-2 py-0.5 font-display text-[0.625rem] font-black uppercase tracking-wide text-white">
+              <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
+              {flag}
+            </span>
+          ) : null}
           {category ? (
             <Link
               href={`/${post.country}/category/${category.slug}`}

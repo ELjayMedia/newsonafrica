@@ -53,24 +53,30 @@
   --radius: 0.625rem;
 
   /**
-   * News On Africa brand palette (design system v1.0) — fixed hex tokens,
-   * theme-independent. The homepage + masthead adopt the high-fidelity light
-   * mockup ("Bold Punch" direction with a light masthead) regardless of the
-   * site theme, so these read the same in light and dark and are consumed via
-   * the `noa-*` Tailwind colour utilities exposed in the @theme block below.
+   * News On Africa brand palette (design system v1.0) — hex tokens for the
+   * "Bold Punch" direction with a light masthead, consumed via the `noa-*`
+   * Tailwind colour utilities exposed in the @theme block below. The greens
+   * and live red are fixed; the neutrals are redefined under .dark so the
+   * content well stays legible alongside the semantic tokens.
    */
   --noa-paper: #fafaf9;
   --noa-white: #ffffff;
   --noa-ink: #161412;
   --noa-body: #2b2825;
   --noa-muted: #6e6a66;
-  --noa-faint: #9a9591;
+  /* Timestamps/meta. Darkened from #9a9591 (2.97:1 on white) to clear WCAG
+     1.4.3 AA (4.5:1) for the 12px text it styles. */
+  --noa-faint: #76716c;
   --noa-hairline: #eceae7;
   --noa-green: #15994a; /* Green 600 — primary */
   --noa-green-dark: #0b5e2d; /* Green 900 */
   --noa-green-bright: #1bb257; /* Green 500 */
   --noa-green-50: #e8f6ee;
   --noa-green-200: #a6e2be;
+  /* Brand green for small text (eyebrows, active nav). #15994a is 3.69:1 on
+     white, below AA for 12px labels; this shade is 5.09:1. Fills, rules and
+     large display text keep --noa-green. */
+  --noa-green-text: #117f3d;
   --noa-live: #d62828;
 
   /* Width of the centred white "content well" that floats over the takeover
@@ -105,6 +111,19 @@
   --border: 240 5% 26%;
   --input: 240 5% 26%;
   --ring: 142.1 70.6% 45.3%;
+
+  /* Brand palette, dark. The content well (.noa-well) and homepage use the
+     noa-* utilities while article/category/search templates use the semantic
+     tokens above; both must flip together or dark mode paints light text on
+     the white sheet. Values mirror the semantic dark scale. */
+  --noa-paper: #18181b;
+  --noa-white: #09090b;
+  --noa-ink: #fafafa;
+  --noa-body: #e4e4e7;
+  --noa-muted: #a1a1aa;
+  --noa-faint: #8b8b93;
+  --noa-hairline: #27272a;
+  --noa-green-text: #1bb257;
 }
 
 /**
@@ -153,6 +172,7 @@
   --color-noa-green-bright: var(--noa-green-bright);
   --color-noa-green-50: var(--noa-green-50);
   --color-noa-green-200: var(--noa-green-200);
+  --color-noa-green-text: var(--noa-green-text);
   --color-noa-live: var(--noa-live);
 
   --radius-sm: calc(var(--radius) - 4px);
