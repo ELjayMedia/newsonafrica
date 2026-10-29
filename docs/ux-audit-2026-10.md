@@ -264,3 +264,32 @@ since there is one article tree.
 
 Unchanged by design: the mobile in-article sponsored units (#2, awaiting monetisation sign-off) and the colour
 of the primary-green fills (#9).
+
+---
+
+## Follow-up: article layout modelled on BBC / News24
+
+Reference: BBC News and News24 mobile article pages (screenshots supplied by the product owner). The layout
+follows their patterns using the existing NOA tokens and type (Archivo / Source Sans 3, noa-* palette).
+
+| Pattern                                     | Implementation                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compact app bar: back · logo · save · share | `ArticleToolbar` (below `md`). It replaces the utility bar, masthead and section strip on article routes (`isArticlePath`). Back returns to the previous page only when the reader came from this site, otherwise to the edition front. Share uses the native share sheet, falling back to copying the link |
+| Headline first                              | Category · edition eyebrow → 28px headline → standfirst. On the demo article the headline starts about 120px higher on a 390×844 screen                                                                                                                                                                     |
+| Time and byline stacked                     | Clock icon + date · updated · reading time, then "By Author"                                                                                                                                                                                                                                                |
+| Publisher row with comments (News24)        | "News on Africa · {Edition} edition" (keeps the Play attribution), plus a "Comments" link to `#comments`                                                                                                                                                                                                    |
+| Edge-to-edge lead image on phones           | Full-bleed below `sm`; rounded `lg` in the column from `sm`                                                                                                                                                                                                                                                 |
+| Larger reading type                         | Body 18px on phones and 19px from `md`, line-height 1.7, tighter paragraph gaps. Pull quotes in the Archivo display face with a green rule                                                                                                                                                                  |
+| Desktop                                     | Global header kept; share pills + save in a row under the publisher row; rail unchanged                                                                                                                                                                                                                     |
+
+Trade-offs to note:
+
+- On phones, article pages no longer show the utility bar's **Subscribe** CTA, the theme toggle or the search
+  menu. Search and Home remain in the bottom navigation. If Subscribe must stay on article pages, add it at
+  the article end rather than restoring the full chrome.
+- The toolbar adds about 1 kB of JS (article first-load 132 → 133 kB).
+
+Verification: typecheck, lint, 212 unit tests (2 new for `isArticlePath`), Playwright e2e 16/16 twice from a
+clean start. One earlier failure was traced to the test setup, not the code: the demo and repo stubs shared
+one Next data cache, so the first request after switching served the other stub's cached article (stale-while-
+revalidate). This was reproduced deliberately, then cleared.

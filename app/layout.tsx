@@ -10,6 +10,7 @@ import { TakeoverSkin } from "@/components/ads/takeover-skin";
 import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
 import { BottomNavigation } from "@/components/bottom-navigation";
+import { HideOnMobileArticle } from "@/components/hide-on-mobile-article";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
 import { SiteJsonLd } from "@/components/seo/json-ld";
@@ -108,13 +109,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               share one centred white sheet (.noa-well, z-10) that floats above
               it, with the full-bleed utility bar spanning the top. */}
           <TakeoverSkin />
-          <UtilityBar
-            accountSlot={
-              <Suspense fallback={<AccountMenuFallback />}>
-                <AccountMenu />
-              </Suspense>
-            }
-          />
+          <HideOnMobileArticle>
+            <UtilityBar
+              accountSlot={
+                <Suspense fallback={<AccountMenuFallback />}>
+                  <AccountMenu />
+                </Suspense>
+              }
+            />
+          </HideOnMobileArticle>
           <div className="noa-well relative z-10 flex flex-1 flex-col">
             <SiteHeader sections={navSections} />
             <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">

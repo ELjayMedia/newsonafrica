@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { CountrySwitcher } from "@/components/country-switcher";
 import { HeaderSearch, SearchBox } from "@/components/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { isArticlePath } from "@/lib/article/route";
 import { DEFAULT_COUNTRY, isValidCountry } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
@@ -97,7 +98,13 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className="border-b-[3px] border-noa-green bg-noa-white">
+    // Article pages show the compact ArticleToolbar below md instead.
+    <header
+      className={cn(
+        "border-b-[3px] border-noa-green bg-noa-white",
+        isArticlePath(pathname) && "max-md:hidden",
+      )}
+    >
       {/* Masthead row */}
       <div className="flex items-center gap-4 px-4 py-3.5 sm:px-6">
         <Link href="/" aria-label="News On Africa home" className="shrink-0">

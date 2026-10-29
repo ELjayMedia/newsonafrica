@@ -345,10 +345,12 @@
    * Hand-rolled rather than @tailwindcss/typography since that plugin isn't
    * part of this stack.
    */
+  /* Body copy sized like the major news apps (BBC, News24): 18px on phones,
+     19px from md, with paragraph gaps a little under one line. */
   .prose-article {
     color: hsl(var(--foreground));
-    font-size: 1.0625rem;
-    line-height: 1.75;
+    font-size: 1.125rem;
+    line-height: 1.7;
     /* Long URLs and unbroken strings must not force horizontal scroll. */
     overflow-wrap: break-word;
   }
@@ -356,7 +358,12 @@
     text-wrap: pretty;
   }
   .prose-article > * + * {
-    margin-top: 1.25em;
+    margin-top: 1.1em;
+  }
+  @media (min-width: 768px) {
+    .prose-article {
+      font-size: 1.1875rem;
+    }
   }
   /* Subheads in the display face so they read as structure, with less space
      below than above to bind them to the paragraph they introduce. */
@@ -388,11 +395,18 @@
     height: auto;
     border-radius: var(--radius-lg);
   }
+  /* Quotes in the Bold Punch display face behind a green rule, so they read
+     as pull quotes rather than faded asides. */
   .prose-article blockquote {
-    border-left: 3px solid hsl(var(--primary));
+    margin-block: 1.75em;
+    border-left: 4px solid var(--noa-green);
     padding-left: 1rem;
-    font-style: italic;
-    color: hsl(var(--muted-foreground));
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    color: hsl(var(--foreground));
   }
   .prose-article ul,
   .prose-article ol {
