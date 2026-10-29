@@ -16,7 +16,7 @@ export function UtilityBar({ accountSlot }: { accountSlot?: React.ReactNode }) {
         <div className="flex items-center gap-1 sm:gap-3">
           <Link
             href="/register"
-            className="rounded-full bg-noa-green px-3.5 py-1.5 font-display text-xs font-extrabold text-white transition-colors hover:bg-noa-green-bright sm:px-4"
+            className="inline-flex h-9 items-center rounded-full bg-noa-green px-4 font-display text-xs font-extrabold text-white transition-colors hover:bg-noa-green-bright sm:px-4"
           >
             Subscribe
           </Link>

@@ -85,7 +85,7 @@ export default async function HomePage() {
 
             <aside className="min-w-0">
               {/* Pan-African home has no per-edition Most Read RPC; the rail
-                  leads with the personalised Latest News list + house ads. */}
+                  leads with the Latest News list + house ads. */}
               <HomeRail mostRead={[]} latest={railLatest} />
             </aside>
           </div>

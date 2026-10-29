@@ -20,7 +20,7 @@ function hrefForPage(basePath: string, page: number, extraParams?: Record<string
 }
 
 const PAGE_LINK_CLASS =
-  "inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 ui-sm transition-colors";
+  "inline-flex h-11 min-w-11 items-center justify-center rounded-md border px-3 ui-sm transition-colors md:h-9 md:min-w-9";
 
 /** Page-number pagination control for category/tag/author listings (NOA-91) and search results (NOA-94). */
 export function Pagination({ basePath, page, totalPages, extraParams }: PaginationProps) {

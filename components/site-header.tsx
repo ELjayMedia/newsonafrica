@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { CountrySwitcher } from "@/components/country-switcher";
 import { HeaderSearch, SearchBox } from "@/components/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { isArticlePath } from "@/lib/article/route";
 import { DEFAULT_COUNTRY, isValidCountry } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,15 @@ interface HeaderSection {
   slug: string;
   name: string;
 }
+
+/**
+ * Official News On Africa social profiles shown in the masthead. Left empty
+ * until the newsroom confirms its handles: the previous placeholders linked to
+ * the x.com / facebook.com home pages under "News On Africa on …" labels,
+ * which reads as a broken trust signal. Add `{ label, href, glyph }` entries
+ * here to restore the icons.
+ */
+const SOCIAL_PROFILES: { label: string; href: string; glyph: string }[] = [];
 
 interface SiteHeaderProps {
   /** WordPress-derived nav sections (busiest categories) from the root layout. */
@@ -88,7 +98,13 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <header className="border-b-[3px] border-noa-green bg-noa-white">
+    // Article pages show the compact ArticleToolbar below md instead.
+    <header
+      className={cn(
+        "border-b-[3px] border-noa-green bg-noa-white",
+        isArticlePath(pathname) && "max-md:hidden",
+      )}
+    >
       {/* Masthead row */}
       <div className="flex items-center gap-4 px-4 py-3.5 sm:px-6">
         <Link href="/" aria-label="News On Africa home" className="shrink-0">
@@ -103,15 +119,18 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
         </div>
 
         <div className="ml-auto flex items-center gap-2 md:ml-0">
-          <div className="hidden items-center gap-1.5 lg:flex">
-            <SocialLink label="News On Africa on X" path="https://x.com">
-              <span className="text-sm font-bold">𝕏</span>
-            </SocialLink>
-            <SocialLink label="News On Africa on Facebook" path="https://facebook.com">
-              <span className="font-display text-sm font-black">f</span>
-            </SocialLink>
-          </div>
-          <span className="mx-1 hidden h-6 w-px bg-noa-hairline lg:block" aria-hidden />
+          {SOCIAL_PROFILES.length > 0 ? (
+            <>
+              <div className="hidden items-center gap-1.5 lg:flex">
+                {SOCIAL_PROFILES.map((profile) => (
+                  <SocialLink key={profile.href} label={profile.label} path={profile.href}>
+                    <span className="font-display text-sm font-black">{profile.glyph}</span>
+                  </SocialLink>
+                ))}
+              </div>
+              <span className="mx-1 hidden h-6 w-px bg-noa-hairline lg:block" aria-hidden />
+            </>
+          ) : null}
           <div className="hidden lg:block">
             <EditionDate />
           </div>
@@ -124,7 +143,7 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-noa-hairline text-noa-ink md:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-noa-hairline text-noa-ink md:hidden"
           >
             <span aria-hidden>{open ? "✕" : "☰"}</span>
           </button>
@@ -154,7 +173,7 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
               className={cn(
                 "noa-eyebrow whitespace-nowrap border-b-[3px] py-3 tracking-[0.08em] transition-colors",
                 active
-                  ? "border-noa-green text-noa-green"
+                  ? "border-noa-green text-noa-green-text"
                   : "border-transparent text-noa-ink hover:text-noa-green",
               )}
             >

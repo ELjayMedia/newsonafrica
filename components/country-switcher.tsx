@@ -66,7 +66,7 @@ export function CountrySwitcher({ className }: { className?: string }) {
         value={current ?? ""}
         onChange={handleChange}
         aria-label="Choose country edition"
-        className="ui-md h-10 rounded-md border border-input bg-background px-2 text-foreground"
+        className="ui-md h-11 rounded-md border border-input bg-background px-2 text-foreground max-md:text-base md:h-10"
       >
         {!current ? (
           <option value="" disabled>
