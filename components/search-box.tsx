@@ -188,7 +188,7 @@ export function SearchBox({ className, placeholder = "Search news…", autoFocus
           // eslint-disable-next-line jsx-a11y/no-autofocus -- opt-in, only used when the mobile panel opens
           autoFocus={autoFocus}
           className={cn(
-            "h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm",
+            "h-11 w-full rounded-md border border-input bg-background pl-9 pr-3 text-base md:h-10 md:text-sm",
             "placeholder:text-muted-foreground",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
             "[&::-webkit-search-cancel-button]:appearance-none",

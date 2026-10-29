@@ -53,24 +53,30 @@
   --radius: 0.625rem;
 
   /**
-   * News On Africa brand palette (design system v1.0) — fixed hex tokens,
-   * theme-independent. The homepage + masthead adopt the high-fidelity light
-   * mockup ("Bold Punch" direction with a light masthead) regardless of the
-   * site theme, so these read the same in light and dark and are consumed via
-   * the `noa-*` Tailwind colour utilities exposed in the @theme block below.
+   * News On Africa brand palette (design system v1.0) — hex tokens for the
+   * "Bold Punch" direction with a light masthead, consumed via the `noa-*`
+   * Tailwind colour utilities exposed in the @theme block below. The greens
+   * and live red are fixed; the neutrals are redefined under .dark so the
+   * content well stays legible alongside the semantic tokens.
    */
   --noa-paper: #fafaf9;
   --noa-white: #ffffff;
   --noa-ink: #161412;
   --noa-body: #2b2825;
   --noa-muted: #6e6a66;
-  --noa-faint: #9a9591;
+  /* Timestamps/meta. Darkened from #9a9591 (2.97:1 on white) to clear WCAG
+     1.4.3 AA (4.5:1) for the 12px text it styles. */
+  --noa-faint: #76716c;
   --noa-hairline: #eceae7;
   --noa-green: #15994a; /* Green 600 — primary */
   --noa-green-dark: #0b5e2d; /* Green 900 */
   --noa-green-bright: #1bb257; /* Green 500 */
   --noa-green-50: #e8f6ee;
   --noa-green-200: #a6e2be;
+  /* Brand green for small text (eyebrows, active nav). #15994a is 3.69:1 on
+     white, below AA for 12px labels; this shade is 5.09:1. Fills, rules and
+     large display text keep --noa-green. */
+  --noa-green-text: #117f3d;
   --noa-live: #d62828;
 
   /* Width of the centred white "content well" that floats over the takeover
@@ -105,6 +111,19 @@
   --border: 240 5% 26%;
   --input: 240 5% 26%;
   --ring: 142.1 70.6% 45.3%;
+
+  /* Brand palette, dark. The content well (.noa-well) and homepage use the
+     noa-* utilities while article/category/search templates use the semantic
+     tokens above; both must flip together or dark mode paints light text on
+     the white sheet. Values mirror the semantic dark scale. */
+  --noa-paper: #18181b;
+  --noa-white: #09090b;
+  --noa-ink: #fafafa;
+  --noa-body: #e4e4e7;
+  --noa-muted: #a1a1aa;
+  --noa-faint: #8b8b93;
+  --noa-hairline: #27272a;
+  --noa-green-text: #1bb257;
 }
 
 /**
@@ -153,6 +172,7 @@
   --color-noa-green-bright: var(--noa-green-bright);
   --color-noa-green-50: var(--noa-green-50);
   --color-noa-green-200: var(--noa-green-200);
+  --color-noa-green-text: var(--noa-green-text);
   --color-noa-live: var(--noa-live);
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -185,6 +205,14 @@
     outline: 2px solid hsl(var(--ring));
     outline-offset: 2px;
   }
+
+  /* Even line lengths on multi-line headlines instead of a one-word last
+     line; ignored by browsers without support. */
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
 }
 
 /**
@@ -210,6 +238,15 @@
     line-height: 1.2;
     letter-spacing: -0.025em;
     font-weight: 700;
+  }
+  /* Article headline: the page's primary heading, a clear step above the
+     24px section headings (28px on phones, up to 40px on desktop). */
+  .display-article {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 1.35rem + 1.6vw, 2.5rem);
+    line-height: 1.12;
+    letter-spacing: -0.02em;
+    font-weight: 800;
   }
   .heading-lg {
     font-size: 1.5rem;
@@ -308,25 +345,45 @@
    * Hand-rolled rather than @tailwindcss/typography since that plugin isn't
    * part of this stack.
    */
+  /* Body copy sized like the major news apps (BBC, News24): 18px on phones,
+     19px from md, with paragraph gaps a little under one line. */
   .prose-article {
     color: hsl(var(--foreground));
-    font-size: 1.0625rem;
-    line-height: 1.75;
+    font-size: 1.125rem;
+    line-height: 1.7;
+    /* Long URLs and unbroken strings must not force horizontal scroll. */
+    overflow-wrap: break-word;
+  }
+  .prose-article p {
+    text-wrap: pretty;
   }
   .prose-article > * + * {
-    margin-top: 1.25em;
+    margin-top: 1.1em;
   }
+  @media (min-width: 768px) {
+    .prose-article {
+      font-size: 1.1875rem;
+    }
+  }
+  /* Subheads in the display face so they read as structure, with less space
+     below than above to bind them to the paragraph they introduce. */
   .prose-article h2 {
     margin-top: 2em;
+    font-family: var(--font-display);
     font-size: 1.5rem;
-    font-weight: 600;
-    line-height: 1.3;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
   .prose-article h3 {
     margin-top: 1.75em;
+    font-family: var(--font-display);
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.3;
+  }
+  .prose-article :is(h2, h3) + * {
+    margin-top: 0.75em;
   }
   .prose-article a {
     color: hsl(var(--primary));
@@ -338,11 +395,18 @@
     height: auto;
     border-radius: var(--radius-lg);
   }
+  /* Quotes in the Bold Punch display face behind a green rule, so they read
+     as pull quotes rather than faded asides. */
   .prose-article blockquote {
-    border-left: 3px solid hsl(var(--primary));
+    margin-block: 1.75em;
+    border-left: 4px solid var(--noa-green);
     padding-left: 1rem;
-    font-style: italic;
-    color: hsl(var(--muted-foreground));
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    color: hsl(var(--foreground));
   }
   .prose-article ul,
   .prose-article ol {
@@ -363,7 +427,9 @@
     border-radius: var(--radius-lg);
   }
   .prose-article figcaption {
+    margin-top: 0.5rem;
     font-size: 0.875rem;
+    line-height: 1.5;
     color: hsl(var(--muted-foreground));
   }
 }

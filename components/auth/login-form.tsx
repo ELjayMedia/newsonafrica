@@ -76,7 +76,7 @@ export function LoginForm({
               <label htmlFor="login-password" className="ui-sm font-medium">
                 Password
               </label>
-              <Link href="/forgot-password" className="ui-sm text-primary underline-offset-4 hover:underline">
+              <Link href="/forgot-password" className="ui-sm inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline md:min-h-0">
                 Forgot password?
               </Link>
             </div>

@@ -35,17 +35,18 @@ function MostRead({ posts }: { posts: MostReadPost[] }) {
 }
 
 /**
- * "Latest News" personalised list (homepage mockup): thumbnail rows with a
- * date, using the shared ThumbRow row.
+ * "Latest News" list (homepage mockup): thumbnail rows with a date, using the
+ * shared ThumbRow row.
  */
 function LatestNews({ posts }: { posts: PostSummary[] }) {
   if (posts.length === 0) return null;
   return (
     <section aria-label="Latest news">
-      <h2 className="noa-eyebrow mb-1 border-b-2 border-noa-green pb-2 text-noa-ink">
+      {/* No "Personalized for you" subhead: this is the edition's plain latest
+          feed, and claiming personalisation it doesn't do costs trust. */}
+      <h2 className="noa-eyebrow mb-4 border-b-2 border-noa-green pb-2 text-noa-ink">
         Latest News
       </h2>
-      <p className="ui-sm mb-4 text-noa-faint">Personalized for you</p>
       <div className="space-y-4">
         {posts.map((post) => (
           <div
@@ -66,7 +67,7 @@ export interface HomeRailProps {
 }
 
 /**
- * Right rail for the homepage: Most Read, a mid-rail MPU ad, a personalised
+ * Right rail for the homepage: Most Read, a mid-rail MPU ad, a
  * Latest News list and a sticky half-page ad — the full monetised sidebar from
  * the design system homepage mockup.
  */

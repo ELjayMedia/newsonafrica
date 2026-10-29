@@ -7,7 +7,7 @@ import type { PostSummary } from "@/lib/dal/types";
 /** Newsroom can flag a lead story as live/breaking via a WordPress tag. */
 const BREAKING_TAGS = new Set(["breaking", "live", "breaking-news"]);
 
-function heroFlag(post: PostSummary): "LIVE" | "BREAKING" | null {
+export function heroFlag(post: PostSummary): "LIVE" | "BREAKING" | null {
   for (const tag of post.tags) {
     const slug = tag.slug.toLowerCase();
     if (slug === "live") return "LIVE";
@@ -62,13 +62,13 @@ export function HeroLead({ post }: { post: PostSummary }) {
         {category ? (
           <Link
             href={`/${post.country}/category/${category.slug}`}
-            className="noa-eyebrow w-fit text-noa-green hover:underline"
+            className="noa-eyebrow w-fit text-noa-green-text hover:underline"
           >
             {category.name}
           </Link>
         ) : null}
 
-        <h1 className="noa-hed text-[clamp(1.125rem,1.5vw,1.625rem)] text-noa-ink">
+        <h1 className="noa-hed text-[clamp(1.5rem,1.1rem+1vw,2rem)] text-noa-ink">
           <Link href={href} className="transition-colors hover:text-noa-green">
             {post.title}
           </Link>

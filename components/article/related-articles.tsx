@@ -6,18 +6,24 @@ export interface RelatedArticlesProps {
   title?: string;
 }
 
-/** "You might also like" rail at the foot of an article (NOA-90). */
+/**
+ * "You might also like" at the foot of an article (NOA-90): thumbnail rows
+ * rather than tall stacked cards, so the next-read options fit on one phone
+ * screen.
+ */
 export function RelatedArticles({ posts, title = "You might also like" }: RelatedArticlesProps) {
   if (posts.length === 0) return null;
 
   return (
     <section aria-label={title} className="space-y-4 border-t border-border pt-8">
       <h2 className="heading-md">{title}</h2>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="divide-y divide-border">
         {posts.map((post) => (
-          <ArticleCard key={post.id} post={post} variant="grid" />
+          <li key={post.id} className="py-4 first:pt-0 last:pb-0">
+            <ArticleCard post={post} variant="list" />
+          </li>
         ))}
-      </div>
+      </ul>
     </section>
   );
 }

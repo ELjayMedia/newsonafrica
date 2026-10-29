@@ -11,7 +11,7 @@ function CategoryEyebrow({ post }: { post: PostSummary }) {
   return (
     <Link
       href={`/${post.country}/category/${category.slug}`}
-      className="noa-eyebrow w-fit text-noa-green hover:underline"
+      className="noa-eyebrow w-fit text-noa-green-text hover:underline"
     >
       {category.name}
     </Link>

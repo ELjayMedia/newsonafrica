@@ -11,11 +11,10 @@ test.describe("article page", () => {
     await page.goto("/sz/article/stub-headline-2");
 
     await expect(page.getByRole("heading", { level: 1, name: "Stub headline 2" })).toBeVisible();
-    // The line renders in both the mobile and desktop article trees (one hidden
-    // per breakpoint); the desktop tree is rendered last and is visible here.
+    // One responsive article tree renders the line exactly once.
     const updated = page.getByText(/^Updated/);
-    await expect(updated).toHaveCount(2);
-    await expect(updated.last()).toBeVisible();
+    await expect(updated).toHaveCount(1);
+    await expect(updated).toBeVisible();
   });
 
   test("omits the Updated line when the post was never meaningfully updated", async ({ page }) => {
