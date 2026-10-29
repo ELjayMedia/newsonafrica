@@ -73,7 +73,10 @@ jobs:
         run: pnpm build
 
   e2e:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moved to 26.04, which @playwright/test 1.56.x
+    # (pinned to match the sandbox browsers) cannot install Chromium on.
+    # Move back to ubuntu-latest when Playwright is upgraded.
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
 
     steps:
