@@ -293,3 +293,18 @@ Verification: typecheck, lint, 212 unit tests (2 new for `isArticlePath`), Playw
 clean start. One earlier failure was traced to the test setup, not the code: the demo and repo stubs shared
 one Next data cache, so the first request after switching served the other stub's cached article (stale-while-
 revalidate). This was reproduced deliberately, then cleared.
+
+---
+
+## Follow-up: one action group (share · save · comments)
+
+- All sharing is compressed into one **Share** icon (`ShareMenuButton`). It opens the native share sheet where
+  supported and otherwise a menu: WhatsApp, Facebook, X, Email, Copy link. The menu closes on Escape or an
+  outside click, and copy is announced politely.
+- Share, Save and Comments sit together as three 44px icons in the publisher row (`ArticleActions`) at every
+  breakpoint. The desktop share-pill row, the end-of-article share row and `share-buttons.tsx` are removed.
+- The mobile toolbar is now back + NOA mark only, so the actions are not repeated on the same screen.
+
+Verification: typecheck, lint, 212 unit tests, e2e 16/16 twice. On the demo article: icons measure 44×44;
+Share opens the five-item menu (headless Chromium has no native share sheet) and Escape closes it; Comments
+scrolls `#comments` into view.

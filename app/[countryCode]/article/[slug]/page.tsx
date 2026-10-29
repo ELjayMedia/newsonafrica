@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ArticleActions } from "@/components/article/article-actions";
 import { ArticleBody } from "@/components/article/article-body";
 import { ArticleToolbar } from "@/components/article/article-toolbar";
 import { CorrectionNotice } from "@/components/article/correction-notice";
 import { RelatedArticles } from "@/components/article/related-articles";
-import { ShareButtons } from "@/components/article/share-buttons";
 import { SponsoredArticleDisclosure } from "@/components/article/sponsored-article-disclosure";
-import { BookmarkButton } from "@/components/bookmark-button";
 import { CommentSection, COMMENTS_CURSOR_PARAM } from "@/components/comments/comment-section";
 import { HomeRail } from "@/components/home/home-rail";
 import { BreadcrumbJsonLd, NewsArticleJsonLd } from "@/components/seo/json-ld";
@@ -102,19 +101,9 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
 
   return (
     <>
-      {/* Compact app-style toolbar below md (back · mark · save · share);
-          the global masthead and utility bar hide on article routes there. */}
-      <ArticleToolbar
-        country={countryCode}
-        slug={slug}
-        wpPostId={post.id}
-        title={post.title}
-        shareUrl={shareUrl}
-        fallbackHref={`/${countryCode}`}
-        fallbackLabel={editionName}
-        bookmarked={bookmarked}
-        signedIn={user !== null}
-      />
+      {/* Compact app-style toolbar below md (back · mark); the global
+          masthead and utility bar hide on article routes there. */}
+      <ArticleToolbar fallbackHref={`/${countryCode}`} fallbackLabel={editionName} />
       <Container className="pb-8 pt-5 md:py-8">
         {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
         <NewsArticleJsonLd post={post} />
@@ -246,40 +235,20 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
               </div>
 
               {/* Publisher row (News24 pattern): attribution on the left (Play
-                news policy), a jump to the discussion on the right. */}
-              <div className="flex items-center justify-between gap-4 border-y border-border py-1 md:py-2">
-                <p className="ui-sm text-muted-foreground">
+                news policy); share, save and comments as one icon group on
+                the right, at every breakpoint. */}
+              <div className="flex items-center justify-between gap-4 border-y border-border py-2">
+                <p className="ui-sm min-w-0 text-muted-foreground">
                   <span className="font-semibold text-foreground">News on Africa</span> ·{" "}
                   {editionName} edition
                 </p>
-                <a
-                  href="#comments"
-                  className="ui-sm inline-flex min-h-11 shrink-0 items-center gap-1.5 font-semibold text-foreground hover:text-primary md:min-h-9"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                    className="h-4 w-4"
-                  >
-                    <path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" />
-                  </svg>
-                  Comments
-                </a>
-              </div>
-
-              {/* Mobile carries share/save in the toolbar; desktop shows them here. */}
-              <div className="hidden items-center justify-between gap-4 md:flex">
-                <ShareButtons title={post.title} url={shareUrl} />
-                <BookmarkButton
+                <ArticleActions
                   country={countryCode}
                   slug={slug}
                   wpPostId={post.id}
-                  initialBookmarked={bookmarked}
+                  title={post.title}
+                  shareUrl={shareUrl}
+                  bookmarked={bookmarked}
                   signedIn={user !== null}
                 />
               </div>
@@ -317,31 +286,27 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                 />
               ) : null}
 
-              {/* Article end: topics, a second share prompt for readers who
-                finished the piece, then the next-read pathway before the
+              {/* Article end: topics, then the next-read pathway before the
                 discussion. */}
-              <footer className="space-y-5 border-t border-border pt-6">
-                {post.tags.length > 0 ? (
-                  <div className="space-y-2">
-                    <h2 className="ui-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                      Topics
-                    </h2>
-                    <ul className="flex flex-wrap gap-2">
-                      {post.tags.map((tag) => (
-                        <li key={tag.slug}>
-                          <Link
-                            href={`/${countryCode}/tag/${tag.slug}`}
-                            className="ui-sm inline-flex min-h-10 items-center rounded-full border border-input px-3.5 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:min-h-8"
-                          >
-                            {tag.name}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-                <ShareButtons title={post.title} url={shareUrl} compact />
-              </footer>
+              {post.tags.length > 0 ? (
+                <footer className="space-y-2 border-t border-border pt-6">
+                  <h2 className="ui-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    Topics
+                  </h2>
+                  <ul className="flex flex-wrap gap-2">
+                    {post.tags.map((tag) => (
+                      <li key={tag.slug}>
+                        <Link
+                          href={`/${countryCode}/tag/${tag.slug}`}
+                          className="ui-sm inline-flex min-h-10 items-center rounded-full border border-input px-3.5 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:min-h-8"
+                        >
+                          {tag.name}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </footer>
+              ) : null}
 
               <RelatedArticles posts={related} />
 
