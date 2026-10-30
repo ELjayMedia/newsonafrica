@@ -3,6 +3,11 @@
 import * as React from "react";
 
 import { ArticleCard } from "@/components/article/article-card";
+import {
+  STORY_LIST_CARD_VARIANT,
+  STORY_LIST_CLASSES,
+  type StoryListLayout,
+} from "@/components/listing/story-listing";
 import type { PostSummary } from "@/lib/dal/types";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +26,12 @@ export interface InfiniteFeedProps {
   initialCursor: string | null;
   /** `${country}-${id}` keys already on the page, so the feed never repeats a story. */
   seenKeys: string[];
+  /**
+   * Server-rendered stories to start the list with, so they and the appended
+   * pages form one continuous list/grid (no half-empty grid row between them).
+   */
+  initialItems?: PostSummary[];
+  layout?: StoryListLayout;
   /** Visible section heading; null continues the list above seamlessly (category pages). */
   heading?: string | null;
   /** Show each card's category label (off on a category page, where it is the page). */
@@ -46,19 +57,21 @@ export function InfiniteFeed({
   scope,
   initialCursor,
   seenKeys,
+  initialItems = [],
+  layout = "rows",
   heading = "More stories",
   showCategory = true,
   fallbackHref,
   className,
 }: InfiniteFeedProps) {
   const [mounted, setMounted] = React.useState(false);
-  const [items, setItems] = React.useState<PostSummary[]>([]);
+  const [items, setItems] = React.useState<PostSummary[]>(initialItems);
   const [cursor, setCursor] = React.useState(initialCursor);
   const [status, setStatus] = React.useState<Status>("idle");
   const [autoLoads, setAutoLoads] = React.useState(0);
   const [announcement, setAnnouncement] = React.useState("");
 
-  const seen = React.useRef(new Set(seenKeys));
+  const seen = React.useRef(new Set([...seenKeys, ...initialItems.map(postKey)]));
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const listRef = React.useRef<HTMLUListElement>(null);
   const focusIndex = React.useRef<number | null>(null);
@@ -151,11 +164,22 @@ export function InfiniteFeed({
       {items.length > 0 ? (
         <ul
           ref={listRef}
-          className={cn("divide-y divide-border", !heading && "border-t border-border")}
+          className={cn(
+            STORY_LIST_CLASSES[layout].list,
+            // Under a heading the first row needs no top rule.
+            heading && "border-t-0",
+          )}
         >
           {items.map((post) => (
-            <li key={postKey(post)} className={cn("py-4", heading && "first:pt-0")}>
-              <ArticleCard post={post} variant="list" showCategory={showCategory} />
+            <li
+              key={postKey(post)}
+              className={cn(STORY_LIST_CLASSES[layout].item, heading && "first:pt-0")}
+            >
+              <ArticleCard
+                post={post}
+                variant={STORY_LIST_CARD_VARIANT[layout]}
+                showCategory={showCategory}
+              />
             </li>
           ))}
         </ul>

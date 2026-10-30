@@ -132,20 +132,44 @@ export function ListingLead({ post, showCategory = true }: ListingLeadProps) {
   );
 }
 
+/**
+ * Story-list layouts shared by ListingRows and the infinite feed so server-
+ * rendered and appended stories line up:
+ * - `rows`: thumbnail rows at every width (as "You might also like").
+ * - `grid`: category feeds, News24-style — thumbnail rows on phones, two
+ *   image-on-top cards per row from md up.
+ */
+export type StoryListLayout = "rows" | "grid";
+
+export const STORY_LIST_CLASSES: Record<StoryListLayout, { list: string; item: string }> = {
+  rows: { list: "divide-y divide-border border-t border-border", item: "py-4" },
+  grid: {
+    list: "divide-y divide-border border-t border-border md:grid md:grid-cols-2 md:gap-x-6 md:gap-y-8 md:divide-y-0 md:border-t-0",
+    item: "py-4 md:py-0",
+  },
+};
+
+export const STORY_LIST_CARD_VARIANT = { rows: "list", grid: "feed" } as const;
+
 export interface ListingRowsProps {
   posts: PostSummary[];
   showCategory?: boolean;
+  layout?: StoryListLayout;
 }
 
-/** Thumbnail rows, as used for "You might also like" on the article page. */
-export function ListingRows({ posts, showCategory = true }: ListingRowsProps) {
+/** Server-rendered story list in one of the shared layouts. */
+export function ListingRows({ posts, showCategory = true, layout = "rows" }: ListingRowsProps) {
   if (posts.length === 0) return null;
 
   return (
-    <ul className="divide-y divide-border border-t border-border">
+    <ul className={STORY_LIST_CLASSES[layout].list}>
       {posts.map((post) => (
-        <li key={`${post.country}-${post.id}`} className="py-4">
-          <ArticleCard post={post} variant="list" showCategory={showCategory} />
+        <li key={`${post.country}-${post.id}`} className={STORY_LIST_CLASSES[layout].item}>
+          <ArticleCard
+            post={post}
+            variant={STORY_LIST_CARD_VARIANT[layout]}
+            showCategory={showCategory}
+          />
         </li>
       ))}
     </ul>

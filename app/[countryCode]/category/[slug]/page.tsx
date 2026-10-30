@@ -94,24 +94,30 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           {listing.items.length > 0 ? (
             <>
               {showLead ? <ListingLead post={leadPost} showCategory={false} /> : null}
-              <ListingRows posts={rows} showCategory={false} />
               {isFirstPage ? (
-                // Infinite scroll continues the rows; ?page=2 stays as the
-                // crawlable / no-JS next page until the feed hydrates.
+                // Stories after the lead and every infinite-scroll page share
+                // one list: thumbnail rows on phones, two cards per row from
+                // md up (News24-style). ?page=2 stays as the crawlable / no-JS
+                // next page until the feed hydrates.
                 <InfiniteFeed
                   scope={{ scope: "category", country: countryCode, category: slug }}
                   initialCursor={listing.nextCursor}
+                  initialItems={rows}
                   seenKeys={listing.items.map((post) => `${post.country}-${post.id}`)}
+                  layout="grid"
                   heading={null}
                   showCategory={false}
                   fallbackHref={`${basePath}?page=2`}
                 />
               ) : (
-                <Pagination
-                  basePath={basePath}
-                  page={listing.page}
-                  totalPages={listing.totalPages}
-                />
+                <>
+                  <ListingRows posts={rows} showCategory={false} layout="grid" />
+                  <Pagination
+                    basePath={basePath}
+                    page={listing.page}
+                    totalPages={listing.totalPages}
+                  />
+                </>
               )}
             </>
           ) : (

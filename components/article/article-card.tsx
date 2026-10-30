@@ -6,7 +6,7 @@ import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PostSummary } from "@/lib/dal/types";
 
-export type ArticleCardVariant = "grid" | "list" | "compact";
+export type ArticleCardVariant = "grid" | "list" | "compact" | "feed";
 
 export interface ArticleCardProps {
   post: PostSummary;
@@ -22,6 +22,7 @@ const IMAGE_ASPECT: Record<ArticleCardVariant, string> = {
   grid: "aspect-video",
   list: "aspect-[4/3]",
   compact: "aspect-video",
+  feed: "aspect-[4/3] md:aspect-video",
 };
 
 /**
@@ -29,7 +30,8 @@ const IMAGE_ASPECT: Record<ArticleCardVariant, string> = {
  * listings and the related-articles rail. `variant` controls layout:
  * `grid` (image above text), `list` (thumbnail beside text at every width,
  * for stacked rows such as related stories), `compact` (small image, no
- * excerpt).
+ * excerpt), `feed` (category feeds, News24-style: a thumbnail row on phones,
+ * an image-on-top card from md up for the two-column grid; no excerpt).
  */
 export function ArticleCard({
   post,
@@ -41,15 +43,23 @@ export function ArticleCard({
   const href = getArticleUrl(post.country, post.slug);
   const category = post.categories[0];
   const isList = variant === "list";
+  const isFeed = variant === "feed";
 
   return (
-    <article className={cn("group flex h-full overflow-hidden", isList ? "flex-row gap-4" : "flex-col", className)}>
+    <article
+      className={cn(
+        "group flex h-full overflow-hidden",
+        isList ? "flex-row gap-4" : isFeed ? "flex-row gap-4 md:flex-col md:gap-0" : "flex-col",
+        className,
+      )}
+    >
       <Link
         href={href}
         className={cn(
           "relative block flex-shrink-0 overflow-hidden rounded-lg bg-muted",
           IMAGE_ASPECT[variant],
           isList && "w-28 self-start sm:w-40",
+          isFeed && "w-28 self-start sm:w-40 md:w-full md:self-auto",
         )}
       >
         {post.featuredImage ? (
@@ -67,7 +77,7 @@ export function ArticleCard({
         )}
       </Link>
 
-      <div className={cn("flex min-w-0 flex-1 flex-col gap-2", !isList && "pt-3")}>
+      <div className={cn("flex min-w-0 flex-1 flex-col gap-2", isFeed ? "md:pt-3" : !isList && "pt-3")}>
         {showCategory && category ? (
           <Link href={`/${post.country}/category/${category.slug}`} className="w-fit">
             <Badge variant="secondary">{category.name}</Badge>
@@ -80,7 +90,7 @@ export function ArticleCard({
           </Link>
         </h3>
 
-        {variant !== "compact" && post.excerpt ? (
+        {variant !== "compact" && !isFeed && post.excerpt ? (
           <p className={cn("body-sm line-clamp-2 text-muted-foreground", isList && "max-sm:hidden")}>
             {post.excerpt}
           </p>
