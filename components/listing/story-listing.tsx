@@ -1,8 +1,8 @@
 import Link from "next/link";
 
 import { ArticleCard } from "@/components/article/article-card";
+import { StoryMeta } from "@/components/story-meta";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
-import { formatDate } from "@/lib/format";
 import type { PostSummary } from "@/lib/dal/types";
 
 /**
@@ -45,24 +45,6 @@ export function ListingHeader({ eyebrow, title, description, total }: ListingHea
   );
 }
 
-function ClockIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-      className="h-4 w-4 shrink-0"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
-    </svg>
-  );
-}
-
 export interface ListingLeadProps {
   post: PostSummary;
   /** Show the post's category eyebrow (off on a category page, where it is the page). */
@@ -71,12 +53,11 @@ export interface ListingLeadProps {
 
 /**
  * Lead story: image edge to edge on phones (rounded in the column from sm),
- * then the headline and a clock + date / byline line — the article page's
- * header rhythm in miniature (no standfirst, matching the article).
+ * then the sentence-case lead headline and the shared meta line (BBC lead-
+ * promo order; no standfirst, matching the article).
  */
 export function ListingLead({ post, showCategory = true }: ListingLeadProps) {
   const href = getArticleUrl(post.country, post.slug);
-  const category = post.categories[0];
 
   return (
     <article className="space-y-4">
@@ -104,29 +85,12 @@ export function ListingLead({ post, showCategory = true }: ListingLeadProps) {
       </Link>
 
       <div className="space-y-3">
-        {showCategory && category ? (
-          <Link
-            href={`/${post.country}/category/${category.slug}`}
-            className="noa-eyebrow inline-flex text-noa-green-text hover:underline"
-          >
-            {category.name}
-          </Link>
-        ) : null}
-        <h2 className="font-display text-2xl font-extrabold leading-tight tracking-[-0.02em] text-foreground md:text-3xl">
+        <h2 className="noa-hed text-2xl text-foreground md:text-[2rem]">
           <Link href={href} className="transition-colors hover:text-primary">
             {post.title}
           </Link>
         </h2>
-        <p className="ui-sm flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted-foreground">
-          <ClockIcon />
-          <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
-          {post.author ? (
-            <>
-              <span aria-hidden>·</span>
-              <span>{post.author.name}</span>
-            </>
-          ) : null}
-        </p>
+        <StoryMeta post={post} showCategory={showCategory} />
       </div>
     </article>
   );

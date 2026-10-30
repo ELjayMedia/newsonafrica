@@ -1,8 +1,7 @@
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
+import { StoryMeta } from "@/components/story-meta";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
-import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { PostSummary } from "@/lib/dal/types";
 
@@ -13,7 +12,7 @@ export interface ArticleCardProps {
   variant?: ArticleCardVariant;
   /** Marks the image `loading="eager"`/high `fetchPriority` for above-the-fold cards. */
   priority?: boolean;
-  /** Hide the category badge, e.g. on a category page where every card shares it. */
+  /** Omit the section from the meta line, e.g. on a category page where every card shares it. */
   showCategory?: boolean;
   className?: string;
 }
@@ -41,7 +40,6 @@ export function ArticleCard({
   className,
 }: ArticleCardProps) {
   const href = getArticleUrl(post.country, post.slug);
-  const category = post.categories[0];
   const isList = variant === "list";
   const isFeed = variant === "feed";
 
@@ -78,13 +76,17 @@ export function ArticleCard({
       </Link>
 
       <div className={cn("flex min-w-0 flex-1 flex-col gap-2", isFeed ? "md:pt-3" : !isList && "pt-3")}>
-        {showCategory && category ? (
-          <Link href={`/${post.country}/category/${category.slug}`} className="w-fit">
-            <Badge variant="secondary">{category.name}</Badge>
-          </Link>
-        ) : null}
-
-        <h3 className={cn("heading-sm", variant === "compact" && "text-sm font-semibold leading-snug")}>
+        {/* Headline first, details last (BBC-style): one card headline style
+            everywhere, sized by variant; the section moves into the meta line. */}
+        <h3
+          className={cn(
+            "story-hed",
+            variant === "compact" && "text-[0.9375rem]",
+            variant === "list" && "text-[1.0625rem] sm:text-lg",
+            variant === "feed" && "text-[1.0625rem] md:text-xl",
+            variant === "grid" && "text-lg",
+          )}
+        >
           <Link href={href} className="transition-colors hover:text-primary">
             {post.title}
           </Link>
@@ -96,11 +98,13 @@ export function ArticleCard({
           </p>
         ) : null}
 
-        <div className="mt-auto flex items-center gap-2 ui-sm text-muted-foreground">
-          {post.author ? <span>{post.author.name}</span> : null}
-          {post.author ? <span aria-hidden>&middot;</span> : null}
-          <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
-        </div>
+        {/* Grids pin the meta line to the card foot so side-by-side cards
+            align; rows keep it directly under the headline (BBC app). */}
+        <StoryMeta
+          post={post}
+          showCategory={showCategory}
+          className={cn(variant === "grid" && "mt-auto", isFeed && "md:mt-auto")}
+        />
       </div>
     </article>
   );
