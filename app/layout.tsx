@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Source_Sans_3 } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 
 import "./globals.css";
@@ -21,16 +21,19 @@ import { getNavSections } from "@/lib/nav";
 // Bold Punch typography (design system §03): Archivo carries mastheads,
 // eyebrows and the heavy condensed headlines; Source Sans 3 carries body copy.
 // Exposed as CSS variables so globals.css helper classes can reference them.
-const archivo = Archivo({
-  subsets: ["latin"],
-  weight: ["500", "600", "700", "800", "900"],
+//
+// Self-hosted from app/fonts (the Latin variable files Google Fonts serves,
+// byte-identical to what next/font/google downloaded; OFL-licensed, licences
+// alongside). Builds no longer fetch from fonts.googleapis.com, which made CI
+// and deploys fail whenever Google returned an unexpected response.
+const archivo = localFont({
+  src: [{ path: "./fonts/archivo-latin-variable.woff2", weight: "500 900", style: "normal" }],
   variable: "--font-archivo",
   display: "swap",
 });
 
-const sourceSans = Source_Sans_3({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
+const sourceSans = localFont({
+  src: [{ path: "./fonts/source-sans-3-latin-variable.woff2", weight: "400 700", style: "normal" }],
   variable: "--font-source",
   display: "swap",
 });
