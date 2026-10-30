@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 import { BrandMark } from "@/components/brand-mark";
 import { CountrySwitcher } from "@/components/country-switcher";
-import { HeaderSearch, SearchBox } from "@/components/search-box";
+import { HeaderSearch } from "@/components/search-box";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { isArticlePath } from "@/lib/article/route";
 import { DEFAULT_COUNTRY, isValidCountry } from "@/lib/countries";
@@ -77,11 +77,11 @@ function EditionDate() {
  * masthead). Lives inside the floating content well: a white masthead row
  * (brand lockup, edition picker, search, socials, date, theme) over an
  * uppercase Archivo nav row whose active item carries a green underline, with a
- * green accent bar beneath as the Bold Punch signature. Collapses to a
- * hamburger disclosure below `lg`.
+ * green accent bar beneath as the Bold Punch signature. Below md the
+ * masthead is just the logo and the edition picker: search lives in the
+ * bottom navigation, and the theme toggle is desktop-only.
  */
 export function SiteHeader({ sections = [] }: SiteHeaderProps) {
-  const [open, setOpen] = React.useState(false);
   const pathname = usePathname();
 
   const firstSegment = pathname.split("/")[1] ?? "";
@@ -118,7 +118,10 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
           </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-2 md:ml-0">
+        {/* Mobile: the edition picker sits opposite the logo. */}
+        <CountrySwitcher className="ml-auto shrink-0 md:hidden" />
+
+        <div className="hidden items-center gap-2 md:flex">
           {SOCIAL_PROFILES.length > 0 ? (
             <>
               <div className="hidden items-center gap-1.5 lg:flex">
@@ -135,26 +138,6 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
             <EditionDate />
           </div>
           <ThemeToggle />
-          {/* Mobile utilities menu (search + edition). Section nav is the
-              always-visible scrolling strip below, so this holds utilities
-              only. Hidden from md up, where they sit inline in the masthead. */}
-          <button
-            type="button"
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-noa-hairline text-noa-ink md:hidden"
-          >
-            <span aria-hidden>{open ? "✕" : "☰"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Mobile utilities disclosure (search + edition switcher) */}
-      <div className={cn("border-t border-noa-hairline md:hidden", open ? "block" : "hidden")}>
-        <div className="flex flex-col gap-3 px-4 py-3 sm:px-6">
-          <SearchBox onNavigate={() => setOpen(false)} />
-          <CountrySwitcher />
         </div>
       </div>
 

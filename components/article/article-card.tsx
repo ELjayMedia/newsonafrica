@@ -13,6 +13,8 @@ export interface ArticleCardProps {
   variant?: ArticleCardVariant;
   /** Marks the image `loading="eager"`/high `fetchPriority` for above-the-fold cards. */
   priority?: boolean;
+  /** Hide the category badge, e.g. on a category page where every card shares it. */
+  showCategory?: boolean;
   className?: string;
 }
 
@@ -29,7 +31,13 @@ const IMAGE_ASPECT: Record<ArticleCardVariant, string> = {
  * for stacked rows such as related stories), `compact` (small image, no
  * excerpt).
  */
-export function ArticleCard({ post, variant = "grid", priority = false, className }: ArticleCardProps) {
+export function ArticleCard({
+  post,
+  variant = "grid",
+  priority = false,
+  showCategory = true,
+  className,
+}: ArticleCardProps) {
   const href = getArticleUrl(post.country, post.slug);
   const category = post.categories[0];
   const isList = variant === "list";
@@ -60,7 +68,7 @@ export function ArticleCard({ post, variant = "grid", priority = false, classNam
       </Link>
 
       <div className={cn("flex min-w-0 flex-1 flex-col gap-2", !isList && "pt-3")}>
-        {category ? (
+        {showCategory && category ? (
           <Link href={`/${post.country}/category/${category.slug}`} className="w-fit">
             <Badge variant="secondary">{category.name}</Badge>
           </Link>
