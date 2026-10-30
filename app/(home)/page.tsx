@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { AdSlot } from "@/components/ads/ad-slot";
+import { InfiniteFeed } from "@/components/feed/infinite-feed";
 import { ExploreAfrica } from "@/components/home/explore-africa";
 import { HeroLead } from "@/components/home/hero-lead";
 import { HomeRail } from "@/components/home/home-rail";
@@ -9,46 +10,36 @@ import { MobileFeed } from "@/components/home/mobile-feed";
 import { SponsoredCard } from "@/components/home/sponsored-card";
 import { StoryCard } from "@/components/home/story-card";
 import { createLogger } from "@/lib/log";
-import { listCountries, listPosts, type Country, type PostSummary } from "@/lib/dal";
+import type { PostSummary } from "@/lib/dal";
+import { initialFeedState, loadFeedPage } from "@/lib/feed/load";
 
 // Canonical for the root page (NOA-114); resolved against metadataBase.
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-const PAN_AFRICAN_POSTS_PER_COUNTRY = 5;
 const PAN_AFRICAN_POST_COUNT = 13;
+const AFRICA_SCOPE = { kind: "africa" } as const;
 
 const log = createLogger("home-page");
 
-async function listPostsForCountry(
-  country: Country,
-): Promise<{ country: Country; posts: PostSummary[] }> {
-  try {
-    const { items } = await listPosts({
-      country: country.code,
-      perPage: PAN_AFRICAN_POSTS_PER_COUNTRY,
-    });
-    return { country, posts: items };
-  } catch (error) {
-    log.warn("Country feed unavailable on pan-African home", { country: country.code, err: error });
-    return { country, posts: [] };
-  }
-}
-
-function getPostSortTime(post: PostSummary): number {
-  const timestamp = Date.parse(post.publishedAt);
-  return Number.isFinite(timestamp) ? timestamp : 0;
-}
-
 export default async function HomePage() {
-  const countryFeeds = await Promise.all(
-    listCountries().map((country) => listPostsForCountry(country)),
-  );
-  const posts = countryFeeds
-    .flatMap(({ posts }) => posts)
-    .sort((a, b) => getPostSortTime(b) - getPostSortTime(a))
-    .slice(0, PAN_AFRICAN_POST_COUNT);
+  // Newest stories across every edition, merged by date. The same merged
+  // feed continues below as infinite "More stories" from `moreCursor`.
+  // Each edition degrades independently inside loadFeedPage.
+  let posts: PostSummary[] = [];
+  let moreCursor: string | null = null;
+  try {
+    const page = await loadFeedPage(
+      AFRICA_SCOPE,
+      initialFeedState(AFRICA_SCOPE),
+      PAN_AFRICAN_POST_COUNT,
+    );
+    posts = page.posts;
+    moreCursor = page.nextCursor;
+  } catch (error) {
+    log.warn("Pan-African home feed unavailable", { err: error });
+  }
 
   const [hero, ...rest] = posts;
   const standardCards = rest.slice(0, 2);
@@ -92,6 +83,15 @@ export default async function HomePage() {
 
           {/* Mobile: dense image-left feed. */}
           <MobileFeed posts={allStories} />
+
+          {/* Infinite "More stories" across all editions (one copy for every
+              breakpoint), sized to the desktop main column. */}
+          <InfiniteFeed
+            scope={{ scope: "africa" }}
+            initialCursor={moreCursor}
+            seenKeys={allStories.map((post) => `${post.country}-${post.id}`)}
+            className="mt-10 lg:max-w-[calc(100%-352px)]"
+          />
         </>
       ) : (
         <section className="rounded-xl border border-noa-hairline bg-noa-paper p-6">
