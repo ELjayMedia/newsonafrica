@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { AdSlot } from "@/components/ads/ad-slot";
+import { InfiniteFeed } from "@/components/feed/infinite-feed";
 import { ExploreAfrica } from "@/components/home/explore-africa";
 import { HeroLead } from "@/components/home/hero-lead";
 import { HomeRail } from "@/components/home/home-rail";
@@ -17,6 +18,7 @@ import {
   type HomeFeed,
   type MostReadPost,
 } from "@/lib/dal";
+import { initialFeedState, loadFeedPage } from "@/lib/feed/load";
 import { createLogger } from "@/lib/log";
 
 interface CountryHomePageProps {
@@ -52,11 +54,15 @@ const log = createLogger("country-home-page");
 
 async function loadCountryHomeData(
   countryCode: string,
-): Promise<{ feed: HomeFeed; mostRead: MostReadPost[] }> {
-  const [feedResult, mostReadResult] = await Promise.allSettled([
+): Promise<{ feed: HomeFeed; mostRead: MostReadPost[]; moreCursor: string | null }> {
+  const scope = { kind: "edition", country: countryCode } as const;
+  const [feedResult, mostReadResult, moreResult] = await Promise.allSettled([
     // Editor-pinned (sticky) posts lead the feed, then the latest fill in.
     getHomeFeed(countryCode, { total: HOME_POST_COUNT, secondary: 3 }),
     getMostReadPosts(countryCode, MOST_READ_COUNT),
+    // Where "More stories" picks up: after the same number of latest posts.
+    // Pinned posts shown above are de-duplicated by the feed itself.
+    loadFeedPage(scope, initialFeedState(scope), HOME_POST_COUNT),
   ]);
 
   if (feedResult.status === "rejected") {
@@ -76,6 +82,8 @@ async function loadCountryHomeData(
         ? feedResult.value
         : { hero: null, secondary: [], grid: [] },
     mostRead: mostReadResult.status === "fulfilled" ? mostReadResult.value : [],
+    // Without a cursor the page simply ends where it did before.
+    moreCursor: moreResult.status === "fulfilled" ? moreResult.value.nextCursor : null,
   };
 }
 
@@ -86,7 +94,7 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
     notFound();
   }
 
-  const { feed, mostRead } = await loadCountryHomeData(countryCode);
+  const { feed, mostRead, moreCursor } = await loadCountryHomeData(countryCode);
   const { hero, secondary, grid } = feed;
 
   // Fan the feed out across the desktop mockup's surfaces.
@@ -131,6 +139,15 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
 
           {/* Mobile: dense image-left feed. */}
           <MobileFeed posts={allStories} />
+
+          {/* Infinite "More stories" (one copy for every breakpoint), sized to
+              the desktop main column so it lines up under the hero grid. */}
+          <InfiniteFeed
+            scope={{ scope: "edition", country: countryCode }}
+            initialCursor={moreCursor}
+            seenKeys={allStories.map((post) => `${post.country}-${post.id}`)}
+            className="mt-10 lg:max-w-[calc(100%-352px)]"
+          />
         </>
       ) : (
         <section className="rounded-xl border border-noa-hairline bg-noa-paper p-6">

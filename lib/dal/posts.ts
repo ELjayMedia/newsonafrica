@@ -220,6 +220,86 @@ async function graphQL<T>(country: CountryCode | string, query: string, variable
   return result.data;
 }
 
+/** Listing fields without `content`: feed pages never render article bodies. */
+const POST_SUMMARY_FIELDS = POST_FIELDS.replace("content(format: RENDERED)", "");
+
+const POSTS_FEED_QUERY = /* GraphQL */ `
+  query PostsFeed($first: Int!, $after: String, $categoryName: String) {
+    posts(
+      first: $first
+      after: $after
+      where: { status: PUBLISH, orderby: { field: DATE, order: DESC }, categoryName: $categoryName }
+    ) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          ${POST_SUMMARY_FIELDS}
+        }
+      }
+    }
+  }
+`;
+
+type PostsFeedData = {
+  posts?: {
+    pageInfo?: { hasNextPage?: boolean | null; endCursor?: string | null } | null;
+    edges?: Array<{ cursor?: string | null; node?: GqlPost | null } | null> | null;
+  } | null;
+};
+
+export interface PostFeedEntry {
+  post: PostSummary;
+  /** Opaque WPGraphQL cursor positioned at this post. */
+  cursor: string;
+}
+
+export interface PostFeedSlice {
+  entries: PostFeedEntry[];
+  hasNextPage: boolean;
+}
+
+/**
+ * Cursor-paginated post summaries for infinite feeds. Unlike `listPosts`
+ * (offset paging: page N re-fetches N × perPage posts and is capped by
+ * WPGraphQL's 100-item limit), each call fetches only `first` posts after
+ * `after`, so cost stays flat however deep a reader scrolls. Every entry
+ * carries its own cursor so multi-edition feeds can resume from exactly the
+ * last story they showed.
+ */
+export async function listPostFeedSlice(params: {
+  country: CountryCode | string;
+  categorySlug?: string;
+  after?: string | null;
+  first: number;
+}): Promise<PostFeedSlice> {
+  const tags = [cacheTags.posts(params.country)];
+  if (params.categorySlug) tags.push(cacheTags.category(params.country, params.categorySlug));
+
+  const data = await graphQL<PostsFeedData>(
+    params.country,
+    POSTS_FEED_QUERY,
+    {
+      first: normalizePerPage(params.first),
+      after: params.after ?? null,
+      categoryName: params.categorySlug ?? null,
+    },
+    tags,
+    "PostsFeed",
+  );
+
+  const entries: PostFeedEntry[] = [];
+  for (const edge of data.posts?.edges ?? []) {
+    if (!edge?.node || !edge.cursor) continue;
+    entries.push({ post: mapGraphQLPostSummary(edge.node, params.country), cursor: edge.cursor });
+  }
+
+  return { entries, hasNextPage: Boolean(data.posts?.pageInfo?.hasNextPage) };
+}
+
 export async function listPosts(params: PostListParams): Promise<PaginatedResult<PostSummary>> {
   const page = normalizePage(params.page);
   const perPage = normalizePerPage(params.perPage);

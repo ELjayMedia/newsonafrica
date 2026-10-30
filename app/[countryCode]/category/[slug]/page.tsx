@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { InfiniteFeed } from "@/components/feed/infinite-feed";
 import { HomeRail } from "@/components/home/home-rail";
 import { ListingHeader, ListingLead, ListingRows } from "@/components/listing/story-listing";
 import { Pagination } from "@/components/pagination";
@@ -10,6 +11,7 @@ import { RailLayout } from "@/components/ui/rail-layout";
 import { COUNTRIES } from "@/lib/countries";
 import { getCategoryBySlug, isValidCountry, listPosts } from "@/lib/dal";
 import { getHomeRailData } from "@/lib/dal/home-rail";
+import { initialFeedState, loadFeedPage } from "@/lib/feed/load";
 
 interface CategoryPageProps {
   params: Promise<{ countryCode: string; slug: string }>;
@@ -46,16 +48,29 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   const page = Number(pageParam) || 1;
-  const [result, rail] = await Promise.all([
-    listPosts({ country: countryCode, categorySlug: slug, page, perPage: PER_PAGE }),
+  const scope = { kind: "category", country: countryCode, slug } as const;
+  // Page 1 comes from the cursor feed so infinite scroll can continue exactly
+  // where it ends; ?page=N (N > 1) stays an offset-paged, crawlable page.
+  const [listing, rail] = await Promise.all([
+    page <= 1
+      ? loadFeedPage(scope, initialFeedState(scope), PER_PAGE).then((feed) => ({
+          items: feed.posts,
+          page: 1,
+          totalPages: feed.nextCursor ? 2 : 1,
+          nextCursor: feed.nextCursor,
+        }))
+      : listPosts({ country: countryCode, categorySlug: slug, page, perPage: PER_PAGE }).then(
+          (result) => ({ ...result, nextCursor: null }),
+        ),
     getHomeRailData(countryCode),
   ]);
-  const [leadPost, ...remainingPosts] = result.items;
+  const [leadPost, ...remainingPosts] = listing.items;
   const editionName = COUNTRIES[countryCode].name;
   const basePath = `/${countryCode}/category/${slug}`;
+  const isFirstPage = listing.page === 1;
   // The lead treatment is for the newest story; later pages are plain rows.
-  const showLead = result.page === 1 && leadPost !== undefined;
-  const rows = showLead ? remainingPosts : result.items;
+  const showLead = isFirstPage && leadPost !== undefined;
+  const rows = showLead ? remainingPosts : listing.items;
 
   return (
     <Container className="pb-8 pt-5 md:py-8">
@@ -73,14 +88,37 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
             eyebrow={{ label: editionName, href: `/${countryCode}` }}
             title={category.name}
             description={category.description || undefined}
-            total={result.total}
+            total={category.postCount}
           />
 
-          {result.items.length > 0 ? (
+          {listing.items.length > 0 ? (
             <>
               {showLead ? <ListingLead post={leadPost} showCategory={false} /> : null}
-              <ListingRows posts={rows} showCategory={false} />
-              <Pagination basePath={basePath} page={result.page} totalPages={result.totalPages} />
+              {isFirstPage ? (
+                // Stories after the lead and every infinite-scroll page share
+                // one list: thumbnail rows on phones, two cards per row from
+                // md up (News24-style). ?page=2 stays as the crawlable / no-JS
+                // next page until the feed hydrates.
+                <InfiniteFeed
+                  scope={{ scope: "category", country: countryCode, category: slug }}
+                  initialCursor={listing.nextCursor}
+                  initialItems={rows}
+                  seenKeys={listing.items.map((post) => `${post.country}-${post.id}`)}
+                  layout="grid"
+                  heading={null}
+                  showCategory={false}
+                  fallbackHref={`${basePath}?page=2`}
+                />
+              ) : (
+                <>
+                  <ListingRows posts={rows} showCategory={false} layout="grid" />
+                  <Pagination
+                    basePath={basePath}
+                    page={listing.page}
+                    totalPages={listing.totalPages}
+                  />
+                </>
+              )}
             </>
           ) : (
             <p className="body-lg text-muted-foreground">No stories in this section yet.</p>
