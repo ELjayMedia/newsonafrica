@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { getArticleUrl } from "@/lib/content-sync/article-url";
-import { formatRelativeTime } from "@/lib/format";
+import { StoryMeta } from "@/components/story-meta";
 import type { PostSummary } from "@/lib/dal/types";
 
 /** Newsroom can flag a lead story as live/breaking via a WordPress tag. */
@@ -17,14 +17,12 @@ export function heroFlag(post: PostSummary): "LIVE" | "BREAKING" | null {
 }
 
 /**
- * Lead hero (design system homepage mockup, Bold Punch treatment): a large
- * image with an optional red LIVE/BREAKING flag beside a green category
- * eyebrow, a compact uppercase Archivo Black headline, a bold standfirst and
- * a byline/timestamp.
+ * Lead hero (design system homepage mockup): a large image with an optional
+ * red LIVE/BREAKING flag, then a sentence-case Archivo headline, a plain
+ * summary and the shared meta line (BBC lead-promo text order).
  */
 export function HeroLead({ post }: { post: PostSummary }) {
   const href = getArticleUrl(post.country, post.slug);
-  const category = post.categories[0];
   const flag = heroFlag(post);
 
   return (
@@ -58,37 +56,21 @@ export function HeroLead({ post }: { post: PostSummary }) {
         ) : null}
       </Link>
 
+      {/* BBC lead-promo order: headline, plain summary, then the meta line.
+          Sentence case throughout; the red LIVE/BREAKING flag stays on the
+          image. */}
       <div className="flex flex-col justify-center gap-3">
-        {category ? (
-          <Link
-            href={`/${post.country}/category/${category.slug}`}
-            className="noa-eyebrow w-fit text-noa-green-text hover:underline"
-          >
-            {category.name}
-          </Link>
-        ) : null}
-
-        <h1 className="noa-hed text-[clamp(1.5rem,1.1rem+1vw,2rem)] text-noa-ink">
-          <Link href={href} className="transition-colors hover:text-noa-green">
+        <h1 className="noa-hed text-[clamp(1.625rem,1.2rem+1vw,2.125rem)] text-foreground">
+          <Link href={href} className="transition-colors hover:text-primary">
             {post.title}
           </Link>
         </h1>
 
         {post.excerpt ? (
-          <p className="line-clamp-3 text-base font-semibold leading-relaxed text-noa-body">
-            {post.excerpt}
-          </p>
+          <p className="body-lg line-clamp-3 text-muted-foreground">{post.excerpt}</p>
         ) : null}
 
-        <div className="flex items-center gap-2 text-xs font-semibold text-noa-faint">
-          {post.author ? (
-            <>
-              <span className="text-noa-muted">{post.author.name}</span>
-              <span aria-hidden>·</span>
-            </>
-          ) : null}
-          <time dateTime={post.publishedAt}>{formatRelativeTime(post.publishedAt)}</time>
-        </div>
+        <StoryMeta post={post} />
       </div>
     </article>
   );

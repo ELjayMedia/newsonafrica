@@ -124,6 +124,26 @@ function handleGraphQL(req, res) {
         return;
       }
 
+      if (operationName === "PostsFeed") {
+        // Cursor paging for the infinite feed: cursors are opaque to the app,
+        // here simply the base64 of the post's index in GQL_POSTS.
+        const first = Number(variables.first ?? 10);
+        const start = variables.after
+          ? Number(Buffer.from(String(variables.after), "base64").toString("utf8")) + 1
+          : 0;
+        const slice = GQL_POSTS.slice(start, start + first);
+        sendGraphQL(res, {
+          posts: {
+            pageInfo: {
+              hasNextPage: start + first < GQL_POSTS.length,
+              endCursor: slice.length ? Buffer.from(String(start + slice.length - 1)).toString("base64") : null,
+            },
+            edges: slice.map((node, i) => ({ cursor: Buffer.from(String(start + i)).toString("base64"), node })),
+          },
+        });
+        return;
+      }
+
       if (operationName === "PostBySlug") {
         const post = GQL_POSTS.find((item) => item.slug === variables.slug) ?? null;
         sendGraphQL(res, { post });

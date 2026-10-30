@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { MobileFeatureStory, MobilePostList } from "@/components/article/mobile-post-list";
+import { InfiniteFeed } from "@/components/feed/infinite-feed";
 import { HomeRail } from "@/components/home/home-rail";
-import { NewsGrid } from "@/components/home/news-grid";
+import { ListingHeader, ListingLead, ListingRows } from "@/components/listing/story-listing";
 import { Pagination } from "@/components/pagination";
 import { BreadcrumbJsonLd } from "@/components/seo/json-ld";
 import { Container } from "@/components/ui/container";
@@ -11,6 +11,7 @@ import { RailLayout } from "@/components/ui/rail-layout";
 import { COUNTRIES } from "@/lib/countries";
 import { getCategoryBySlug, isValidCountry, listPosts } from "@/lib/dal";
 import { getHomeRailData } from "@/lib/dal/home-rail";
+import { initialFeedState, loadFeedPage } from "@/lib/feed/load";
 
 interface CategoryPageProps {
   params: Promise<{ countryCode: string; slug: string }>;
@@ -47,61 +48,83 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   }
 
   const page = Number(pageParam) || 1;
-  const [result, rail] = await Promise.all([
-    listPosts({ country: countryCode, categorySlug: slug, page, perPage: PER_PAGE }),
+  const scope = { kind: "category", country: countryCode, slug } as const;
+  // Page 1 comes from the cursor feed so infinite scroll can continue exactly
+  // where it ends; ?page=N (N > 1) stays an offset-paged, crawlable page.
+  const [listing, rail] = await Promise.all([
+    page <= 1
+      ? loadFeedPage(scope, initialFeedState(scope), PER_PAGE).then((feed) => ({
+          items: feed.posts,
+          page: 1,
+          totalPages: feed.nextCursor ? 2 : 1,
+          nextCursor: feed.nextCursor,
+        }))
+      : listPosts({ country: countryCode, categorySlug: slug, page, perPage: PER_PAGE }).then(
+          (result) => ({ ...result, nextCursor: null }),
+        ),
     getHomeRailData(countryCode),
   ]);
-  const [featuredPost, ...remainingPosts] = result.items;
+  const [leadPost, ...remainingPosts] = listing.items;
+  const editionName = COUNTRIES[countryCode].name;
+  const basePath = `/${countryCode}/category/${slug}`;
+  const isFirstPage = listing.page === 1;
+  // The lead treatment is for the newest story; later pages are plain rows.
+  const showLead = isFirstPage && leadPost !== undefined;
+  const rows = showLead ? remainingPosts : listing.items;
 
   return (
-    <Container className="space-y-8 py-8 max-md:space-y-5 max-md:px-4 max-md:py-4">
+    <Container className="pb-8 pt-5 md:py-8">
       {/* BreadcrumbList structured data (NOA-114). */}
       <BreadcrumbJsonLd
-        items={[{ name: COUNTRIES[countryCode].name, path: `/${countryCode}` }, { name: category.name }]}
+        items={[{ name: editionName, path: `/${countryCode}` }, { name: category.name }]}
       />
-      <header className="space-y-2 border-b border-border pb-6 max-md:rounded-2xl max-md:border max-md:bg-card max-md:p-5 max-md:shadow-sm">
-        <p className="ui-sm uppercase tracking-wide text-primary">Category</p>
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <h1 className="display-lg max-md:text-4xl">{category.name}</h1>
-          <span className="hidden ui-sm rounded-full bg-primary/10 px-3 py-1 text-primary max-md:inline-flex">
-            {category.postCount.toLocaleString()} stories
-          </span>
-        </div>
-        {category.description ? <p className="body-lg text-muted-foreground max-md:body-md">{category.description}</p> : null}
-      </header>
 
-      <section className="hidden space-y-5 max-md:block" aria-label={`${category.name} mobile stories`}>
-        {featuredPost ? <MobileFeatureStory post={featuredPost} eyebrow="Latest lead" /> : null}
-        {remainingPosts.length > 0 ? (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="heading-sm">More latest stories</h2>
-              <span className="ui-sm text-muted-foreground">{result.total.toLocaleString()} total</span>
-            </div>
-            <MobilePostList posts={remainingPosts} />
-          </div>
-        ) : null}
-        {result.items.length > 0 ? (
-          <Pagination basePath={`/${countryCode}/category/${slug}`} page={result.page} totalPages={result.totalPages} />
-        ) : (
-          <p className="body-lg rounded-2xl border border-border bg-card p-5 text-muted-foreground shadow-sm">
-            No stories in this category yet.
-          </p>
-        )}
-      </section>
+      {/* One responsive tree (previously separate mobile and desktop copies),
+          in the article page's language: eyebrow + display headline, an
+          edge-to-edge lead on phones, then thumbnail rows. Rail joins at lg. */}
+      <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
+        <div className="space-y-6 md:space-y-8">
+          <ListingHeader
+            eyebrow={{ label: editionName, href: `/${countryCode}` }}
+            title={category.name}
+            description={category.description || undefined}
+            total={category.postCount}
+          />
 
-      <div className="max-md:hidden">
-        <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
-          {result.items.length > 0 ? (
-            <div className="space-y-8">
-              <NewsGrid posts={result.items} />
-              <Pagination basePath={`/${countryCode}/category/${slug}`} page={result.page} totalPages={result.totalPages} />
-            </div>
+          {listing.items.length > 0 ? (
+            <>
+              {showLead ? <ListingLead post={leadPost} showCategory={false} /> : null}
+              {isFirstPage ? (
+                // Stories after the lead and every infinite-scroll page share
+                // one list: thumbnail rows on phones, two cards per row from
+                // md up (News24-style). ?page=2 stays as the crawlable / no-JS
+                // next page until the feed hydrates.
+                <InfiniteFeed
+                  scope={{ scope: "category", country: countryCode, category: slug }}
+                  initialCursor={listing.nextCursor}
+                  initialItems={rows}
+                  seenKeys={listing.items.map((post) => `${post.country}-${post.id}`)}
+                  layout="grid"
+                  heading={null}
+                  showCategory={false}
+                  fallbackHref={`${basePath}?page=2`}
+                />
+              ) : (
+                <>
+                  <ListingRows posts={rows} showCategory={false} layout="grid" />
+                  <Pagination
+                    basePath={basePath}
+                    page={listing.page}
+                    totalPages={listing.totalPages}
+                  />
+                </>
+              )}
+            </>
           ) : (
-            <p className="body-lg text-muted-foreground">No stories in this category yet.</p>
+            <p className="body-lg text-muted-foreground">No stories in this section yet.</p>
           )}
-        </RailLayout>
-      </div>
+        </div>
+      </RailLayout>
     </Container>
   );
 }

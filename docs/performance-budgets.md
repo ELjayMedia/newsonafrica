@@ -35,10 +35,10 @@ Shared First Load JS: **102 kB** — within the 120 kB budget.
 
 | Route                          | Size    | First Load JS | Budget | Status              |
 | ------------------------------ | ------- | ------------- | ------ | ------------------- |
-| `/` (root redirect/landing)    | 169 B   | 105 kB        | 150 kB | OK                  |
-| `/[countryCode]` (edition home)| 172 B   | 105 kB        | 150 kB | OK                  |
-| `/[countryCode]/article/[slug]`| 1.74 kB | 113 kB        | 150 kB | OK                  |
-| `/[countryCode]/category/[slug]`| 172 B  | 105 kB        | 150 kB | OK                  |
+| `/` (root redirect/landing)    | 2.81 kB | 115 kB        | 150 kB | OK (infinite feed, 2026-10-30) |
+| `/[countryCode]` (edition home)| 2.81 kB | 115 kB        | 150 kB | OK (infinite feed, 2026-10-30) |
+| `/[countryCode]/article/[slug]`| 7.31 kB | 133 kB        | 150 kB | OK (2026-10-30)     |
+| `/[countryCode]/category/[slug]`| 2.81 kB | 115 kB       | 150 kB | OK (infinite feed, 2026-10-30) |
 | `/search`                      | 172 B   | 105 kB        | 150 kB | OK                  |
 | `/account/bookmarks`           | 169 B   | 105 kB        | 200 kB | OK                  |
 | `/account/onboarding`          | 2.67 kB | 124 kB        | 200 kB | OK                  |

@@ -14,6 +14,7 @@ import { BreadcrumbJsonLd, NewsArticleJsonLd } from "@/components/seo/json-ld";
 import { Container } from "@/components/ui/container";
 import { RailLayout } from "@/components/ui/rail-layout";
 import { getUser } from "@/lib/auth/session";
+import { leadImageAspectRatio } from "@/lib/article/lead-image";
 import { estimateReadingMinutes } from "@/lib/article/reading-time";
 import { shouldShowUpdatedTimestamp } from "@/lib/article/revision";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
@@ -131,7 +132,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
         >
           <article className="mx-auto w-full max-w-3xl lg:mx-0">
             {/* Reading order follows the BBC / News24 article pattern: section
-              eyebrow, headline, standfirst, time, byline, publisher row, then
+              eyebrow, headline, time, byline, publisher row, then
               the lead image and copy. */}
             <header className="space-y-4 md:space-y-5">
               <nav aria-label="Breadcrumb">
@@ -172,12 +173,6 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
               ) : null}
 
               <h1 className="display-article text-foreground">{post.title}</h1>
-
-              {post.excerpt ? (
-                <p className="text-lg font-semibold leading-relaxed text-noa-body md:text-xl">
-                  {post.excerpt}
-                </p>
-              ) : null}
 
               <div className="space-y-3">
                 <p className="ui-sm flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted-foreground">
@@ -259,8 +254,10 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
 
               {post.featuredImage ? (
                 // Lead image runs edge to edge on phones (BBC / News24) and sits
-                // in the column with the design-system radius from sm up. Alt
-                // text is for screen readers, so it is not printed as a caption.
+                // in the column with the design-system radius from sm up. The
+                // frame follows the image's own shape (square to 16:9) so
+                // poster artwork is not cropped. Alt text is for screen
+                // readers, so it is not printed as a caption.
                 // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
                 <img
                   src={post.featuredImage.url}
@@ -270,7 +267,13 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                   loading="eager"
                   fetchPriority="high"
                   decoding="async"
-                  className="-mx-4 aspect-[16/10] w-[calc(100%+2rem)] max-w-none bg-noa-hairline object-cover sm:mx-0 sm:w-full sm:rounded-lg md:aspect-video"
+                  style={{
+                    aspectRatio: leadImageAspectRatio(
+                      post.featuredImage.width,
+                      post.featuredImage.height,
+                    ),
+                  }}
+                  className="-mx-4 w-[calc(100%+2rem)] max-w-none bg-noa-hairline object-cover sm:mx-0 sm:w-full sm:rounded-lg"
                 />
               ) : null}
 

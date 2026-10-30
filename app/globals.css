@@ -302,12 +302,44 @@
     text-transform: uppercase;
     line-height: 1.2;
   }
+  /* Lead headline. Sentence case (BBC-style: headlines are never set in
+     capitals); Archivo 800 with a little more leading so two- and three-line
+     leads stay readable. */
   .noa-hed {
     font-family: var(--font-display);
-    font-weight: 900;
-    line-height: 0.98;
-    letter-spacing: -0.03em;
-    text-transform: uppercase;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+
+  /* Story card headline, shared by every card and row so the same weight,
+     face and leading appear everywhere; size alone carries hierarchy. */
+  .story-hed {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1.22;
+    letter-spacing: -0.01em;
+    color: hsl(var(--foreground));
+  }
+
+  /* One muted metadata line at the foot of a card ("4 hours ago | Business"). */
+  .story-meta {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* Section heading ("Most read", "More stories"): sentence case, bold, over
+     the NOA green rule. */
+  .section-title {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.25rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: hsl(var(--foreground));
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--noa-green);
   }
   .noa-hed-tight {
     font-family: var(--font-display);

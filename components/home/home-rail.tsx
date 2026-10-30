@@ -13,16 +13,14 @@ function MostRead({ posts }: { posts: MostReadPost[] }) {
   if (posts.length === 0) return null;
   return (
     <section aria-label="Most read">
-      <h2 className="noa-eyebrow mb-4 border-b-2 border-noa-green pb-2 text-noa-ink">
-        Most Read
-      </h2>
+      <h2 className="section-title mb-4">Most read</h2>
       <ol className="space-y-4">
         {posts.map((post, index) => (
           <li key={post.id} className="flex items-start gap-3">
             <span className="heading-md font-display text-noa-green" aria-hidden>
               {index + 1}
             </span>
-            <h3 className="ui-md font-display text-noa-ink">
+            <h3 className="story-hed text-[0.9375rem]">
               <Link href={post.url} className="transition-colors hover:text-noa-green">
                 {post.title}
               </Link>
@@ -44,9 +42,7 @@ function LatestNews({ posts }: { posts: PostSummary[] }) {
     <section aria-label="Latest news">
       {/* No "Personalized for you" subhead: this is the edition's plain latest
           feed, and claiming personalisation it doesn't do costs trust. */}
-      <h2 className="noa-eyebrow mb-4 border-b-2 border-noa-green pb-2 text-noa-ink">
-        Latest News
-      </h2>
+      <h2 className="section-title mb-4">Latest news</h2>
       <div className="space-y-4">
         {posts.map((post) => (
           <div
