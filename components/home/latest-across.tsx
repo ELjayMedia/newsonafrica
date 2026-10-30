@@ -11,9 +11,7 @@ export function LatestAcross({ posts }: { posts: PostSummary[] }) {
 
   return (
     <section>
-      <h2 className="mb-5 font-display text-2xl font-black tracking-[-0.02em] text-noa-ink">
-        Latest across the continent
-      </h2>
+      <h2 className="section-title mb-5">Latest across the continent</h2>
       <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
         {posts.map((post) => (
           <ThumbRow key={`${post.country}-${post.id}`} post={post} />

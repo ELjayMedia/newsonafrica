@@ -153,10 +153,7 @@ export function InfiniteFeed({
       className={cn(heading ? "space-y-4" : "space-y-2", className)}
     >
       {heading ? (
-        <h2
-          id="more-stories-heading"
-          className="noa-eyebrow border-b-2 border-noa-green pb-2 text-noa-ink"
-        >
+        <h2 id="more-stories-heading" className="section-title">
           {heading}
         </h2>
       ) : null}

@@ -16,7 +16,7 @@ export function RelatedArticles({ posts, title = "You might also like" }: Relate
 
   return (
     <section aria-label={title} className="space-y-4 border-t border-border pt-8">
-      <h2 className="heading-md">{title}</h2>
+      <h2 className="section-title">{title}</h2>
       <ul className="divide-y divide-border">
         {posts.map((post) => (
           <li key={post.id} className="py-4 first:pt-0 last:pb-0">

@@ -4,10 +4,10 @@ import Link from "next/link";
 import { ExploreAfrica } from "@/components/home/explore-africa";
 import { heroFlag } from "@/components/home/hero-lead";
 import { FeedRow } from "@/components/home/story-card";
+import { StoryMeta } from "@/components/story-meta";
 import { SponsoredCard } from "@/components/home/sponsored-card";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import type { PostSummary } from "@/lib/dal/types";
-import { formatRelativeTime } from "@/lib/format";
 
 const FIRST_NATIVE_AD_AFTER_STORIES = 4;
 const SECOND_NATIVE_AD_AFTER_STORIES = 11;
@@ -24,7 +24,6 @@ function shouldRenderNativeAdAfter(storyNumber: number, totalStories: number): b
 
 function MobileLeadStory({ post }: { post: PostSummary }) {
   const href = getArticleUrl(post.country, post.slug);
-  const category = post.categories[0];
   const flag = heroFlag(post);
 
   return (
@@ -52,37 +51,23 @@ function MobileLeadStory({ post }: { post: PostSummary }) {
         )}
       </Link>
 
+      {/* BBC app order: optional LIVE flag, headline, then the meta line. The
+          flag is text (not over the image) so it survives image-off loads. */}
       <div className="space-y-2.5">
-        <div className="flex items-center gap-2">
-          {/* Same newsroom LIVE/BREAKING tag flag as the desktop hero, shown
-              as text (not over the image) so it survives image-off loads. */}
-          {flag ? (
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded bg-noa-live px-2 py-0.5 font-display text-[0.625rem] font-black uppercase tracking-wide text-white">
-              <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
-              {flag}
-            </span>
-          ) : null}
-          {category ? (
-            <Link
-              href={`/${post.country}/category/${category.slug}`}
-              className="truncate rounded-full border border-noa-hairline px-2.5 py-0.5 font-display text-[0.625rem] font-extrabold uppercase tracking-[0.06em] text-noa-ink transition-colors hover:border-noa-green hover:text-noa-green"
-            >
-              {category.name}
-            </Link>
-          ) : null}
-          <time
-            dateTime={post.publishedAt}
-            className="ml-auto shrink-0 text-xs font-semibold text-noa-faint"
-          >
-            {formatRelativeTime(post.publishedAt)}
-          </time>
-        </div>
+        {flag ? (
+          <span className="inline-flex items-center gap-1.5 rounded bg-noa-live px-2 py-0.5 font-display text-[0.625rem] font-black uppercase tracking-wide text-white">
+            <span className="h-1.5 w-1.5 rounded-full bg-white" aria-hidden />
+            {flag}
+          </span>
+        ) : null}
 
-        <h2 className="font-display text-2xl font-black leading-[1.06] tracking-[-0.02em] text-noa-ink">
-          <Link href={href} className="transition-colors hover:text-noa-green">
+        <h2 className="noa-hed text-2xl text-foreground">
+          <Link href={href} className="transition-colors hover:text-primary">
             {post.title}
           </Link>
         </h2>
+
+        <StoryMeta post={post} />
       </div>
     </article>
   );
