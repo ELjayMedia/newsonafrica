@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { isArticlePath } from "@/lib/article/route";
 import { DEFAULT_COUNTRY, isValidCountry, type CountryCode } from "@/lib/countries";
 import { cn } from "@/lib/utils";
 
@@ -112,8 +113,16 @@ export function BottomNavigation() {
     },
   ] as const;
 
+  // Article pages are a focused reading view (News24 / BBC apps): the bar
+  // would cover the lead image, and the article toolbar already has Back.
+  if (isArticlePath(pathname)) return null;
+
   return (
-    <nav
+    <>
+      {/* Reserves the bar's height (+ safe area) at the end of the page so the
+          footer is never hidden behind it; rendered only where the bar is. */}
+      <div aria-hidden className="h-[calc(4rem+env(safe-area-inset-bottom))] shrink-0 md:hidden" />
+      <nav
       aria-label="Bottom navigation"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur supports-[backdrop-filter]:bg-background/80 md:hidden"
     >
@@ -137,5 +146,6 @@ export function BottomNavigation() {
         })}
       </div>
     </nav>
+    </>
   );
 }

@@ -32,7 +32,7 @@ export function ArticleToolbar({ fallbackHref, fallbackLabel }: ArticleToolbarPr
 
   return (
     <div className="border-b border-border bg-background md:hidden">
-      <div className="grid h-16 grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2 px-4">
+      <div className="grid h-14 grid-cols-[2.75rem_1fr_2.75rem] items-center gap-2 px-4">
         <button
           type="button"
           onClick={handleBack}

@@ -105,7 +105,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
       {/* Compact app-style toolbar below md (back · mark); the global
           masthead and utility bar hide on article routes there. */}
       <ArticleToolbar fallbackHref={`/${countryCode}`} fallbackLabel={editionName} />
-      <Container className="pb-8 pt-5 md:py-8">
+      <Container className="pb-8 pt-3 md:py-8">
         {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
         <NewsArticleJsonLd post={post} />
         <BreadcrumbJsonLd
@@ -134,14 +134,14 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
             {/* Reading order follows the BBC / News24 article pattern: section
               eyebrow, headline, time, byline, publisher row, then
               the lead image and copy. */}
-            <header className="space-y-4 md:space-y-5">
+            <header className="space-y-3 md:space-y-5">
               <nav aria-label="Breadcrumb">
                 <ol className="flex flex-wrap items-center gap-x-2">
                   {category ? (
                     <li>
                       <Link
                         href={`/${countryCode}/category/${category.slug}`}
-                        className="noa-eyebrow inline-flex min-h-11 items-center text-noa-green-text hover:underline md:min-h-0"
+                        className="noa-eyebrow inline-flex min-h-6 items-center text-noa-green-text hover:underline md:min-h-0"
                       >
                         {category.name}
                       </Link>
@@ -155,7 +155,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                     ) : null}
                     <Link
                       href={`/${countryCode}`}
-                      className="noa-eyebrow inline-flex min-h-11 items-center text-noa-muted hover:text-noa-ink md:min-h-0"
+                      className="noa-eyebrow inline-flex min-h-6 items-center text-noa-muted hover:text-noa-ink md:min-h-0"
                     >
                       {editionName}
                     </Link>
@@ -174,7 +174,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
 
               <h1 className="display-article text-foreground">{post.title}</h1>
 
-              <div className="space-y-3">
+              <div className="space-y-2 md:space-y-3">
                 <p className="ui-sm flex flex-wrap items-center gap-x-1.5 gap-y-1 text-muted-foreground">
                   <svg
                     viewBox="0 0 24 24"
@@ -210,7 +210,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                       alt=""
                       width={36}
                       height={36}
-                      className="h-9 w-9 shrink-0 rounded-full object-cover"
+                      className="hidden h-9 w-9 shrink-0 rounded-full object-cover md:block"
                     />
                   ) : null}
                   <p className="body-md text-foreground">
@@ -232,7 +232,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
               {/* Publisher row (News24 pattern): attribution on the left (Play
                 news policy); share, save and comments as one icon group on
                 the right, at every breakpoint. */}
-              <div className="flex items-center justify-between gap-4 border-y border-border py-2">
+              <div className="flex items-center justify-between gap-4 border-y border-border py-1 md:py-2">
                 <p className="ui-sm min-w-0 text-muted-foreground">
                   <span className="font-semibold text-foreground">News on Africa</span> ·{" "}
                   {editionName} edition
@@ -249,7 +249,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
               </div>
             </header>
 
-            <div className="space-y-6 pt-5 md:space-y-8 md:pt-6">
+            <div className="space-y-5 pt-4 md:space-y-8 md:pt-6">
               {corrections.length > 0 ? <CorrectionNotice entries={corrections} /> : null}
 
               {post.featuredImage ? (

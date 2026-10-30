@@ -92,10 +92,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
       className={`${archivo.variable} ${sourceSans.variable}`}
     >
-      {/* Mobile bottom padding matches the fixed bottom navigation height
-          (h-16) + the device safe-area inset so content and the footer are
-          never hidden behind it (NOA-111). */}
-      <body className="flex min-h-screen flex-col bg-noa-paper pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      {/* The fixed mobile bottom navigation reserves its own height with a
+          spacer (NOA-111), so pages without the bar (articles) don't end in
+          an empty band. */}
+      <body className="flex min-h-screen flex-col bg-noa-paper">
         {/* WebSite + Organization structured data (NOA-114). */}
         <SiteJsonLd />
         {/* Bypass block (WCAG 2.4.1): first tab stop jumps past the utility
