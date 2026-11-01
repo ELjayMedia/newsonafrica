@@ -1,0 +1,82 @@
+name: Google Play Listing
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/play-store-listing.yml'
+      - 'play-store/**'
+      - 'scripts/publish-google-play-listing*'
+      - 'scripts/lib/google-play.mjs'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Validate locally without contacting Google Play'
+        type: boolean
+        required: true
+        default: true
+      upload_graphics:
+        description: 'Replace Play images using the complete versioned graphics packet'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+# Google Play edits are serialized with the Android release workflow.
+concurrency:
+  group: google-play-com.newsonafrica.app
+  cancel-in-progress: false
+
+jobs:
+  listing:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      UPLOAD_GRAPHICS: ${{ inputs.upload_graphics || false }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test listing publisher
+        run: node --test scripts/publish-google-play-listing.test.mjs
+
+      - name: Validate listing and prepare review artifact
+        shell: bash
+        run: |
+          ARGS=()
+          if [[ "$UPLOAD_GRAPHICS" == 'true' ]]; then
+            ARGS+=(--upload-graphics)
+          fi
+          node scripts/publish-google-play-listing.mjs "${ARGS[@]}" > "$RUNNER_TEMP/listing-plan.json"
+
+      - name: Upload listing plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: google-play-listing-plan
+          path: ${{ runner.temp }}/listing-plan.json
+          retention-days: 30
+
+      - name: Require main for publishing
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" != 'refs/heads/main' ]]; then
+            echo 'Publish listings from main after reviewing the listing plan.' >&2
+            exit 1
+          fi
+
+      - name: Publish listing edit
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        shell: bash
+        run: |
+          ARGS=(--publish)
+          if [[ "$UPLOAD_GRAPHICS" == 'true' ]]; then
+            ARGS+=(--upload-graphics)
+          fi
+          node scripts/publish-google-play-listing.mjs "${ARGS[@]}"

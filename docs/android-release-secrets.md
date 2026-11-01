@@ -11,8 +11,13 @@ repository level: **Settings → Secrets and variables → Actions**.
    bash scripts/setup-android-release-secrets.sh /secure/backup/dir
    ```
 2. Copy the printed secrets into GitHub → Settings → Secrets and variables → Actions.
-3. Set `GOOGLE_SERVICE_ACCOUNT_KEY` with the Play Console service account JSON.
-4. Push a tag `android-v*` to trigger the workflow.
+3. Run **Android Release** manually with `publish_to_play` left off to build and
+   download a signed AAB without contacting Google Play. Set `version_name` to
+   the intended release version; the default is `1.0.3`.
+4. Before publishing, set `GOOGLE_SERVICE_ACCOUNT_KEY` with the Play Console
+   service account JSON. Run manually with `publish_to_play` enabled and choose
+   a track, or push a version tag such as `android-v1.0.3` to publish to internal
+   testing. Tag pushes publish automatically.
 
 ## Required secrets
 
@@ -22,7 +27,12 @@ repository level: **Settings → Secrets and variables → Actions**.
 | `NOA_ANDROID_KEYSTORE_PASSWORD` | String | Password for the keystore. |
 | `NOA_ANDROID_KEY_ALIAS` | String | Alias of the signing key inside the keystore (e.g. `noa_upload`). |
 | `NOA_ANDROID_KEY_PASSWORD` | String | Password for the signing key. For PKCS12 keystores this is usually the same as `NOA_ANDROID_KEYSTORE_PASSWORD`. |
-| `GOOGLE_SERVICE_ACCOUNT_KEY` | JSON string | Google Play service account credentials (raw JSON). Must have access to `com.newsonafrica.app` in Play Console. |
+| `GOOGLE_SERVICE_ACCOUNT_KEY` | JSON string | Required when publishing to Google Play. Raw service account JSON with access to `com.newsonafrica.app` in Play Console; not needed for a build-only run. |
+
+Both build-only and publishing runs need the four signing secrets. Debug builds
+in CI do not use signing secrets. GitHub stores secret values privately; their
+presence alone does not prove the keystore, passwords, or Play permissions work.
+A successful signed build and publishing preflight provide that evidence.
 
 ## Optional secrets
 
@@ -95,23 +105,48 @@ node scripts/verify-google-play-access.mjs
 ## whatsnew directory
 
 The workflow reads release notes from `android/whatsnew/`. Create this
-directory with language-coded files:
+directory with the uploader's required `whatsnew-<LOCALE>` filenames:
 
 ```
 android/whatsnew/
-  en-US             # Default release notes
-  af-ZA             # Afrikaans (optional)
+  whatsnew-en-US    # English release notes
+  whatsnew-af-ZA    # Afrikaans (optional)
 ```
 
 Each file should contain plain text (max 500 chars) describing the release.
-If the directory is missing, the upload step will fail.
+A bare filename such as `en-US` is ignored by the upload action. Update the
+notes for each release before publishing.
 
 ## Workflow triggers
 
-- **Tag push**: Push a tag matching `android-v*` (e.g. `android-v1.0.2`) to
-  trigger an automatic release to the **internal** track.
-- **Manual dispatch**: Use the **Run workflow** button in GitHub Actions to
-  choose a specific track (internal / closed / open / production).
+- **Tag push**: Push a version tag such as `android-v1.0.3` to build that
+  version and automatically publish to the **internal** track.
+- **Manual dispatch**: Use the **Run workflow** button in GitHub Actions. Set
+  `version_name`, optionally override `version_code`, and leave `publish_to_play`
+  off for a build-only run. Enable it to publish to the selected track:
+  `internal`, `alpha` (closed testing), `beta` (open testing), or `production`.
+  The values are Play API track IDs, not the Console's display labels. Confirm
+  that the chosen testing track exists in the app's Play Console.
+
+The default CI version code starts at the workflow run number plus 3, so the
+first build-only run uses code 4. For publishing runs without a manual
+`version_code` override, the preflight raises this code to the highest existing
+Play bundle code plus 1 when needed. This also keeps tag releases working after
+a manual run used a higher code. Both the final version code and version name
+are passed to Gradle.
+
+Manual `version_code` overrides must be integers from 1 through 2100000000 and
+must be greater than every existing Play bundle code; the preflight rejects an
+explicit code that is already used or too low. Re-running a published run with
+an explicit override requires choosing a fresh code in a new manual run.
+
+Before publishing, the workflow verifies Play API access and version-code
+availability **before** decoding the signing key or building. The preflight
+creates an edit, reads APK and bundle metadata, and deletes the edit; it does not
+publish anything. A build-only run skips this check and the upload step.
+Publishing builds upload an AAB and release notes. Store listing text and
+optional graphics use the separate listing workflow documented in
+[`play-store-listing.md`](play-store-listing.md).
 
 ## Local testing
 
@@ -122,6 +157,9 @@ To test the release build locally without GitHub Actions:
 cp scripts/android-release-env.example /tmp/noa-android-release-env
 # Edit /tmp/noa-android-release-env with real values
 source /tmp/noa-android-release-env
+# Use a fresh code above every code already uploaded to this Play app.
+export NOA_ANDROID_VERSION_CODE=4
+export NOA_ANDROID_VERSION_NAME=1.0.3
 
 cd android
 ./gradlew clean bundleRelease
@@ -163,4 +201,5 @@ keytool -list -v \
 | `No key with alias 'noa_upload'` | Wrong `NOA_ANDROID_KEY_ALIAS`. |
 | `AAB not found` | Build failed before AAB generation — check build logs. |
 | `Google Play API access check failed` | Service account JSON is invalid or lacks permissions. |
-| `whatsnew directory missing` | Create `android/whatsnew/en-US` with release notes. |
+| Missing release notes | Create `android/whatsnew/whatsnew-en-US` with release notes. |
+| Version code already used or too low | Start a new manual run with `version_code` greater than the highest code in Play Console. |

@@ -8,3 +8,8 @@ export NOA_ANDROID_KEY_PASSWORD="replace-with-private-key-password"
 
 # Optional. Leave unset unless the keystore requires an explicit type.
 # export NOA_ANDROID_KEYSTORE_TYPE="pkcs12"
+
+# Optional release version overrides. Choose a code above every code already
+# uploaded to Google Play. Unset values keep the local Gradle defaults.
+# export NOA_ANDROID_VERSION_CODE="4"
+# export NOA_ANDROID_VERSION_NAME="1.0.3"

@@ -1,47 +1,24 @@
 # Google Play listing & data-safety content pack (NOA-133)
 
-Paste-ready copy and questionnaire answers for the News on Africa Play Console
-submission. Everything here reflects the app's **actual** behaviour (verified
-against the codebase 2026-07-13) — no placeholder claims. Items only the Play
-Console account owner can confirm are marked **[YOU]**; remaining console-side
-gaps before submission are marked **⚠️**.
+The versioned store text is in
+[`play-store/listings/en-US.json`](../play-store/listings/en-US.json). The
+**Google Play Listing** workflow validates it and can publish a listing edit
+separately from an Android app release. See [the workflow guide](../play-store/README.md)
+for dry runs, publishing and importing graphic assets.
+
+The questionnaire guidance below was originally reviewed on 2026-07-13 and
+needs a fresh review against the current app and live sponsored content before
+submission. Items only the Play Console account owner can confirm are marked
+**[YOU]**. The workflow does not change these Console declarations.
 
 ---
 
 ## 1. Store listing — text
 
-**App name (≤30 chars):** `News on Africa`
-
-**Short description (≤80 chars):**
-`Independent pan-African news — Eswatini, South Africa & Nigeria editions.`
-
-**Full description (≤4000 chars):**
-
-> News on Africa is an independent pan-African news service bringing you the
-> stories that matter across the continent — with dedicated editions for
-> Eswatini, South Africa and Nigeria.
->
-> **Read across editions.** Switch between country editions or browse the
-> pan-African view for headlines in business, politics, culture and the creative
-> economy.
->
-> **Save what matters.** Create a free account to bookmark articles and pick up
-> reading where you left off.
->
-> **Join the conversation.** Comment on stories, reply to other readers, and
-> report anything that breaks the rules — comments are moderated.
->
-> **Search everything.** Full-text search across every edition finds the story
-> you're looking for fast.
->
-> **Made for mobile.** Fast, clean reading with a bottom nav built for one
-> thumb, and offline fallback so a dropped signal doesn't drop your page.
->
-> **Stay informed.** Subscribe to The Africa Brief, our weekly newsletter of
-> business and creative-economy stories.
->
-> News on Africa is committed to independent journalism and clear labelling of
-> any sponsored content.
+Edit title, short description and full description in
+[`play-store/listings/en-US.json`](../play-store/listings/en-US.json). Local and
+pull-request checks enforce Play's 30/80/4000 character limits. The JSON contains
+the existing News on Africa copy; avoid maintaining another copy here.
 
 **Category:** News & Magazines
 **Tags/keywords:** African news, Eswatini news, South Africa news, Nigeria news,
@@ -59,44 +36,52 @@ business, culture
 
 ## 2. Graphic assets
 
-Prepared NOA-134 output packet:
-`/Users/lethu/Documents/Codex/2026-07-12/ge/outputs/noa-134-play-submission/`
+The previously prepared NOA-134 feature graphic and five phone screenshots
+were referenced in a developer's local output folder and are **not available in
+this repository**. Their existence or readiness cannot be established from the
+repository. Import the actual reviewed files into
+`play-store/graphics/en-US/` using [the required layout](../play-store/README.md#graphics).
 
-- **App icon** 512×512 — reuse `public/icons/icon-512.png`.
-- **Feature graphic** 1024×500 — prepared at
-  `feature-graphic-1024x500.png`.
-- **Phone screenshots** ×5, 1080×2340 — release-signed TWA screenshots captured
-  from the live production app:
-  - home
-  - article
-  - search
-  - privacy policy
-  - account deletion
-- (Optional) 7" / 10" tablet screenshots.
+- **App icon:** 512×512; review `public/icons/icon-512.png` for reuse.
+- **Feature graphic:** 1024×500 RGB PNG without alpha.
+- **Phone screenshots:** two to eight current device captures, named in display
+  order. Recommended screens: home, article, search, privacy policy and account
+  deletion.
+- **Tablet screenshots:** optional; maintained in Play Console for now.
 
-No placeholder or mocked screenshots are used in the prepared packet.
+Text publishing preserves existing Play images. Enable `upload_graphics` only
+after the complete packet passes a dry run. No placeholder app screenshots are
+provided.
 
 ## 3. Data safety questionnaire
 
-The app collects the following, **all first-party** (stored in Supabase). **No
-data is shared with third parties, sold, or used for third-party ads/analytics**
-(there is no third-party ad or analytics SDK in the app). Everything is
-**encrypted in transit** (HTTPS/TLS).
+The original declaration described first-party collection stored in Supabase
+and no third-party sharing, sale or third-party ad/analytics SDK. Reconfirm those
+answers against current deployments and service providers. The current code
+also records page views and sponsored-campaign impressions/clicks. API traffic
+uses HTTPS/TLS.
 
 | Data type (Play category)                       | Collected                  | Why                                   | What it is                                  |
 | ----------------------------------------------- | -------------------------- | ------------------------------------- | ------------------------------------------- |
 | **Name** (Personal info)                        | Yes (optional)             | App functionality, Account management | Profile display name                        |
 | **Email address** (Personal info)               | Yes (required for account) | App functionality, Account management | Sign-in identity; newsletter                |
 | **Photos** (Photos and videos)                  | Yes (optional)             | App functionality                     | Profile avatar you upload                   |
-| **App interactions** (App activity)             | Yes                        | App functionality, Analytics          | Bookmarks; searches                         |
+| **App interactions** (App activity)             | Yes                        | App functionality, Analytics          | Bookmarks; searches; page/campaign events   |
 | **Search history** (App activity)               | Yes                        | Analytics, App functionality          | Search terms (logged without your identity) |
 | **Other user-generated content** (App activity) | Yes                        | App functionality                     | Comments you post                           |
 
-**Answer "No / not collected" for:** precise or approximate **location** (the
-profile "country" is a self-selected text preference, not device location),
-financial info, health & fitness, messages (comments are public UGC, not private
-messages), contacts, calendar, web browsing history, device/other IDs for
-tracking.
+Before choosing data types, review the production page-view tracker and
+sponsored article events: page path, coarse content/edition/device class,
+external referrer hostname and a random per-tab session ID are sent to
+first-party endpoints. Assess their Play categories, purposes, retention and
+any collection/sharing exemptions; do not assume that "no ad SDK" answers these
+questions.
+
+The original "not collected" guidance covered precise/approximate location
+(the profile country is self-selected), financial information, health/fitness,
+private messages, contacts and calendar. Reconfirm it against the current app;
+review browsing/activity and device/other ID answers in light of the events
+above.
 
 **Security section answers:**
 
@@ -104,8 +89,9 @@ tracking.
 - Can users request that data be deleted? **Yes.** Use
   `https://app.newsonafrica.com/account-deletion`; signed-in users can delete
   their account from profile settings.
-- Data collection is **required** for account features and **optional** for
-  browsing (you can read without an account).
+- Account features require account information. Browsing without an account
+  does not by itself make analytics collection optional; confirm consent,
+  collection behavior and the questionnaire answer against the deployed app.
 
 ## 4. Content rating questionnaire (IARC)
 
@@ -134,8 +120,10 @@ via the questionnaire result.
 - **User-generated content:** Yes. Moderation exists (`/account/admin/comments`
   — approve/hide/delete) and readers can **report** comments (NOA-23), which is
   the Play requirement for UGC apps. State that UGC is moderated and reportable.
-- **Ads:** **No** — the app shows no third-party ads today (ad units are unfilled
-  placeholders; no ad SDK). Revisit if/when real ad serving ships.
+- **Ads:** **[YOU] Review before submission.** The app now supports sponsored
+  articles/campaigns and records impressions/clicks. Confirm current live content
+  and Play's ads declaration; absence of a third-party ad SDK is insufficient
+  to retain the old "No ads" answer automatically.
 - **Target audience & age:** 13+; **not** directed at children. Do not opt into
   the Designed for Families programme.
 - **App access:** Core reading is public; bookmarking, commenting and profile
@@ -158,11 +146,16 @@ via the questionnaire result.
    upload certificate, add that fingerprint to
    `public/.well-known/assetlinks.json`, deploy, and re-run Digital Asset Links
    verification.
+5. **Import the real graphics packet** into `play-store/graphics/en-US/` before
+   enabling image publishing, unless the existing Console assets are retained.
+6. **Revalidate data safety and ads declarations** against current first-party
+   analytics, sponsored content and live service-provider behavior.
 
 ---
 
-**Dependencies:** **NOA-121** (live domain), **NOA-136** (signed AAB + asset
-links), and **NOA-149** (account/data deletion) are complete. The text,
-questionnaire answers, feature graphic, phone screenshots, privacy URL, and
-deletion URL are ready for Play Console entry now. The remaining blockers are
-console-side confirmations and the actual Play upload/submission.
+A listing dry run verifies the local text and, when requested, the complete
+local graphics packet. Publishing validates and commits a Google Play edit;
+it does not establish that Play has approved or publicly published the listing.
+Confirm review/managed-publishing status, questionnaire answers, reviewer access
+and signing/Digital Asset Links in Play Console before declaring the release
+ready.

@@ -76,6 +76,17 @@ def hasReleaseSigningValues = {
     missingReleaseSigningValues().isEmpty()
 }
 
+// CI supplies the tag/manual version and a unique Play version code. Local
+// debug builds keep the checked-in defaults without requiring credentials.
+def appVersionName = findProperty('NOA_ANDROID_VERSION_NAME') ?: System.getenv('NOA_ANDROID_VERSION_NAME') ?: '1.0.2'
+def appVersionCode = (findProperty('NOA_ANDROID_VERSION_CODE') ?: System.getenv('NOA_ANDROID_VERSION_CODE') ?: '3').toString()
+if (!(appVersionCode ==~ /[1-9][0-9]*/) || appVersionCode.toBigInteger() > 2100000000) {
+    throw new GradleException('NOA_ANDROID_VERSION_CODE must be an integer between 1 and 2100000000.')
+}
+if (!appVersionName.toString().trim() || appVersionName.toString().length() > 50) {
+    throw new GradleException('NOA_ANDROID_VERSION_NAME must contain between 1 and 50 characters.')
+}
+
 android {
     compileSdkVersion 36
     namespace "com.newsonafrica.app"
@@ -83,8 +94,8 @@ android {
         applicationId "com.newsonafrica.app"
         minSdkVersion 21
         targetSdkVersion 36
-        versionCode 3
-        versionName "1.0.2"
+        versionCode appVersionCode.toInteger()
+        versionName appVersionName.toString()
 
         // The name for the application
         resValue "string", "appName", twaManifest.name
@@ -294,3 +305,4 @@ dependencies {
 
 
 }
+
