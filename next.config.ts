@@ -36,6 +36,7 @@ export default withSentryConfig(nextConfig, {
   org: "eljaymedia-5k",
   project: "newsonafrica",
   authToken: process.env.SENTRY_AUTH_TOKEN,
+  telemetry: false,
   sourcemaps: {
     disable: !process.env.SENTRY_AUTH_TOKEN,
     deleteSourcemapsAfterUpload: true,
