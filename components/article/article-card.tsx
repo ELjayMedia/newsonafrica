@@ -5,7 +5,7 @@ import { getArticleUrl } from "@/lib/content-sync/article-url";
 import { cn } from "@/lib/utils";
 import type { PostSummary } from "@/lib/dal/types";
 
-export type ArticleCardVariant = "grid" | "list" | "compact" | "feed";
+export type ArticleCardVariant = "grid" | "list" | "compact" | "feed" | "split";
 
 export interface ArticleCardProps {
   post: PostSummary;
@@ -22,6 +22,7 @@ const IMAGE_ASPECT: Record<ArticleCardVariant, string> = {
   list: "aspect-[4/3]",
   compact: "aspect-video",
   feed: "aspect-[4/3] md:aspect-video",
+  split: "aspect-[4/3] md:aspect-square",
 };
 
 /**
@@ -42,12 +43,19 @@ export function ArticleCard({
   const href = getArticleUrl(post.country, post.slug);
   const isList = variant === "list";
   const isFeed = variant === "feed";
+  // Horizontal card in a two-column feed: square thumbnail on the left,
+  // headline on the right, identical in both columns.
+  const isSplit = variant === "split";
 
   return (
     <article
       className={cn(
         "group flex h-full overflow-hidden",
-        isList ? "flex-row gap-4" : isFeed ? "flex-row gap-4 md:flex-col md:gap-0" : "flex-col",
+        isList || isSplit
+          ? "flex-row gap-4"
+          : isFeed
+            ? "flex-row gap-4 md:flex-col md:gap-0"
+            : "flex-col",
         className,
       )}
     >
@@ -57,6 +65,8 @@ export function ArticleCard({
           "relative block flex-shrink-0 overflow-hidden rounded-lg bg-muted",
           IMAGE_ASPECT[variant],
           isList && "w-28 self-start sm:w-40",
+          // Split feed: 90px square thumbnail from md up (phones unchanged).
+          isSplit && "w-28 self-start sm:w-40 md:w-[90px]",
           isFeed && "w-28 self-start sm:w-40 md:w-full md:self-auto",
         )}
       >
@@ -75,7 +85,7 @@ export function ArticleCard({
         )}
       </Link>
 
-      <div className={cn("flex min-w-0 flex-1 flex-col gap-2", isFeed ? "md:pt-3" : !isList && "pt-3")}>
+      <div className={cn("flex min-w-0 flex-1 flex-col gap-2", isFeed ? "md:pt-3" : !isList && !isSplit && "pt-3")}>
         {/* Headline first, details last (BBC-style): one card headline style
             everywhere, sized by variant; the section moves into the meta line. */}
         <h3
@@ -84,6 +94,7 @@ export function ArticleCard({
             variant === "compact" && "text-[0.9375rem]",
             variant === "list" && "text-[1.0625rem] sm:text-lg",
             variant === "feed" && "text-[1.0625rem] md:text-xl",
+            isSplit && "text-[1.0625rem] md:text-lg",
             variant === "grid" && "text-lg",
           )}
         >
@@ -92,7 +103,7 @@ export function ArticleCard({
           </Link>
         </h3>
 
-        {variant !== "compact" && !isFeed && post.excerpt ? (
+        {variant !== "compact" && !isFeed && !isSplit && post.excerpt ? (
           <p className={cn("body-sm line-clamp-2 text-muted-foreground", isList && "max-sm:hidden")}>
             {post.excerpt}
           </p>

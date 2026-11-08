@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { AdSlot } from "@/components/ads/ad-slot";
 import { InfiniteFeed } from "@/components/feed/infinite-feed";
 import { HomeRail } from "@/components/home/home-rail";
 import { ListingHeader, ListingLead, ListingRows } from "@/components/listing/story-listing";
@@ -74,6 +75,8 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   return (
     <Container className="pb-8 pt-5 md:py-8">
+      {/* Desktop billboard under the header, on the grey canvas. */}
+      <AdSlot format="billboard" className="mb-6 hidden lg:block" />
       {/* BreadcrumbList structured data (NOA-114). */}
       <BreadcrumbJsonLd
         items={[{ name: editionName, path: `/${countryCode}` }, { name: category.name }]}
@@ -105,6 +108,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                   initialItems={rows}
                   seenKeys={listing.items.map((post) => `${post.country}-${post.id}`)}
                   layout="grid"
+                  adEvery={8}
                   heading={null}
                   showCategory={false}
                   fallbackHref={`${basePath}?page=2`}

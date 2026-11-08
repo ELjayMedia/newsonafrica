@@ -12,7 +12,7 @@ import type { MostReadPost, PostSummary } from "@/lib/dal/types";
 function MostRead({ posts }: { posts: MostReadPost[] }) {
   if (posts.length === 0) return null;
   return (
-    <section aria-label="Most read">
+    <section aria-label="Most read" className="noa-panel p-5">
       <h2 className="section-title mb-4">Most read</h2>
       <ol className="space-y-4">
         {posts.map((post, index) => (
@@ -39,7 +39,7 @@ function MostRead({ posts }: { posts: MostReadPost[] }) {
 function LatestNews({ posts }: { posts: PostSummary[] }) {
   if (posts.length === 0) return null;
   return (
-    <section aria-label="Latest news">
+    <section aria-label="Latest news" className="noa-panel p-5">
       {/* No "Personalized for you" subhead: this is the edition's plain latest
           feed, and claiming personalisation it doesn't do costs trust. */}
       <h2 className="section-title mb-4">Latest news</h2>
@@ -69,7 +69,9 @@ export interface HomeRailProps {
  */
 export function HomeRail({ mostRead, latest }: HomeRailProps) {
   return (
-    <div className="space-y-8">
+    // Rail sections are separate white panels; ad units sit on the grey
+    // canvas between them (the rail only renders from lg up).
+    <div className="space-y-6">
       <MostRead posts={mostRead} />
       <AdSlot format="mpu" />
       <LatestNews posts={latest} />

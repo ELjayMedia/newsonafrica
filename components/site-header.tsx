@@ -106,7 +106,7 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
       )}
     >
       {/* Masthead row */}
-      <div className="flex items-center gap-4 px-4 py-3.5 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[var(--noa-well-w)] items-center gap-4 px-4 py-3.5 sm:px-6">
         <Link href="/" aria-label="News On Africa home" className="shrink-0">
           <BrandMark />
         </Link>
@@ -143,27 +143,26 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
 
       {/* Section nav — a scrolling tab strip on mobile, a full row on desktop.
           One of the two is visible at any width (they split at lg). */}
-      <nav
-        aria-label="Primary"
-        className="flex items-center gap-6 overflow-x-auto border-t border-noa-hairline px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-6"
-      >
-        {navLinks.map((link) => {
-          const active = isActive(link.href);
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "noa-eyebrow whitespace-nowrap border-b-[3px] py-3 tracking-[0.08em] transition-colors",
-                active
-                  ? "border-noa-green text-noa-green-text"
-                  : "border-transparent text-noa-ink hover:text-noa-green",
-              )}
-            >
-              {link.label}
-            </Link>
-          );
-        })}
+      <nav aria-label="Primary" className="border-t border-noa-hairline">
+        <div className="mx-auto flex w-full max-w-[var(--noa-well-w)] items-center gap-6 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:px-6">
+          {navLinks.map((link) => {
+            const active = isActive(link.href);
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "noa-eyebrow whitespace-nowrap border-b-[3px] py-3 tracking-[0.08em] transition-colors",
+                  active
+                    ? "border-noa-green text-noa-green-text"
+                    : "border-transparent text-noa-ink hover:text-noa-green",
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
     </header>
   );

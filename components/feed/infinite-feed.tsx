@@ -2,7 +2,9 @@
 
 import * as React from "react";
 
+import { AdSlot } from "@/components/ads/ad-slot";
 import { ArticleCard } from "@/components/article/article-card";
+import { AD_PREVIEW } from "@/lib/ads/preview";
 import {
   STORY_LIST_CARD_VARIANT,
   STORY_LIST_CLASSES,
@@ -32,8 +34,16 @@ export interface InfiniteFeedProps {
    */
   initialItems?: PostSummary[];
   layout?: StoryListLayout;
+  /**
+   * Desktop leaderboard break after every N stories (grid layout). Only
+   * rendered when ad inventory renders (commercial preview / live campaign),
+   * so an unfilled slot never leaves an empty grid row.
+   */
+  adEvery?: number;
   /** Visible section heading; null continues the list above seamlessly (category pages). */
   heading?: string | null;
+  /** Extra classes for the heading, e.g. visually hide it where a page heading already introduces the list. */
+  headingClassName?: string;
   /** Show each card's category label (off on a category page, where it is the page). */
   showCategory?: boolean;
   /** Crawlable / no-JS next page (e.g. `?page=2`), shown until the feed hydrates. */
@@ -59,7 +69,9 @@ export function InfiniteFeed({
   seenKeys,
   initialItems = [],
   layout = "rows",
+  adEvery,
   heading = "More stories",
+  headingClassName,
   showCategory = true,
   fallbackHref,
   className,
@@ -153,7 +165,7 @@ export function InfiniteFeed({
       className={cn(heading ? "space-y-4" : "space-y-2", className)}
     >
       {heading ? (
-        <h2 id="more-stories-heading" className="section-title">
+        <h2 id="more-stories-heading" className={cn("section-title", headingClassName)}>
           {heading}
         </h2>
       ) : null}
@@ -167,17 +179,21 @@ export function InfiniteFeed({
             heading && "border-t-0",
           )}
         >
-          {items.map((post) => (
-            <li
-              key={postKey(post)}
-              className={cn(STORY_LIST_CLASSES[layout].item, heading && "first:pt-0")}
-            >
-              <ArticleCard
-                post={post}
-                variant={STORY_LIST_CARD_VARIANT[layout]}
-                showCategory={showCategory}
-              />
-            </li>
+          {items.map((post, index) => (
+            <React.Fragment key={postKey(post)}>
+              <li className={cn(STORY_LIST_CLASSES[layout].item, heading && "first:pt-0")}>
+                <ArticleCard
+                  post={post}
+                  variant={STORY_LIST_CARD_VARIANT[layout]}
+                  showCategory={showCategory}
+                />
+              </li>
+              {AD_PREVIEW && adEvery && (index + 1) % adEvery === 0 ? (
+                <li className="hidden py-2 lg:col-span-2 lg:block">
+                  <AdSlot format="leaderboard" />
+                </li>
+              ) : null}
+            </React.Fragment>
           ))}
         </ul>
       ) : null}

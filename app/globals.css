@@ -83,6 +83,18 @@
      skin (see .noa-well and components/ads/takeover-skin.tsx). Both the well
      and the skin gutters read this single value so they always line up. */
   --noa-well-w: 980px;
+
+  /* Desktop page canvas: the grey the header, body panels and sidebar panels
+     sit on, "semi-detached" (News24-style), with ads in the gaps. */
+  --noa-canvas: #efedea;
+}
+
+/* Desktop: the visible box (boxed header, main panel + rail) is 970px,
+   matching the 970px billboard; the extra 48px is the column's 24px gutters. */
+@media (min-width: 1024px) {
+  :root {
+    --noa-well-w: 1018px;
+  }
 }
 
 .dark {
@@ -124,6 +136,7 @@
   --noa-faint: #8b8b93;
   --noa-hairline: #27272a;
   --noa-green-text: #1bb257;
+  --noa-canvas: #1c1c1f;
 }
 
 /**
@@ -174,6 +187,7 @@
   --color-noa-green-200: var(--noa-green-200);
   --color-noa-green-text: var(--noa-green-text);
   --color-noa-live: var(--noa-live);
+  --color-noa-canvas: var(--noa-canvas);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -369,6 +383,20 @@
     box-shadow:
       0 0 0 1px rgb(20 28 22 / 0.05),
       0 18px 50px -24px rgb(8 13 10 / 0.28);
+  }
+
+  /* Desktop: the well becomes a transparent column on the grey canvas; the
+     main column and each rail section are their own white panels. */
+  @media (min-width: 1024px) {
+    .noa-well {
+      background-color: transparent;
+      box-shadow: none;
+    }
+  }
+
+  .noa-panel {
+    background-color: var(--noa-white);
+    border: 1px solid var(--noa-hairline);
   }
 
   /**
