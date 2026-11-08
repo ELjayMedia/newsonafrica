@@ -71,7 +71,7 @@ export default async function HomePage() {
                     <h2 id="latest-stories-heading" className="section-title">
                       Latest stories
                     </h2>
-                    <ListingRows posts={latestGrid} layout="grid" />
+                    <ListingRows posts={latestGrid} layout="split" />
                   </section>
                 ) : null}
               </div>
@@ -86,7 +86,7 @@ export default async function HomePage() {
                 scope={{ scope: "africa" }}
                 initialCursor={moreCursor}
                 seenKeys={allStories.map((post) => `${post.country}-${post.id}`)}
-                layout="grid"
+                layout="split"
                 adEvery={8}
                 headingClassName="lg:sr-only"
                 className="mt-10 lg:mt-8"

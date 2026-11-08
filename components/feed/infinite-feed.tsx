@@ -186,6 +186,8 @@ export function InfiniteFeed({
                   post={post}
                   variant={STORY_LIST_CARD_VARIANT[layout]}
                   showCategory={showCategory}
+                  // Mirror split cards per column (even index left, odd right).
+                  reverse={index % 2 === 1}
                 />
               </li>
               {AD_PREVIEW && adEvery && (index + 1) % adEvery === 0 ? (

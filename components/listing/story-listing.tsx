@@ -102,8 +102,10 @@ export function ListingLead({ post, showCategory = true }: ListingLeadProps) {
  * - `rows`: thumbnail rows at every width (as "You might also like").
  * - `grid`: category feeds, News24-style — thumbnail rows on phones, two
  *   image-on-top cards per row from md up.
+ * - `split`: home feed — thumbnail rows on phones, two horizontal cards per
+ *   row from md up, image left in the left column and right in the right.
  */
-export type StoryListLayout = "rows" | "grid";
+export type StoryListLayout = "rows" | "grid" | "split";
 
 export const STORY_LIST_CLASSES: Record<StoryListLayout, { list: string; item: string }> = {
   rows: { list: "divide-y divide-border border-t border-border", item: "py-4" },
@@ -111,9 +113,13 @@ export const STORY_LIST_CLASSES: Record<StoryListLayout, { list: string; item: s
     list: "divide-y divide-border border-t border-border md:grid md:grid-cols-2 md:gap-x-6 md:gap-y-8 md:divide-y-0 md:border-t-0",
     item: "py-4 md:py-0",
   },
+  split: {
+    list: "divide-y divide-border border-t border-border md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-6 md:divide-y-0 md:border-t-0",
+    item: "py-4 md:py-0",
+  },
 };
 
-export const STORY_LIST_CARD_VARIANT = { rows: "list", grid: "feed" } as const;
+export const STORY_LIST_CARD_VARIANT = { rows: "list", grid: "feed", split: "split" } as const;
 
 export interface ListingRowsProps {
   posts: PostSummary[];
@@ -127,12 +133,14 @@ export function ListingRows({ posts, showCategory = true, layout = "rows" }: Lis
 
   return (
     <ul className={STORY_LIST_CLASSES[layout].list}>
-      {posts.map((post) => (
+      {posts.map((post, index) => (
         <li key={`${post.country}-${post.id}`} className={STORY_LIST_CLASSES[layout].item}>
           <ArticleCard
             post={post}
             variant={STORY_LIST_CARD_VARIANT[layout]}
             showCategory={showCategory}
+            // Mirror split cards per column (even index left, odd right).
+            reverse={index % 2 === 1}
           />
         </li>
       ))}
