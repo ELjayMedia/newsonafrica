@@ -89,7 +89,7 @@ export default async function HomePage() {
                 layout="split"
                 adEvery={8}
                 headingClassName="lg:sr-only"
-                className="mt-10 lg:mt-8"
+                className="mt-10 lg:mt-6"
               />
             </div>
 

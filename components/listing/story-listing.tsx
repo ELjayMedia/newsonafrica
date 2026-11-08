@@ -103,7 +103,8 @@ export function ListingLead({ post, showCategory = true }: ListingLeadProps) {
  * - `grid`: category feeds, News24-style — thumbnail rows on phones, two
  *   image-on-top cards per row from md up.
  * - `split`: home feed — thumbnail rows on phones, two horizontal cards per
- *   row from md up, image left in the left column and right in the right.
+ *   row from md up (square image left, headline right, the same card in
+ *   both columns).
  */
 export type StoryListLayout = "rows" | "grid" | "split";
 
@@ -133,14 +134,12 @@ export function ListingRows({ posts, showCategory = true, layout = "rows" }: Lis
 
   return (
     <ul className={STORY_LIST_CLASSES[layout].list}>
-      {posts.map((post, index) => (
+      {posts.map((post) => (
         <li key={`${post.country}-${post.id}`} className={STORY_LIST_CLASSES[layout].item}>
           <ArticleCard
             post={post}
             variant={STORY_LIST_CARD_VARIANT[layout]}
             showCategory={showCategory}
-            // Mirror split cards per column (even index left, odd right).
-            reverse={index % 2 === 1}
           />
         </li>
       ))}

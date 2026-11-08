@@ -14,8 +14,6 @@ export interface ArticleCardProps {
   priority?: boolean;
   /** Omit the section from the meta line, e.g. on a category page where every card shares it. */
   showCategory?: boolean;
-  /** `split` only: put the image on the right from md up (mirrored columns). */
-  reverse?: boolean;
   className?: string;
 }
 
@@ -24,7 +22,7 @@ const IMAGE_ASPECT: Record<ArticleCardVariant, string> = {
   list: "aspect-[4/3]",
   compact: "aspect-video",
   feed: "aspect-[4/3] md:aspect-video",
-  split: "aspect-[4/3]",
+  split: "aspect-[4/3] md:aspect-square",
 };
 
 /**
@@ -40,14 +38,13 @@ export function ArticleCard({
   variant = "grid",
   priority = false,
   showCategory = true,
-  reverse = false,
   className,
 }: ArticleCardProps) {
   const href = getArticleUrl(post.country, post.slug);
   const isList = variant === "list";
   const isFeed = variant === "feed";
-  // Horizontal card in a two-column feed: thumbnail beside the text, the
-  // image side mirrored per column from md up.
+  // Horizontal card in a two-column feed: square thumbnail on the left,
+  // headline on the right, identical in both columns.
   const isSplit = variant === "split";
 
   return (
@@ -59,7 +56,6 @@ export function ArticleCard({
           : isFeed
             ? "flex-row gap-4 md:flex-col md:gap-0"
             : "flex-col",
-        isSplit && reverse && "md:flex-row-reverse",
         className,
       )}
     >
