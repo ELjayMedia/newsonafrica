@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { heroFlag } from "@/components/home/hero-lead";
+import { heroFlag } from "@/components/home/hero-flag";
 import { StoryMeta } from "@/components/story-meta";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import type { PostSummary } from "@/lib/dal/types";
