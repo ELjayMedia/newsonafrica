@@ -4,12 +4,11 @@ import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/ads/ad-slot";
 import { InfiniteFeed } from "@/components/feed/infinite-feed";
 import { ExploreAfrica } from "@/components/home/explore-africa";
-import { HeroLead } from "@/components/home/hero-lead";
+import { FeaturedTopStories } from "@/components/home/featured-top-stories";
 import { HomeRail } from "@/components/home/home-rail";
-import { LatestAcross } from "@/components/home/latest-across";
 import { MobileFeed } from "@/components/home/mobile-feed";
 import { SponsoredCard } from "@/components/home/sponsored-card";
-import { StoryCard } from "@/components/home/story-card";
+import { ListingRows } from "@/components/listing/story-listing";
 import {
   getCountry,
   getHomeFeed,
@@ -97,11 +96,13 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
   const { feed, mostRead, moreCursor } = await loadCountryHomeData(countryCode);
   const { hero, secondary, grid } = feed;
 
-  // Fan the feed out across the desktop mockup's surfaces.
-  const standardCards = secondary.slice(0, 2);
-  const pool = [...secondary.slice(2), ...grid];
-  const latestAcross = pool.slice(0, 4);
-  const railLatest = pool.slice(4, 8);
+  // 13 stories: 1 lead + 4 beside it (top stories), 4 in the two-column
+  // grid (even, so the feed continues it without a half-empty row) and 4 in
+  // the rail's Latest news, so no story appears twice on the page.
+  const rest = [...secondary, ...grid];
+  const sideStories = rest.slice(0, 4);
+  const latestGrid = rest.slice(4, 8);
+  const railLatest = rest.slice(8, 12);
   // Mobile renders a single News24-style feed of every story instead.
   const allStories = [hero, ...secondary, ...grid].filter(
     (post): post is NonNullable<typeof post> => post != null,
@@ -113,41 +114,47 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
 
       {hero ? (
         <>
-          {/* Desktop: hero + grid + rail (rendered first so smoke-test locators
-              resolve to the visible desktop copy at wide viewports). */}
-          <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
-            <div className="noa-panel min-w-0 space-y-10 self-start p-6">
-              <HeroLead post={hero} />
+          {/* One layout for every breakpoint: main column + rail (rail from
+              lg). Desktop leads with the Yahoo-style top-stories module and a
+              two-column "Latest stories" grid that the infinite feed
+              continues; mobile keeps its own dense feed. */}
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
+            <div className="min-w-0 lg:self-start lg:border lg:border-noa-hairline lg:bg-noa-white lg:p-6">
+              <div className="hidden space-y-10 lg:block">
+                <FeaturedTopStories lead={hero} side={sideStories} />
+                <ExploreAfrica />
+                <SponsoredCard />
+                {latestGrid.length > 0 ? (
+                  <section aria-labelledby="latest-stories-heading" className="space-y-6">
+                    <h2 id="latest-stories-heading" className="section-title">
+                      Latest stories
+                    </h2>
+                    <ListingRows posts={latestGrid} layout="grid" />
+                  </section>
+                ) : null}
+              </div>
 
-              {standardCards.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 border-t border-noa-hairline pt-8 sm:grid-cols-2">
-                  {standardCards.map((post) => (
-                    <StoryCard key={`${post.country}-${post.id}`} post={post} />
-                  ))}
-                </div>
-              ) : null}
+              {/* Mobile: dense image-left feed. */}
+              <MobileFeed posts={allStories} />
 
-              <ExploreAfrica />
-              <SponsoredCard />
-              <LatestAcross posts={latestAcross} />
+              {/* Infinite feed (one copy for every breakpoint): rows on phones,
+                  continuing the two-column grid on desktop, where "Latest
+                  stories" already heads it. */}
+              <InfiniteFeed
+                scope={{ scope: "edition", country: countryCode }}
+                initialCursor={moreCursor}
+                seenKeys={allStories.map((post) => `${post.country}-${post.id}`)}
+                layout="grid"
+                adEvery={8}
+                headingClassName="lg:sr-only"
+                className="mt-10 lg:mt-8"
+              />
             </div>
 
-            <aside className="min-w-0">
+            <aside className="hidden min-w-0 lg:block">
               <HomeRail mostRead={mostRead} latest={railLatest} />
             </aside>
           </div>
-
-          {/* Mobile: dense image-left feed. */}
-          <MobileFeed posts={allStories} />
-
-          {/* Infinite "More stories" (one copy for every breakpoint), sized to
-              the desktop main column so it lines up under the hero grid. */}
-          <InfiniteFeed
-            scope={{ scope: "edition", country: countryCode }}
-            initialCursor={moreCursor}
-            seenKeys={allStories.map((post) => `${post.country}-${post.id}`)}
-            className="mt-10 lg:border lg:border-noa-hairline lg:bg-noa-white lg:mt-8 lg:max-w-[calc(100%-352px)] lg:p-6"
-          />
         </>
       ) : (
         <section className="rounded-xl border border-noa-hairline bg-noa-paper p-6">

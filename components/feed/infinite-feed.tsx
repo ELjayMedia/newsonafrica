@@ -42,6 +42,8 @@ export interface InfiniteFeedProps {
   adEvery?: number;
   /** Visible section heading; null continues the list above seamlessly (category pages). */
   heading?: string | null;
+  /** Extra classes for the heading, e.g. visually hide it where a page heading already introduces the list. */
+  headingClassName?: string;
   /** Show each card's category label (off on a category page, where it is the page). */
   showCategory?: boolean;
   /** Crawlable / no-JS next page (e.g. `?page=2`), shown until the feed hydrates. */
@@ -69,6 +71,7 @@ export function InfiniteFeed({
   layout = "rows",
   adEvery,
   heading = "More stories",
+  headingClassName,
   showCategory = true,
   fallbackHref,
   className,
@@ -162,7 +165,7 @@ export function InfiniteFeed({
       className={cn(heading ? "space-y-4" : "space-y-2", className)}
     >
       {heading ? (
-        <h2 id="more-stories-heading" className="section-title">
+        <h2 id="more-stories-heading" className={cn("section-title", headingClassName)}>
           {heading}
         </h2>
       ) : null}
