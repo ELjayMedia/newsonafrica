@@ -1,5 +1,6 @@
 "use client";
 
+import { captureException } from "@sentry/nextjs";
 import { useEffect } from "react";
 
 /**
@@ -15,6 +16,8 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error(error);
+    // Next.js already reports server errors through onRequestError.
+    if (!error.digest) captureException(error);
   }, [error]);
 
   return (

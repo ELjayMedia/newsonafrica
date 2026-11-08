@@ -1,5 +1,6 @@
 "use client";
 
+import { captureException } from "@sentry/nextjs";
 import { useEffect } from "react";
 
 import { Container } from "@/components/ui/container";
@@ -14,8 +15,9 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Hook for error reporting (Sentry, etc.) in a later phase.
     console.error(error);
+    // Next.js already reports server errors through onRequestError.
+    if (!error.digest) captureException(error);
   }, [error]);
 
   return (
