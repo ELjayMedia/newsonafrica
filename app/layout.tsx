@@ -6,6 +6,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SiteHeader } from "@/components/site-header";
 import { UtilityBar } from "@/components/utility-bar";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { TakeoverSkin } from "@/components/ads/takeover-skin";
 import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
@@ -121,10 +122,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               }
             />
           </HideOnMobileArticle>
-          {/* Header and footer are full-width bands; between them the page
-              content sits in the centred well (a white sheet on mobile, a
-              transparent column of white panels on desktop). */}
-          <div className="relative z-10">
+          {/* Desktop leaderboard above the header, on the grey canvas. Renders
+              nothing (no space) unless a campaign or ad preview fills it. */}
+          <AdSlot format="leaderboard" className="relative z-10 hidden py-5 lg:block" />
+          {/* The header stays boxed to the content column; the footer is a
+              full-width band. Between them the page content sits in the
+              centred well (a white sheet on mobile, a transparent column of
+              white panels on desktop). */}
+          <div className="relative z-10 mx-auto w-full max-w-[var(--noa-well-w)] lg:px-6">
             <SiteHeader sections={navSections} />
           </div>
           <div className="noa-well relative z-10 flex flex-1 flex-col">
