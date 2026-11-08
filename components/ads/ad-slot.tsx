@@ -1,5 +1,6 @@
 import * as React from "react";
 
+import { AD_PREVIEW } from "@/lib/ads/preview";
 import { cn } from "@/lib/utils";
 
 /**
@@ -40,7 +41,7 @@ export function AdSlot({
   format,
   label = "Advertisement",
   sticky = false,
-  enabled = false,
+  enabled = AD_PREVIEW,
   className,
 }: AdSlotProps) {
   if (!enabled) return null;

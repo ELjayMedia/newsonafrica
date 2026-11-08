@@ -58,7 +58,7 @@ export default async function HomePage() {
           {/* Desktop: hero + grid + rail (rendered first so smoke-test locators
               resolve to the visible desktop copy at wide viewports). */}
           <div className="hidden lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
-            <div className="min-w-0 space-y-10">
+            <div className="noa-panel min-w-0 space-y-10 self-start p-6">
               <HeroLead post={hero} />
 
               {standardCards.length > 0 ? (
@@ -90,7 +90,7 @@ export default async function HomePage() {
             scope={{ scope: "africa" }}
             initialCursor={moreCursor}
             seenKeys={allStories.map((post) => `${post.country}-${post.id}`)}
-            className="mt-10 lg:max-w-[calc(100%-352px)]"
+            className="mt-10 lg:border lg:border-noa-hairline lg:bg-noa-white lg:mt-8 lg:max-w-[calc(100%-352px)] lg:p-6"
           />
         </>
       ) : (

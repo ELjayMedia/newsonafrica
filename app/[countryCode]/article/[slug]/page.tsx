@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AdSlot } from "@/components/ads/ad-slot";
 import { ArticleActions } from "@/components/article/article-actions";
 import { ArticleBody } from "@/components/article/article-body";
 import { ArticleToolbar } from "@/components/article/article-toolbar";
@@ -106,6 +107,8 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
           masthead and utility bar hide on article routes there. */}
       <ArticleToolbar fallbackHref={`/${countryCode}`} fallbackLabel={editionName} />
       <Container className="pb-8 pt-3 md:py-8">
+        {/* Desktop billboard under the header, on the grey canvas. */}
+        <AdSlot format="billboard" className="mb-6 hidden lg:block" />
         {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
         <NewsArticleJsonLd post={post} />
         <BreadcrumbJsonLd

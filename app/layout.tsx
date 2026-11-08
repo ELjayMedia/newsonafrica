@@ -95,7 +95,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       {/* The fixed mobile bottom navigation reserves its own height with a
           spacer (NOA-111), so pages without the bar (articles) don't end in
           an empty band. */}
-      <body className="flex min-h-screen flex-col bg-noa-paper">
+      <body className="flex min-h-screen flex-col bg-noa-paper lg:bg-noa-canvas">
         {/* WebSite + Organization structured data (NOA-114). */}
         <SiteJsonLd />
         {/* Bypass block (WCAG 2.4.1): first tab stop jumps past the utility
@@ -121,11 +121,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               }
             />
           </HideOnMobileArticle>
-          <div className="noa-well relative z-10 flex flex-1 flex-col">
+          {/* Header and footer are full-width bands; between them the page
+              content sits in the centred well (a white sheet on mobile, a
+              transparent column of white panels on desktop). */}
+          <div className="relative z-10">
             <SiteHeader sections={navSections} />
+          </div>
+          <div className="noa-well relative z-10 flex flex-1 flex-col">
             <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
               {children}
             </main>
+          </div>
+          <div className="relative z-10">
             <SiteFooter />
           </div>
           <BottomNavigation />
