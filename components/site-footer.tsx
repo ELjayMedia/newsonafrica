@@ -12,8 +12,8 @@ const FOOTER_LINKS = [
 
 export function SiteFooter() {
   return (
-    <footer className="mt-auto border-t border-border">
-      <Container className="space-y-8 py-8">
+    <footer className="mt-auto border-t border-border bg-noa-white">
+      <Container className="max-w-[var(--noa-well-w)] space-y-8 py-8">
         {/* Newsletter capture (NOA-129): global owned-audience sign-up. */}
         <div className="flex flex-col gap-3 border-b border-border pb-8 sm:flex-row sm:items-start sm:justify-between">
           <div className="max-w-md space-y-1">

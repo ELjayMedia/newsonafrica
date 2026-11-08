@@ -9,7 +9,7 @@ Bubblewrap-generated Trusted Web Activity wrapper for the production PWA at
 - App name: `News on Africa`
 - Launcher name: `News Africa`
 - Start URL: `https://app.newsonafrica.com/`
-- Version: `versionCode 3`, `versionName "1.0.2"`
+- Local default version: `versionCode 3`, `versionName "1.0.2"`; CI overrides both.
 
 ## Local Debug Build
 
@@ -17,7 +17,7 @@ Prerequisites:
 
 - JDK 17
 - Android SDK platform 36
-- Android build-tools 34.0.0 or newer
+- Android build-tools 35.0.0 (installed explicitly by the workflows)
 
 Build the debug APK:
 
@@ -38,9 +38,9 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.newsonafrica.app/.LauncherActivity
 ```
 
-Smoke-test home, article, category, search, and privacy navigation. Release
-signing and the real Digital Asset Links fingerprint are tracked separately in
-NOA-136, so do not commit keystores, APKs, or AABs.
+Smoke-test home, article, category, search, and privacy navigation. CI also
+builds the debug APK without signing secrets. Do not commit keystores, APKs, or
+AABs.
 
 ## Signed Release AAB
 
@@ -59,6 +59,8 @@ it before building:
 
 ```bash
 source /tmp/noa-android-release-env
+export NOA_ANDROID_VERSION_CODE=4
+export NOA_ANDROID_VERSION_NAME=1.0.3
 ./gradlew clean bundleRelease
 ```
 
@@ -74,6 +76,23 @@ Required values:
 For PKCS12 keystores, Java uses the same password for the store and key; set
 `NOA_ANDROID_KEY_PASSWORD` to the same value as
 `NOA_ANDROID_KEYSTORE_PASSWORD`.
+
+Set `NOA_ANDROID_VERSION_CODE` to a fresh integer from 1 through 2100000000
+above every code already uploaded to Google Play. Set
+`NOA_ANDROID_VERSION_NAME` to the user-visible version. Matching Gradle
+properties (`-PNOA_ANDROID_VERSION_CODE=4`, for example) are also supported.
+Unset overrides preserve the local defaults shown above.
+
+For GitHub builds, **Android Release** uses the version tag or manual
+`version_name` input, and starts the code at the workflow run number plus 3.
+When publishing, the preflight raises an automatic code above the highest
+existing Play bundle code when needed. Manual runs can set `version_code`
+explicitly; an already-used override is rejected. Manual runs default to
+build-only; enable `publish_to_play` to upload, or push an `android-v<version>`
+tag to publish to internal testing. Publishing runs verify Google Play access
+and version-code availability before building. See
+[`docs/android-release-secrets.md`](../docs/android-release-secrets.md) for the
+required secrets, track IDs, and release-note filenames.
 
 The signed bundle is written to:
 
@@ -101,3 +120,4 @@ Use the certificate fingerprint that signs the installed app in
 `public/.well-known/assetlinks.json`. For Google Play App Signing, that is the
 Play Console app-signing certificate from Setup -> App integrity; it can differ
 from the upload key used to produce this AAB.
+

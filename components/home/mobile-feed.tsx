@@ -2,7 +2,7 @@ import { Fragment } from "react";
 import Link from "next/link";
 
 import { ExploreAfrica } from "@/components/home/explore-africa";
-import { heroFlag } from "@/components/home/hero-lead";
+import { heroFlag } from "@/components/home/hero-flag";
 import { FeedRow } from "@/components/home/story-card";
 import { StoryMeta } from "@/components/story-meta";
 import { SponsoredCard } from "@/components/home/sponsored-card";

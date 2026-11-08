@@ -29,28 +29,6 @@ function ImageFrame({ post, className }: { post: PostSummary; className?: string
 }
 
 /**
- * Standard story card (design system §04), BBC-style text order: image on
- * top, then the headline, then one muted meta line ("2 hours ago | Business").
- * Used for the two stories beside the hero and any general card grid.
- */
-export function StoryCard({ post }: { post: PostSummary }) {
-  const href = getArticleUrl(post.country, post.slug);
-  return (
-    <article className="group flex flex-col gap-3">
-      <Link href={href} className="block">
-        <ImageFrame post={post} className="aspect-[16/10]" />
-      </Link>
-      <h3 className="story-hed text-lg">
-        <Link href={href} className="transition-colors hover:text-primary">
-          {post.title}
-        </Link>
-      </h3>
-      <StoryMeta post={post} />
-    </article>
-  );
-}
-
-/**
  * Compact horizontal row: a small thumbnail beside the headline and the meta
  * line. Used in the "Latest across the continent" grid and the right-rail
  * "Latest news" list.

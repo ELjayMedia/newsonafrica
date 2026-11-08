@@ -34,6 +34,30 @@ env:
   CONTENT_SYNC_SECRET: test-content-sync-secret-0123456789
 
 jobs:
+  android:
+    name: Android build and Play tooling
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test release and listing tools without credentials
+        run: node --test scripts/*.test.mjs
+      - name: Validate Play Store listing metadata
+        run: node scripts/publish-google-play-listing.mjs
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
+      - name: Build debug APK without release credentials
+        working-directory: android
+        run: bash ./gradlew assembleDebug --no-daemon --stacktrace
+
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -108,3 +132,4 @@ jobs:
           name: playwright-report
           path: playwright-report
           if-no-files-found: warn
+
