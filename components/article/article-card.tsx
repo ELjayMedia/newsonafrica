@@ -64,7 +64,9 @@ export function ArticleCard({
         className={cn(
           "relative block flex-shrink-0 overflow-hidden rounded-lg bg-muted",
           IMAGE_ASPECT[variant],
-          (isList || isSplit) && "w-28 self-start sm:w-40",
+          isList && "w-28 self-start sm:w-40",
+          // Split feed: 90px square thumbnail from md up (phones unchanged).
+          isSplit && "w-28 self-start sm:w-40 md:w-[90px]",
           isFeed && "w-28 self-start sm:w-40 md:w-full md:self-auto",
         )}
       >

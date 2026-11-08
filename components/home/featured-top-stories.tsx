@@ -50,7 +50,7 @@ export function FeaturedTopStories({ lead, side }: { lead: PostSummary; side: Po
 
   return (
     <section aria-label="Top stories" className="space-y-6">
-      <article className="group grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] items-center gap-6">
+      <article className="group grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-center gap-6">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             {flag ? (
@@ -68,7 +68,7 @@ export function FeaturedTopStories({ lead, side }: { lead: PostSummary; side: Po
               </Link>
             ) : null}
           </div>
-          <h1 className="noa-hed text-[2rem] text-foreground">
+          <h1 className="noa-hed text-[1.625rem] text-foreground">
             <Link href={href} className="transition-colors hover:text-primary">
               {lead.title}
             </Link>

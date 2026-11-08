@@ -89,10 +89,11 @@
   --noa-canvas: #efedea;
 }
 
-/* Desktop: a wider column fits a 970px billboard and a 300px rail. */
+/* Desktop: the visible box (boxed header, main panel + rail) is 970px,
+   matching the 970px billboard; the extra 48px is the column's 24px gutters. */
 @media (min-width: 1024px) {
   :root {
-    --noa-well-w: 1200px;
+    --noa-well-w: 1018px;
   }
 }
 
