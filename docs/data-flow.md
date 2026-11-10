@@ -9,7 +9,7 @@ owns what**. This reflects the current rebuild (WPGraphQL DAL + the
 | Concern                                                                            | Owner                                 | Notes                                                                                               |
 | ---------------------------------------------------------------------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | Editorial content (article title, slug, body, media, author, terms, publish state) | **WordPress** (headless, per-edition) | Source of truth. Read via WPGraphQL.                                                                |
-| Public rendering & routing                                                         | **Next.js on Vercel**                 | App Router server components; no article content stored here.                                       |
+| Public rendering & routing                                                         | **Next.js on self-hosted Coolify**    | App Router server components; no article content stored here.                                       |
 | Search / discovery read-model                                                      | **Supabase `content_index`**          | A denormalized, full-text-searchable projection of published WordPress posts. **Not** a second CMS. |
 | Reader identity & interaction (auth, profile, bookmarks, comments)                 | **Supabase**                          | Independent of article content; references posts by ID only.                                        |
 
@@ -32,7 +32,7 @@ editions fall back to the subpath pattern above.
 ## 1. Read path (rendering)
 
 ```
-Reader → Vercel/Next.js
+Reader → Cloudflare Tunnel → Coolify/Next.js
   → App Router server component (e.g. app/[countryCode]/article/[slug]/page.tsx)
     → DAL: lib/dal/posts.ts  (WPGraphQL queries; databaseId → wp_post_id)
       → lib/wordpress/graphql-client.ts → WordPress <edition> GraphQL endpoint

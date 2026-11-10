@@ -1,64 +1,60 @@
 # Deployment (NOA-119)
 
-How News on Africa ships: a Next.js 15 App Router app deployed to **Vercel**,
+How News on Africa ships: a Next.js 15 App Router app deployed to **Coolify**,
 backed by **Supabase** (profiles, bookmarks, comments, content index/search)
 and a **headless WordPress multisite** (articles). CI on GitHub Actions gates
-every push (`.github/workflows/ci.yml`); Vercel's Git integration does the
-actual deploying.
+every push (`.github/workflows/ci.yml`); the successful `main` workflow calls
+Coolify's authenticated deploy API.
 
-## 1. Vercel project setup
+## 1. Coolify project setup
 
-1. Import the GitHub repository into Vercel (**Add New → Project**).
-2. Framework preset: **Next.js** (auto-detected; also pinned in
-   `vercel.json`). Keep the default build command (`next build`) and output.
-3. Install command comes from `vercel.json`
-   (`pnpm install --frozen-lockfile`); Vercel picks the pnpm version from the
-   `packageManager` field in `package.json` (pnpm 9) and Node 22 from
-   `engines.node` — set **Project Settings → General → Node.js Version** to 22
-   if it doesn't auto-match.
-4. Add the environment variables listed below (**Project Settings →
-   Environment Variables**) before the first deploy.
-5. Assign the production domain; set `SITE_URL` / `NEXT_PUBLIC_SITE_URL` to
-   exactly that origin.
-6. Before public launch, confirm the Vercel project reports `live: true` and
-   `app.newsonafrica.com` is attached as the production domain. The connector
-   can read this state but cannot currently toggle it.
+1. Use the Coolify application UUID `bpn1vrazffmj4zfbfpb8vkft`, repository
+   `ELjayMedia/newsonafrica`, branch `main`, and the repository `Dockerfile`.
+2. Expose port `3000`, enable the `/` health check, and attach
+   `https://app.newsonafrica.com` through the shared Cloudflare Tunnel.
+3. Add the environment variables below in Coolify before the first deploy.
+   Mark server-only credentials as secrets and make `NEXT_PUBLIC_*` variables
+   available at build time as well as runtime.
+4. Store a deploy-only Coolify API token in the GitHub Actions secret
+   `COOLIFY_DEPLOY_TOKEN`. CI queues a deploy only after all checks pass.
+5. Configure a daily Coolify scheduled task for `/api/cron/content-health` at
+   `0 4 * * *`, authenticating with `CRON_SECRET`.
 
 ## 2. Launch-blocker settings
 
 These are the settings to verify immediately before launch:
 
-| Blocker                    | Required action                                                                                                                                                                                                    |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Vercel project live flag   | Enable the Vercel project live state so `live` changes from `false` to `true`.                                                                                                                                     |
-| Production domain          | Attach `app.newsonafrica.com` to the project and set both `SITE_URL` and `NEXT_PUBLIC_SITE_URL` to `https://app.newsonafrica.com`.                                                                                 |
-| Nigeria WP endpoints       | Set `NEXT_PUBLIC_WP_NG_REST_BASE` and `NEXT_PUBLIC_WP_NG_GRAPHQL` in Vercel Production and Preview. If unset, the app falls back to `${WORDPRESS_API_URL}/ng/wp-json/wp/v2` and `${WORDPRESS_API_URL}/ng/graphql`. |
-| SZ GraphQL socket timeouts | Keep `WORDPRESS_RETRY_ATTEMPTS=4` and `WORDPRESS_RETRY_BACKOFF_MS=750` unless production logs show a different tuning requirement.                                                                                 |
+| Blocker                    | Required action                                                                                                                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Coolify application        | Latest `main` deployment is healthy and the container health check passes.                                                                                                                   |
+| Production domain          | Attach `app.newsonafrica.com` to the project and set both `SITE_URL` and `NEXT_PUBLIC_SITE_URL` to `https://app.newsonafrica.com`.                                                           |
+| Nigeria WP endpoints       | Set `NEXT_PUBLIC_WP_NG_REST_BASE` and `NEXT_PUBLIC_WP_NG_GRAPHQL` in Coolify. If unset, the app falls back to `${WORDPRESS_API_URL}/ng/wp-json/wp/v2` and `${WORDPRESS_API_URL}/ng/graphql`. |
+| SZ GraphQL socket timeouts | Keep `WORDPRESS_RETRY_ATTEMPTS=4` and `WORDPRESS_RETRY_BACKOFF_MS=750` unless production logs show a different tuning requirement.                                                           |
 
 ## 3. Environment variables
 
-Every variable in `.env.example`, what it does, and where it is set. "Vercel"
-means Project Settings → Environment Variables; scope each to Production/Preview
-as noted. Local development uses `.env.local`.
+Every variable in `.env.example`, what it does, and where it is set. "Coolify"
+means the application Environment Variables page. Local development uses
+`.env.local`.
 
-| Variable                          | Required       | Exposed to browser | Purpose                                                                                                                           | Where set                                                                             |
-| --------------------------------- | -------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `SITE_URL`                        | yes            | no (server)        | Canonical public origin, no trailing slash. Used for canonical URLs, OG tags, sitemaps, share links.                              | Vercel: `https://app.newsonafrica.com` in Production. Local: `http://localhost:3000`. |
-| `NEXT_PUBLIC_SITE_URL`            | recommended    | yes                | Public equivalent of `SITE_URL` for deployment metadata and client-safe URL generation.                                           | Vercel Production/Preview.                                                            |
-| `NEXT_PUBLIC_SUPABASE_URL`        | yes            | yes                | Supabase project URL.                                                                                                             | Vercel (both scopes). Supabase Dashboard → Project Settings → API.                    |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | yes            | yes                | Supabase anon/publishable key — safe to expose, RLS enforces access.                                                              | Vercel (both scopes), same dashboard page.                                            |
-| `SUPABASE_SERVICE_ROLE_KEY`       | yes            | **never**          | Privileged key used server-side by content sync and moderation. Mark as **Sensitive** in Vercel.                                  | Vercel (both scopes), same dashboard page.                                            |
-| `WORDPRESS_API_URL`               | yes            | no                 | Base URL of the WordPress multisite (no trailing slash). Country editions live at `${WORDPRESS_API_URL}/<country>/wp-json/wp/v2`. | Vercel (both scopes; Preview may point at a staging CMS).                             |
-| `NEXT_PUBLIC_WP_NG_REST_BASE`     | launch blocker | yes                | Explicit Nigeria REST base override.                                                                                              | Vercel Production/Preview.                                                            |
-| `NEXT_PUBLIC_WP_NG_GRAPHQL`       | launch blocker | yes                | Explicit Nigeria WPGraphQL endpoint override.                                                                                     | Vercel Production/Preview.                                                            |
-| `WORDPRESS_API_AUTH_HEADER`       | no             | no                 | Optional `Authorization` header for a private/staging CMS.                                                                        | Vercel, usually Preview only.                                                         |
-| `WORDPRESS_REQUEST_TIMEOUT_MS`    | no             | no                 | Per-request CMS timeout override (defaults: 10s dev / 20s prod).                                                                  | Vercel, only if needed.                                                               |
-| `WORDPRESS_RETRY_ATTEMPTS`        | no             | no                 | Retry attempts for transient WordPress network/socket errors. Defaults to 4.                                                      | Vercel Production/Preview if overriding.                                              |
-| `WORDPRESS_RETRY_BACKOFF_MS`      | no             | no                 | Initial retry backoff for transient WordPress failures. Defaults to 750ms.                                                        | Vercel Production/Preview if overriding.                                              |
-| `WORDPRESS_WEBHOOK_SECRET`        | yes            | **never**          | Shared secret authorizing `/api/webhooks/wordpress`. Generate long random values, different per environment.                      | Vercel (Sensitive) **and** the WordPress webhook plugin config.                       |
-| `CONTENT_SYNC_SECRET`             | yes            | **never**          | Shared secret for the admin backfill/status routes `/api/admin/content-sync/*` and `scripts/backfill-content-index.ts`.           | Vercel (Sensitive); locally in `.env.local` when running the backfill script.         |
-| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | no (deferred)  | yes                | Paystack checkout — monetization phase, not yet wired.                                                                            | Leave unset until that phase.                                                         |
-| `PAYSTACK_SECRET_KEY`             | no (deferred)  | **never**          | Paystack server verification — deferred.                                                                                          | Leave unset until that phase.                                                         |
+| Variable                          | Required       | Exposed to browser | Purpose                                                                                                                           | Where set                                                                         |
+| --------------------------------- | -------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `SITE_URL`                        | yes            | no (server)        | Canonical public origin, no trailing slash. Used for canonical URLs, OG tags, sitemaps, share links.                              | Coolify: `https://app.newsonafrica.com`. Local: `http://localhost:3000`.          |
+| `NEXT_PUBLIC_SITE_URL`            | recommended    | yes                | Public equivalent of `SITE_URL` for deployment metadata and client-safe URL generation.                                           | Coolify build + runtime.                                                          |
+| `NEXT_PUBLIC_SUPABASE_URL`        | yes            | yes                | Supabase project URL.                                                                                                             | Coolify build + runtime. Supabase Dashboard → Project Settings → API.             |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`   | yes            | yes                | Supabase anon/publishable key — safe to expose, RLS enforces access.                                                              | Coolify build + runtime, same dashboard page.                                     |
+| `SUPABASE_SERVICE_ROLE_KEY`       | yes            | **never**          | Privileged key used server-side by content sync and moderation.                                                                   | Coolify runtime secret, same dashboard page.                                      |
+| `WORDPRESS_API_URL`               | yes            | no                 | Base URL of the WordPress multisite (no trailing slash). Country editions live at `${WORDPRESS_API_URL}/<country>/wp-json/wp/v2`. | Coolify runtime.                                                                  |
+| `NEXT_PUBLIC_WP_NG_REST_BASE`     | launch blocker | yes                | Explicit Nigeria REST base override.                                                                                              | Coolify build + runtime.                                                          |
+| `NEXT_PUBLIC_WP_NG_GRAPHQL`       | launch blocker | yes                | Explicit Nigeria WPGraphQL endpoint override.                                                                                     | Coolify build + runtime.                                                          |
+| `WORDPRESS_API_AUTH_HEADER`       | no             | no                 | Optional `Authorization` header for a private/staging CMS.                                                                        | Coolify runtime secret when used.                                                 |
+| `WORDPRESS_REQUEST_TIMEOUT_MS`    | no             | no                 | Per-request CMS timeout override (defaults: 10s dev / 20s prod).                                                                  | Coolify runtime, only if needed.                                                  |
+| `WORDPRESS_RETRY_ATTEMPTS`        | no             | no                 | Retry attempts for transient WordPress network/socket errors. Defaults to 4.                                                      | Coolify runtime if overriding.                                                    |
+| `WORDPRESS_RETRY_BACKOFF_MS`      | no             | no                 | Initial retry backoff for transient WordPress failures. Defaults to 750ms.                                                        | Coolify runtime if overriding.                                                    |
+| `WORDPRESS_WEBHOOK_SECRET`        | yes            | **never**          | Shared secret authorizing `/api/webhooks/wordpress`. Generate long random values, different per environment.                      | Coolify runtime secret **and** the WordPress webhook plugin config.               |
+| `CONTENT_SYNC_SECRET`             | yes            | **never**          | Shared secret for the admin backfill/status routes `/api/admin/content-sync/*` and `scripts/backfill-content-index.ts`.           | Coolify runtime secret; locally in `.env.local` when running the backfill script. |
+| `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY` | no (deferred)  | yes                | Paystack checkout — monetization phase, not yet wired.                                                                            | Leave unset until that phase.                                                     |
+| `PAYSTACK_SECRET_KEY`             | no (deferred)  | **never**          | Paystack server verification — deferred.                                                                                          | Leave unset until that phase.                                                     |
 
 Optional runtime knob not in `.env.example`: `LOG_LEVEL`
 (`debug|info|warn|error|silent`) tunes `lib/log.ts`; production defaults to
@@ -94,7 +90,7 @@ supabase db push
 
 After the schema is in place:
 
-1. Copy the project URL + anon key + service-role key into Vercel.
+1. Copy the project URL + anon key + service-role key into Coolify.
 2. Backfill the content index so search/most-read/sitemaps have data:
    ```bash
    CONTENT_SYNC_SECRET=<secret> pnpm content-sync:backfill -- --base-url https://<your-domain>
@@ -197,9 +193,9 @@ to `https://<your-domain>/api/webhooks/wordpress`, authenticated either way:
 
 ## 6. Preview / production flow
 
-- Every PR branch → Vercel builds a Preview deployment with Preview-scoped env vars.
-- Merge to `main` → CI runs again and Vercel promotes a Production deployment.
-- Rollback: Vercel Dashboard → Deployments → Promote to Production on a previous good build.
+- Every pull request runs CI without changing production.
+- Merge to `main` runs CI again; the `deploy-coolify` job queues production only after every gate passes.
+- Rollback: Coolify → Deployments → select a previous successful image and roll it back.
 - The Playwright suite can also smoke-test a live deployment:
   ```bash
   PLAYWRIGHT_SKIP_WEB_SERVER=1 PLAYWRIGHT_BASE_URL=https://<preview-url> pnpm test:e2e
@@ -207,7 +203,7 @@ to `https://<your-domain>/api/webhooks/wordpress`, authenticated either way:
 
 ## 7. Known build warnings (accepted)
 
-Two non-blocking warnings appear in the Vercel / `next build` logs. Both are
+Two non-blocking warnings appear in the Coolify / `next build` logs. Both are
 known and accepted (NOA-120) — they do not fail the build or affect runtime:
 
 1. **Edge Runtime — Supabase SSR in middleware.** `middleware.ts` uses
@@ -219,18 +215,18 @@ known and accepted (NOA-120) — they do not fail the build or affect runtime:
    middleware stays on the Edge runtime deliberately (session refresh must run
    at the edge on every request); we do not adopt the experimental Node.js
    middleware runtime solely to silence a benign warning.
-2. **`next.config.ts` TypeScript bootstrap.** Vercel installs TypeScript to load
+2. **`next.config.ts` TypeScript bootstrap.** The production image keeps TypeScript to load
    the TS-authored `next.config.ts`, emitting a one-line bootstrap note.
    Migrating to `next.config.mjs` was tried (PR #1475) and broke `@/` path-alias
    resolution under the production install mode, so it was reverted. The `.ts`
    config is kept; the note is accepted until alias resolution can first be
-   proven in a Vercel preview.
+   proven in a pull-request build.
 
 ## 8. Deferred: Paystack & subscriptions
 
 Payments/subscriptions are not part of this phase. The env vars are reserved in
 `.env.example`, and the CSP/Permissions-Policy entries they need were deliberately
-removed from `vercel.json`. When the monetization epic starts: set both Paystack
-keys in Vercel, re-add `https://api.paystack.co` to `connect-src` and
+removed from the application CSP. When the monetization epic starts: set both Paystack
+keys in Coolify, re-add `https://api.paystack.co` to `connect-src` and
 `https://checkout.paystack.com` to `form-action`, and change `payment=()` to
 `payment=(self)`.

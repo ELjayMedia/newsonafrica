@@ -52,16 +52,16 @@ export default function PrivacyPolicyPage() {
             address and the page or campaign you signed up from.
           </li>
           <li>
-            <span className="font-semibold">Commercial enquiries.</span> If you ask about advertising
-            or partnerships, we store the business contact details and campaign brief you submit so
-            our commercial team can respond and manage the opportunity.
+            <span className="font-semibold">Commercial enquiries.</span> If you ask about
+            advertising or partnerships, we store the business contact details and campaign brief
+            you submit so our commercial team can respond and manage the opportunity.
           </li>
           <li>
             <span className="font-semibold">Audience measurement.</span> We record first-party page
             views using the page path, country edition, coarse device class, external referrer
-            hostname and a random browser-session identifier. We do not store query strings,
-            account identifiers, email addresses, full referrer URLs or raw IP addresses in the
-            audience analytics table.
+            hostname and a random browser-session identifier. We do not store query strings, account
+            identifiers, email addresses, full referrer URLs or raw IP addresses in the audience
+            analytics table.
           </li>
           <li>
             <span className="font-semibold">Technical data.</span> Standard server and security logs
@@ -95,8 +95,8 @@ export default function PrivacyPolicyPage() {
           Your data is stored with our infrastructure providers, who process it on our behalf under
           their own security and privacy commitments:{" "}
           <span className="font-semibold">Supabase</span> (database, authentication, and image
-          storage) and <span className="font-semibold">Vercel</span> (application hosting). Article
-          content is managed in our WordPress content system.
+          storage) and our self-hosted <span className="font-semibold">Coolify</span> platform
+          (application hosting). Article content is managed in our WordPress content system.
         </p>
         <p className="body-md text-foreground">
           We do not sell your personal information. We share it only with these service providers as
