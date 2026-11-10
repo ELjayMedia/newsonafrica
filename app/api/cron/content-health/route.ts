@@ -7,10 +7,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * Vercel Cron: content-index health report (NOA-140 / NOA-191).
+ * Coolify scheduled task: content-index health report (NOA-140 / NOA-191).
  *
  * A non-2xx response is deliberate when the WordPress mirror is stale or the
- * source cannot be checked, so Vercel monitoring cannot treat an old
+ * source cannot be checked, so production monitoring cannot treat an old
  * "completed" cursor as healthy.
  */
 export async function GET(request: Request) {
@@ -28,10 +28,7 @@ export async function GET(request: Request) {
   ]);
 
   if (healthError) {
-    return NextResponse.json(
-      { ok: false, error: healthError.message },
-      { status: 500 },
-    );
+    return NextResponse.json({ ok: false, error: healthError.message }, { status: 500 });
   }
 
   const degraded = freshness.summary.stale > 0 || freshness.summary.sourceUnavailable > 0;

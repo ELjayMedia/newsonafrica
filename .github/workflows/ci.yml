@@ -4,8 +4,8 @@
 #   checks — typecheck, lint, unit tests + coverage thresholds, production
 #            build. Build/tests run against dummy env vars (no live Supabase
 #            or WordPress is ever contacted in CI; lib/env.ts only validates
-#            shape). Deploys themselves are done by Vercel's Git integration,
-#            not from here — see docs/deployment.md.
+#            shape). A successful main-branch run queues the production
+#            deployment in Coolify — see docs/deployment.md.
 #   e2e    — Playwright smoke suite in its own job so browser install and the
 #            production build+serve don't slow the fast feedback loop; the
 #            HTML report uploads on failure.
@@ -42,18 +42,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
       - name: Test release and listing tools without credentials
         run: node --test scripts/*.test.mjs
       - name: Validate Play Store listing metadata
         run: node scripts/publish-google-play-listing.mjs
       - uses: actions/setup-java@v4
         with:
-          java-version: '17'
-          distribution: 'temurin'
+          java-version: "17"
+          distribution: "temurin"
       - uses: android-actions/setup-android@v3
         with:
-          packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
+          packages: "platform-tools platforms;android-36 build-tools;35.0.0"
       - name: Build debug APK without release credentials
         working-directory: android
         run: bash ./gradlew assembleDebug --no-daemon --stacktrace
@@ -133,3 +133,24 @@ jobs:
           path: playwright-report
           if-no-files-found: warn
 
+  deploy-coolify:
+    name: Deploy production to Coolify
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [android, checks, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Queue News on Africa deployment
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
+        run: |
+          test -n "$COOLIFY_TOKEN"
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors \
+            --request POST \
+            --url "https://coolify.eljaymedia.com/api/v1/deploy" \
+            --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            --header "Content-Type: application/json" \
+            --data '{"uuid":"bpn1vrazffmj4zfbfpb8vkft","force":false}'

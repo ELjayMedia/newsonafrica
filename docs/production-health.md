@@ -6,13 +6,13 @@ and per-edition sync status have dedicated tooling (below).
 
 ## At a glance
 
-| Surface                      | Where to check                                                                      |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| Deployment                   | Vercel dashboard → project `newsonafrica` → Deployments (latest `main` = **Ready**) |
-| Content sync / search        | `/account/admin/content-sync` (admin UI) or `GET /api/admin/content-sync/status`    |
-| Content-index depth/coverage | "Content-index health report" query in [deployment.md](./deployment.md) §4          |
-| Supabase project + advisors  | Supabase dashboard, or MCP `get_project` / `get_advisors`                           |
-| Reader interaction           | the SQL in §5 below                                                                 |
+| Surface                      | Where to check                                                                   |
+| ---------------------------- | -------------------------------------------------------------------------------- |
+| Deployment                   | Coolify → application `newsonafrica` → Deployments (latest `main` = **Healthy**) |
+| Content sync / search        | `/account/admin/content-sync` (admin UI) or `GET /api/admin/content-sync/status` |
+| Content-index depth/coverage | "Content-index health report" query in [deployment.md](./deployment.md) §4       |
+| Supabase project + advisors  | Supabase dashboard, or MCP `get_project` / `get_advisors`                        |
+| Reader interaction           | the SQL in §5 below                                                              |
 
 ## 1. Deployment
 
@@ -71,7 +71,7 @@ moderation backlog (see `/account/admin/comments`).
 
 - `SUPABASE_SERVICE_ROLE_KEY` never in a client bundle; only the anon key is
   client-side.
-- Vercel env vars match [deployment.md](./deployment.md) §3.
+- Coolify env vars match [deployment.md](./deployment.md) §3.
 - No WordPress admin/API credentials in public code.
 
 ## Reporting rhythm
@@ -81,7 +81,7 @@ moderation backlog (see `/account/admin/comments`).
 - **After every production deploy:** the §2 route smoke check + a §4 sync/search check.
 
 Record results in a shared tracking doc. If this becomes repetitive, a scheduled
-job (Vercel Cron / GitHub Action) could post the §4 report + §5 counts + advisor
+job (Coolify scheduled task / GitHub Action) could post the §4 report + §5 counts + advisor
 status to Slack — worth a follow-up automation ticket.
 
 ## Baseline snapshot — 2026-07-10 (pre-launch)
