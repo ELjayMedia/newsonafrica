@@ -21,7 +21,12 @@ export function RailLayout({ children, rail, className }: RailLayoutProps) {
   }
 
   return (
-    <div className={cn("grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px]", className)}>
+    <div
+      className={cn(
+        "grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-4",
+        className,
+      )}
+    >
       {/* Desktop: the main column is its own white panel on the grey canvas,
           semi-detached from the rail's panels (News24-style). */}
       <div className="min-w-0 lg:self-start lg:border lg:border-noa-hairline lg:bg-noa-white lg:p-8">

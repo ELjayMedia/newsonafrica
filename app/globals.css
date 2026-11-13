@@ -425,6 +425,16 @@
       font-size: 1.1875rem;
     }
   }
+  /* Desktop (lg+): article headline and body at two-thirds of their tablet
+     size, sized for the narrower 970px column. */
+  @media (min-width: 1024px) {
+    .display-article {
+      font-size: 1.6667rem;
+    }
+    .prose-article {
+      font-size: 0.7917rem;
+    }
+  }
   /* Subheads in the display face so they read as structure, with less space
      below than above to bind them to the paragraph they introduce. */
   .prose-article h2 {
