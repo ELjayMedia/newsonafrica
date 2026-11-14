@@ -2,7 +2,9 @@
  * PWA icon generator (NOA-109).
  *
  * Renders the brand SVG sources in `public/icons/` to the PNG sizes required
- * for installability (manifest icons, maskable icons, Apple touch icon).
+ * for installability (manifest icons, maskable icons, Apple touch icon), plus
+ * the multi-size `public/favicon.ico` that browsers, Safari tabs and search
+ * engines request at the site root.
  *
  * Usage: node scripts/generate-pwa-icons.mjs
  *
@@ -12,7 +14,7 @@
  */
 
 import { createRequire } from "node:module";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -45,3 +47,35 @@ for (const [source, output, size, flatten] of targets) {
   await pipeline.png().toFile(path.join(iconsDir, output));
   console.log(`generated public/icons/${output} (${size}x${size})`);
 }
+
+// favicon.ico — 16/32/48 px PNG frames in one ICO container (PNG-in-ICO is
+// supported by every current browser). Built by hand so no extra dependency
+// is needed: 6-byte ICONDIR header, one 16-byte ICONDIRENTRY per frame, then
+// the PNG payloads.
+const faviconSizes = [16, 32, 48];
+const faviconSvg = await readFile(path.join(iconsDir, "icon.svg"));
+const frames = await Promise.all(
+  faviconSizes.map((size) =>
+    sharp(faviconSvg, { density: 300 }).resize(size, size).png().toBuffer(),
+  ),
+);
+const header = Buffer.alloc(6 + 16 * frames.length);
+header.writeUInt16LE(0, 0); // reserved
+header.writeUInt16LE(1, 2); // type: icon
+header.writeUInt16LE(frames.length, 4);
+let offset = header.length;
+frames.forEach((frame, i) => {
+  const entry = 6 + 16 * i;
+  const size = faviconSizes[i];
+  header.writeUInt8(size, entry); // width
+  header.writeUInt8(size, entry + 1); // height
+  header.writeUInt8(0, entry + 2); // palette colours
+  header.writeUInt8(0, entry + 3); // reserved
+  header.writeUInt16LE(1, entry + 4); // colour planes
+  header.writeUInt16LE(32, entry + 6); // bits per pixel
+  header.writeUInt32LE(frame.length, entry + 8);
+  header.writeUInt32LE(offset, entry + 12);
+  offset += frame.length;
+});
+await writeFile(path.join(root, "public", "favicon.ico"), Buffer.concat([header, ...frames]));
+console.log(`generated public/favicon.ico (${faviconSizes.join("/")})`);

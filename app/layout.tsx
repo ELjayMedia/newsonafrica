@@ -60,7 +60,15 @@ export const metadata: Metadata = {
   // PWA / installability (NOA-109). The manifest link itself comes from
   // `app/manifest.ts`; these cover favicons and the iOS home-screen icon.
   icons: {
-    icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }],
+    // .ico first for browsers and crawlers that ignore SVG (Safari tabs,
+    // Google search results); SVG and PNGs for everything else.
+    icon: [
+      { url: "/favicon.ico", sizes: "16x16 32x32 48x48" },
+      { url: "/icons/icon.svg", type: "image/svg+xml", sizes: "any" },
+      { url: "/icons/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/favicon.ico",
     apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
