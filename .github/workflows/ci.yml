@@ -147,10 +147,19 @@ jobs:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_DEPLOY_TOKEN }}
         run: |
           test -n "$COOLIFY_TOKEN"
-          curl --fail-with-body --silent --show-error \
+          # /api/v1/deploy bypasses Cloudflare Access and is authenticated by
+          # the Coolify token. Redirects are refused so an Access login page
+          # can never pass as success, and the job fails unless Coolify
+          # reports a queued deployment.
+          response="$(curl --fail-with-body --silent --show-error \
+            --location --max-redirs 0 \
             --retry 3 --retry-all-errors \
             --request POST \
             --url "https://coolify.eljaymedia.com/api/v1/deploy" \
             --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
             --header "Content-Type: application/json" \
-            --data '{"uuid":"bpn1vrazffmj4zfbfpb8vkft","force":false}'
+            --data '{"uuid":"bpn1vrazffmj4zfbfpb8vkft","force":false}')"
+          deployment_uuid="$(printf '%s' "$response" | jq -er '.deployments[0].deployment_uuid')" \
+            || { echo "::error::Coolify did not queue a deployment: ${response}"; exit 1; }
+          echo "Queued Coolify deployment ${deployment_uuid} for ${GITHUB_SHA}"
+          echo "Coolify deployment \`${deployment_uuid}\` queued for \`${GITHUB_SHA::7}\`" >> "$GITHUB_STEP_SUMMARY"
