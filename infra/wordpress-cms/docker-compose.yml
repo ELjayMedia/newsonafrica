@@ -1,0 +1,154 @@
+# News On Africa headless WordPress (Coolify docker-compose application).
+# Secrets are NOT in this file: WORDPRESS_DB_PASSWORD and WORDPRESS_*_KEY/SALT
+# are Coolify environment variables. MySQL is a separate Coolify-native
+# resource (noa-wp-mysql) reached over the internal "coolify" network.
+services:
+  wordpress:
+    image: wordpress:7.1.4-php8.4-apache@sha256:63dbbdf2c9ea29a2e4f417c0d4e7c4b821725d115127f70838dbbc5051ee4db0
+    restart: unless-stopped
+    environment:
+      WORDPRESS_DB_HOST: ${WORDPRESS_DB_HOST}
+      WORDPRESS_DB_NAME: ${WORDPRESS_DB_NAME:-newsonafrica_wp}
+      WORDPRESS_DB_USER: ${WORDPRESS_DB_USER:-noa_wp}
+      WORDPRESS_DB_PASSWORD: ${WORDPRESS_DB_PASSWORD}
+      WORDPRESS_DB_CHARSET: utf8mb4
+      WORDPRESS_TABLE_PREFIX: ${WORDPRESS_TABLE_PREFIX:-wp_}
+      WORDPRESS_AUTH_KEY: ${WORDPRESS_AUTH_KEY}
+      WORDPRESS_SECURE_AUTH_KEY: ${WORDPRESS_SECURE_AUTH_KEY}
+      WORDPRESS_LOGGED_IN_KEY: ${WORDPRESS_LOGGED_IN_KEY}
+      WORDPRESS_NONCE_KEY: ${WORDPRESS_NONCE_KEY}
+      WORDPRESS_AUTH_SALT: ${WORDPRESS_AUTH_SALT}
+      WORDPRESS_SECURE_AUTH_SALT: ${WORDPRESS_SECURE_AUTH_SALT}
+      WORDPRESS_LOGGED_IN_SALT: ${WORDPRESS_LOGGED_IN_SALT}
+      WORDPRESS_NONCE_SALT: ${WORDPRESS_NONCE_SALT}
+      NOA_CMS_URL: ${NOA_CMS_URL:-https://cms.newsonafrica.com}
+      # R2 media offload (Advanced Media Offloader reads these via wp-config constants)
+      NOA_R2_ACCOUNT_ID: ${NOA_R2_ACCOUNT_ID:-}
+      NOA_R2_BUCKET: ${NOA_R2_BUCKET:-noa-media-prod}
+      NOA_R2_ACCESS_KEY_ID: ${NOA_R2_ACCESS_KEY_ID:-}
+      NOA_R2_SECRET_ACCESS_KEY: ${NOA_R2_SECRET_ACCESS_KEY:-}
+      NOA_R2_PUBLIC_DOMAIN: ${NOA_R2_PUBLIC_DOMAIN:-https://media.newsonafrica.com}
+      WORDPRESS_CONFIG_EXTRA: |
+        /* Public traffic always arrives over HTTPS at Cloudflare (tunnel -> Traefik -> :80). */
+        if ((isset($$_SERVER['HTTP_X_FORWARDED_PROTO']) && $$_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+            || (isset($$_SERVER['HTTP_CF_VISITOR']) && strpos($$_SERVER['HTTP_CF_VISITOR'], 'https') !== false)) {
+          $$_SERVER['HTTPS'] = 'on';
+        }
+        define('WP_HOME', getenv('NOA_CMS_URL'));
+        define('WP_SITEURL', getenv('NOA_CMS_URL'));
+        define('FORCE_SSL_ADMIN', true);
+        define('DISALLOW_FILE_EDIT', true);
+        define('DISABLE_WP_CRON', true);
+        define('WP_ENVIRONMENT_TYPE', 'production');
+        define('WP_MEMORY_LIMIT', '256M');
+        define('WP_POST_REVISIONS', 25);
+        define('AUTOMATIC_UPDATER_DISABLED', false);
+        define('WP_AUTO_UPDATE_CORE', 'minor');
+        /* Advanced Media Offloader: credentials from env, never stored in the DB. */
+        if (getenv('NOA_R2_ACCESS_KEY_ID') && getenv('NOA_R2_SECRET_ACCESS_KEY') && getenv('NOA_R2_ACCOUNT_ID')) {
+          define('ADVMO_CLOUDFLARE_R2_KEY', getenv('NOA_R2_ACCESS_KEY_ID'));
+          define('ADVMO_CLOUDFLARE_R2_SECRET', getenv('NOA_R2_SECRET_ACCESS_KEY'));
+          define('ADVMO_CLOUDFLARE_R2_ENDPOINT', 'https://' . getenv('NOA_R2_ACCOUNT_ID') . '.r2.cloudflarestorage.com');
+          define('ADVMO_CLOUDFLARE_R2_REGION', 'auto');
+          define('ADVMO_CLOUDFLARE_R2_BUCKET', getenv('NOA_R2_BUCKET') ?: 'noa-media-prod');
+          define('ADVMO_CLOUDFLARE_R2_DOMAIN', getenv('NOA_R2_PUBLIC_DOMAIN') ?: 'https://media.newsonafrica.com');
+        }
+    volumes:
+      - noa-wp-content:/var/www/html/wp-content
+      - type: bind
+        source: ./php/noa.ini
+        target: /usr/local/etc/php/conf.d/zz-noa.ini
+        content: |
+          memory_limit = 256M
+          upload_max_filesize = 64M
+          post_max_size = 64M
+          max_execution_time = 120
+          max_input_vars = 3000
+          expose_php = Off
+          session.cookie_secure = 1
+          session.cookie_httponly = 1
+          session.cookie_samesite = Lax
+      - type: bind
+        source: ./apache/noa.conf
+        target: /etc/apache2/conf-enabled/zz-noa.conf
+        content: |
+          ServerTokens Prod
+          ServerSignature Off
+          <IfModule mpm_prefork_module>
+            StartServers 2
+            MinSpareServers 2
+            MaxSpareServers 4
+            MaxRequestWorkers 12
+            MaxConnectionsPerChild 500
+          </IfModule>
+          <Files "xmlrpc.php">
+            Require all denied
+          </Files>
+          <FilesMatch "^(wp-config\.php|readme\.html|license\.txt)$">
+            Require all denied
+          </FilesMatch>
+      - type: bind
+        source: ./mu-plugins/noa-hardening.php
+        target: /var/www/html/wp-content/mu-plugins/noa-hardening.php
+        content: |
+          <?php
+          /**
+           * Plugin Name: NOA headless hardening
+           * Description: noindex, XML-RPC off, login throttling, private REST surfaces. Managed in Coolify compose.
+           */
+          if (!defined('ABSPATH')) { exit; }
+          add_filter('xmlrpc_enabled', '__return_false');
+          add_filter('wp_headers', function ($h) { unset($h['X-Pingback']); return $h; });
+          add_action('send_headers', function () { header('X-Robots-Tag: noindex, nofollow', true); });
+          add_filter('rest_post_dispatch', function ($r) { if ($r instanceof WP_REST_Response) { $r->header('X-Robots-Tag', 'noindex, nofollow'); } return $r; });
+          add_filter('pre_option_blog_public', function () { return '0'; });
+          function noa_client_ip() {
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+            if (!empty($_SERVER['HTTP_CF_CONNECTING_IP']) && !filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+              $ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+            }
+            return $ip;
+          }
+          /* Max 5 failed logins per IP per 15 minutes (covers wp-login, REST app passwords). */
+          add_filter('authenticate', function ($user, $username) {
+            if (empty($username)) { return $user; }
+            if ((int) get_transient('noa_lf_' . md5(noa_client_ip())) >= 5) {
+              return new WP_Error('too_many_attempts', __('Too many failed login attempts. Try again in 15 minutes.'));
+            }
+            return $user;
+          }, 30, 2);
+          add_action('wp_login_failed', function () {
+            $k = 'noa_lf_' . md5(noa_client_ip());
+            set_transient($k, (int) get_transient($k) + 1, 15 * MINUTE_IN_SECONDS);
+          });
+          /* Same message for unknown user and wrong password (no username probing via the login form). */
+          add_filter('login_errors', function ($msg) {
+            return (strpos($msg, 'Too many failed') !== false) ? $msg : __('<strong>Error:</strong> The username or password is incorrect.');
+          });
+          /* REST /wp/v2/users stays core-default (only authors with published posts, as bylines need). */
+    healthcheck:
+      test: ["CMD-SHELL", "code=$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/wp-login.php); [ \"$$code\" = 200 ] || [ \"$$code\" = 302 ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    mem_limit: 768m
+
+  wp-cron:
+    # Real cron for scheduled publishing: WP-Cron is disabled for visitors.
+    image: wordpress:7.1.4-php8.4-apache@sha256:63dbbdf2c9ea29a2e4f417c0d4e7c4b821725d115127f70838dbbc5051ee4db0
+    restart: unless-stopped
+    depends_on:
+      wordpress:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "while true; do curl -fsS -o /dev/null --max-time 110 'http://wordpress/wp-cron.php?doing_wp_cron' || echo \"wp-cron tick failed $$(date -u +%FT%TZ)\"; sleep 60; done"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null --max-time 10 http://wordpress/wp-login.php || curl -s -o /dev/null -w '%{http_code}' http://wordpress/wp-login.php | grep -q 302"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+    mem_limit: 64m
+    exclude_from_hc: true
+
+volumes:
+  noa-wp-content:
