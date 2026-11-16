@@ -1,4 +1,4 @@
-# News On Africa headless WordPress (Coolify docker-compose application).
+# News On Africa headless WordPress multisite (subdirectory network; Coolify docker-compose service).
 # Secrets are NOT in this file: WORDPRESS_DB_PASSWORD and WORDPRESS_*_KEY/SALT
 # are Coolify environment variables. MySQL is a separate Coolify-native
 # resource (noa-wp-mysql) reached over the internal "coolify" network.
@@ -34,8 +34,15 @@ services:
             || (isset($$_SERVER['HTTP_CF_VISITOR']) && strpos($$_SERVER['HTTP_CF_VISITOR'], 'https') !== false)) {
           $$_SERVER['HTTPS'] = 'on';
         }
-        define('WP_HOME', getenv('NOA_CMS_URL'));
-        define('WP_SITEURL', getenv('NOA_CMS_URL'));
+        /* Subdirectory multisite network (editions /sz /za /ng). WP_HOME/WP_SITEURL must NOT be set:
+           in a network they would force every edition onto the main site's URL. */
+        define('WP_ALLOW_MULTISITE', true);
+        define('MULTISITE', true);
+        define('SUBDOMAIN_INSTALL', false);
+        define('DOMAIN_CURRENT_SITE', parse_url(getenv('NOA_CMS_URL') ?: 'https://cms.newsonafrica.com', PHP_URL_HOST));
+        define('PATH_CURRENT_SITE', '/');
+        define('SITE_ID_CURRENT_SITE', 1);
+        define('BLOG_ID_CURRENT_SITE', 1);
         define('FORCE_SSL_ADMIN', true);
         define('DISALLOW_FILE_EDIT', true);
         define('DISABLE_WP_CRON', true);
@@ -81,6 +88,24 @@ services:
             MaxRequestWorkers 12
             MaxConnectionsPerChild 500
           </IfModule>
+          # Multisite (subdirectory) rewrites live here; .htaccess in the docroot is ignored
+          # because core files are re-copied from the image on every deploy.
+          <Directory "/var/www/html">
+            AllowOverride None
+            Options FollowSymLinks
+            Require all granted
+            RewriteEngine On
+            RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+            RewriteBase /
+            RewriteRule ^index\.php$ - [L]
+            RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ https://%{HTTP_HOST}/$1wp-admin/ [R=301,L]
+            RewriteCond %{REQUEST_FILENAME} -f [OR]
+            RewriteCond %{REQUEST_FILENAME} -d
+            RewriteRule ^ - [L]
+            RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
+            RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
+            RewriteRule . index.php [L]
+          </Directory>
           <Files "xmlrpc.php">
             Require all denied
           </Files>
@@ -109,17 +134,17 @@ services:
             }
             return $ip;
           }
-          /* Max 5 failed logins per IP per 15 minutes (covers wp-login, REST app passwords). */
+          /* Max 5 failed logins per IP per 15 minutes, network-wide (covers wp-login, REST app passwords). */
           add_filter('authenticate', function ($user, $username) {
             if (empty($username)) { return $user; }
-            if ((int) get_transient('noa_lf_' . md5(noa_client_ip())) >= 5) {
+            if ((int) get_site_transient('noa_lf_' . md5(noa_client_ip())) >= 5) {
               return new WP_Error('too_many_attempts', __('Too many failed login attempts. Try again in 15 minutes.'));
             }
             return $user;
           }, 30, 2);
           add_action('wp_login_failed', function () {
             $k = 'noa_lf_' . md5(noa_client_ip());
-            set_transient($k, (int) get_transient($k) + 1, 15 * MINUTE_IN_SECONDS);
+            set_site_transient($k, (int) get_site_transient($k) + 1, 15 * MINUTE_IN_SECONDS);
           });
           /* Same message for unknown user and wrong password (no username probing via the login form). */
           add_filter('login_errors', function ($msg) {
@@ -127,7 +152,7 @@ services:
           });
           /* REST /wp/v2/users stays core-default (only authors with published posts, as bylines need). */
     healthcheck:
-      test: ["CMD-SHELL", "code=$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1/wp-login.php); [ \"$$code\" = 200 ] || [ \"$$code\" = 302 ]"]
+      test: ["CMD-SHELL", "code=$$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: cms.newsonafrica.com' http://127.0.0.1/wp-login.php); [ \"$$code\" = 200 ] || [ \"$$code\" = 302 ]"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -141,9 +166,13 @@ services:
     depends_on:
       wordpress:
         condition: service_healthy
-    entrypoint: ["sh", "-c", "while true; do curl -fsS -o /dev/null --max-time 110 'http://wordpress/wp-cron.php?doing_wp_cron' || echo \"wp-cron tick failed $$(date -u +%FT%TZ)\"; sleep 60; done"]
+    environment:
+      NOA_CRON_HOST: ${NOA_CRON_HOST:-cms.newsonafrica.com}
+      # One WP-Cron per network site; add a path here when an edition is created.
+      NOA_CRON_PATHS: ${NOA_CRON_PATHS:-/ /sz/ /za/ /ng/}
+    entrypoint: ["sh", "-c", "while true; do for p in $$NOA_CRON_PATHS; do curl -fsS -o /dev/null --max-time 110 -H \"Host: $$NOA_CRON_HOST\" -H 'X-Forwarded-Proto: https' \"http://wordpress$${p}wp-cron.php?doing_wp_cron\" || echo \"wp-cron tick failed $$p $$(date -u +%FT%TZ)\"; done; sleep 60; done"]
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -o /dev/null --max-time 10 http://wordpress/wp-login.php || curl -s -o /dev/null -w '%{http_code}' http://wordpress/wp-login.php | grep -q 302"]
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Host: cms.newsonafrica.com' http://wordpress/wp-login.php | grep -qE '^(200|302)$$'"]
       interval: 60s
       timeout: 15s
       retries: 3
