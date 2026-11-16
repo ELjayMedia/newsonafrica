@@ -96,7 +96,7 @@ Volumes:
 - `mysql-data-pilolo1nw5krlso5azw5u9hl` → `/var/lib/mysql`.
 - WordPress core is **not** persisted. It comes from the image on every deploy, and `wp-config.php` is generated from env.
 
-## 5. Cloudflare R2 (pending: owner action)
+## 5. Cloudflare R2 (configured 2026-11-16)
 
 The VM's Cloudflare token has no R2 permissions, and the only R2 S3 key on the box is scoped to another bucket, so these are manual steps:
 
@@ -119,7 +119,7 @@ Database backups do **not** go to this bucket (see section 6).
 |---|---|---|---|
 | MySQL `newsonafrica_wp` | Coolify scheduled backup `xcfs5spxy0iabnjd5exclxtz`, daily 01:15, 7 local / 30 on S3 | Coolify S3 storage "Cloudflare R2 Backups" (private bucket `eljaymedia-coolify-backups`) | 2026-11-15: dump uploaded (`s3_uploaded=t`), restored into a disposable MySQL with `restore-test.sh`: tables, options, users and posts match |
 | `wp-content` + `secrets/newsonafrica` | `backup_runtime_data.py` source `noa-wp-content` (nightly 02:47, GPG-encrypted, 7 days), then `backup-offhost` (03:30) | yes (existing off-host job) | 2026-11-15: test run ok (23.6 MB → 10.5 MB encrypted) |
-| Media | R2 `noa-media-prod`, with local copies retained in `wp-content` | n/a | pending R2 |
+| Media | R2 `noa-media-prod`, with local copies retained in `wp-content` | n/a | 2026-11-16: offload and serve verified |
 | Compose / file storages | Coolify DB dump (`coolify-db.dump` in the runtime-data backup) + this repo | yes | |
 
 Restoring MySQL:
@@ -160,13 +160,13 @@ Nothing pre-existing was changed. To remove everything (see `/srv/eljaymedia/bac
 | 2 | WP ↔ MySQL over the internal network (utf8mb4) | PASS |
 | 3 | Admin login over HTTPS, secure cookies, dashboard 200 | PASS |
 | 4 | Article created and published (category, tag, featured image) | PASS |
-| 5 | Image upload through the WP media pipeline (5 sizes + srcset) | PASS (stored locally) |
-| 6 | Image and sizes stored in R2 | **BLOCKED**: no R2 bucket or credentials. The offloader failed safely and kept local files |
-| 7 | Public URL on `media.newsonafrica.com` | **BLOCKED** (R2) |
-| 8 | Image over HTTPS | PASS for the local URL, BLOCKED for R2 |
-| 9 | PDF upload and serving | PASS locally (`application/pdf`), BLOCKED for R2 |
+| 5 | Image upload through the WP media pipeline (5 sizes + srcset) | PASS |
+| 6 | Image and sizes stored in R2 | PASS (2026-11-16, all 4 sites; before credentials existed the offloader failed safe and kept local files) |
+| 7 | Public URL on `media.newsonafrica.com` | PASS (REST `source_url`, GraphQL `sourceUrl`/`srcSet`) |
+| 8 | Image over HTTPS | PASS (28/28 objects 200 with the right content type) |
+| 9 | PDF upload and serving | PASS (`application/pdf` from R2 on every site) |
 | 10 | REST: `/wp-json/`, posts, categories, tags, media; `_embed` featured media and author; drafts/future → 401 | PASS |
-| 11 | Media valid after a WordPress redeploy (container replaced, upload hash identical) | PASS for local, pending R2 |
+| 11 | Media valid after a WordPress redeploy (container replaced) | PASS (all R2 URLs still 200) |
 | 12 | MySQL data persists across restart | PASS |
 | 13 | Off-server DB backup | PASS |
 | 14 | DB restore into a disposable instance | PASS |
@@ -188,6 +188,12 @@ Multisite conversion (2026-11-16, backup `/srv/eljaymedia/backups/noa-multisite-
 | Edition isolation (the `/sz` post is not on `/` or `/za`) | PASS |
 | Scheduled post on `/za` published by the cron sidecar | PASS |
 | Offloader without R2 credentials fails safe (local copy kept) | PASS |
+
+R2 (2026-11-16, after `noa-r2-apply.sh`): on each site an image (original + 5 sizes) and a PDF were offloaded to
+`editions/<main|sz|za|ng>/YYYY/MM/<version>/…`. All were served over HTTPS from `media.newsonafrica.com`, local copies were kept,
+and the URLs survived a container replacement. Test posts were deleted in WP and the 28 test objects were deleted from R2 (bucket empty).
+Note: the key includes the offloader's object-version folder, not `sites/<id>`. Media responses are `cf-cache-status: DYNAMIC`
+(not edge-cached). Add a Cache Rule for `media.newsonafrica.com` (eligible for cache, long edge TTL), or remove the zone rule that bypasses it.
 
 ## 10. Source site: what the migration must handle
 
