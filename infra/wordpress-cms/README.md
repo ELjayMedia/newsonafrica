@@ -1,7 +1,8 @@
 # News On Africa headless WordPress CMS (`cms.newsonafrica.com`)
 
 The new home for News On Africa editorial content: a headless WordPress on the EljayMedia VM (Coolify),
-with a private MySQL and Cloudflare R2 for media. It was deployed on 2026-11-15 and holds **no production content yet**.
+with a private MySQL and Cloudflare R2 for media. It was deployed on 2026-11-15 and converted to a **subdirectory multisite network**
+on 2026-11-16 to mirror the source (`/` main, `/sz` = blog 2, `/za` = 3, `/ng` = 4). It holds **no production content yet**.
 The live sources are still the cPanel multisite at `newsonafrica.com` (164.160.91.47) and the
 Next.js reader at `app.newsonafrica.com`. Neither has been changed.
 
@@ -40,8 +41,13 @@ browser ─HTTPS─> Cloudflare (proxied CNAME cms → tunnel 38a98bd6) ─> clo
 - Tunnel ingress (remote-managed, v14): `cms.newsonafrica.com → http://coolify-proxy:80`.
 - The Coolify FQDN **must be `http://cms.newsonafrica.com`**. TLS ends at Cloudflare. An `https://` FQDN makes Traefik add
   `redirect-to-https` on the :80 router, and every request loops.
-- WordPress detects HTTPS from `CF-Visitor` / `X-Forwarded-Proto` (`WORDPRESS_CONFIG_EXTRA`), and `WP_HOME` / `WP_SITEURL` come from
-  `NOA_CMS_URL`. Admin cookies are `secure; HttpOnly`.
+- WordPress detects HTTPS from `CF-Visitor` / `X-Forwarded-Proto` (`WORDPRESS_CONFIG_EXTRA`). The network domain
+  (`DOMAIN_CURRENT_SITE`) comes from `NOA_CMS_URL`. `WP_HOME` / `WP_SITEURL` are deliberately **not** defined: in a network they
+  would force every edition onto the main site's URL. Admin cookies are `secure; HttpOnly`.
+- Multisite rewrites are in `apache/noa.conf` (`<Directory /var/www/html>`, `AllowOverride None`), not `.htaccess`, because core
+  files are re-copied from the image on every deploy.
+- Edition endpoints: `https://cms.newsonafrica.com/<cc>/wp-json/` and `https://cms.newsonafrica.com/<cc>/graphql`
+  (`<cc>` = `sz`, `za`, `ng`; the main site has no prefix). Network admin: `/wp-admin/network/`.
 - Cloudflare caching: HTML, admin and REST responses are `DYNAMIC` (not cached). Media should be cached from the R2 custom domain (section 5).
 - No MySQL port is published anywhere. Port 80 of WordPress is only reachable via Traefik on the `coolify` network.
 
@@ -59,14 +65,14 @@ Environment variables on the Coolify service (names only):
 | `NOA_R2_ACCOUNT_ID`, `NOA_R2_ACCESS_KEY_ID`, `NOA_R2_SECRET_ACCESS_KEY` | **empty until the owner creates the R2 token** |
 | `NOA_R2_BUCKET`, `NOA_R2_PUBLIC_DOMAIN` | `noa-media-prod`, `https://media.newsonafrica.com` |
 
-What `WORDPRESS_CONFIG_EXTRA` sets: `DISALLOW_FILE_EDIT`, `DISABLE_WP_CRON` (real cron runs in the sidecar), `FORCE_SSL_ADMIN`,
+What `WORDPRESS_CONFIG_EXTRA` sets: the multisite constants (`MULTISITE`, `SUBDOMAIN_INSTALL=false`, `DOMAIN_CURRENT_SITE`, …), `DISALLOW_FILE_EDIT`, `DISABLE_WP_CRON` (real cron runs in the sidecar), `FORCE_SSL_ADMIN`,
 `WP_ENVIRONMENT_TYPE=production`, `WP_MEMORY_LIMIT=256M`, `WP_POST_REVISIONS=25`, automatic minor core updates, and the
 `ADVMO_CLOUDFLARE_R2_*` constants. Those constants are defined only when all three R2 env vars are set, and they always override the DB.
 
 Inline config files in the compose (`content:` blocks):
 - `php/noa.ini`: 256M memory, 64M upload/post, `expose_php=Off`, secure session cookies.
-- `apache/noa.conf`: `MaxRequestWorkers 12`, denies `xmlrpc.php`, `wp-config.php`, `readme.html`, `license.txt`.
-- `mu-plugins/noa-hardening.php`: `noindex` on HTML and REST, `blog_public=0`, XML-RPC off, 5 failed logins per IP per 15 min
+- `apache/noa.conf`: multisite subdirectory rewrites, `MaxRequestWorkers 12`, denies `xmlrpc.php`, `wp-config.php`, `readme.html`, `license.txt`.
+- `mu-plugins/noa-hardening.php`: `noindex` on HTML and REST, `blog_public=0`, XML-RPC off, 5 failed logins per IP per 15 min network-wide
   (uses `CF-Connecting-IP`), and a generic login error.
 
 > **Coolify quirk:** Coolify strips `content:` blocks out of `docker_compose_raw` into *File Storage* records
@@ -74,15 +80,16 @@ Inline config files in the compose (`content:` blocks):
 > Coolify UI → service → Storages, or update the `LocalFileVolume` and call `saveStorageOnServer()`. Changing the compose
 > alone silently keeps the old file. Also, the `PATCH /services/{uuid}` API ignored `docker_compose_raw` in v4.7.5.
 
-Plugins (pinned, auto-update off):
+Plugins (pinned, auto-update off, **network-activated**):
 - `advanced-media-offloader` 4.7.3: R2 offload. Chosen because it explicitly supports R2, offloads all
   sizes and rewrites `srcset`, has bulk offload (`wp advmo offload`), per-file retry, and a path prefix. It was updated 2026-11-08 and is tested on WP 7.1.4.
 - `wp-graphql` 2.28.0: the reader app queries `/graphql` (84 call sites).
-- Theme: `twentytwentyfive` only (headless; no page builders). Akismet, Hello Dolly and the sample content were removed.
+- Theme: `twentytwentyfive` only (headless; no page builders). Sample content was removed. Akismet and Hello Dolly come back
+  (inactive) whenever the container is recreated, because the image entrypoint re-seeds missing bundled plugins into `wp-content`. They are harmless while inactive.
 
 Offloader policy (`advmo_settings`): `cloud_provider=cloudflare_r2`, `retention_policy=0` (**retain local files**),
-`mirror_delete=0` (**deleting in WP never deletes in R2**), `object_versioning=1`, `path_prefix=editions/main`.
-With multisite, uploads keep their `sites/<id>/` segment under the prefix, so editions cannot collide.
+`mirror_delete=0` (**deleting in WP never deletes in R2**), `object_versioning=1`. Settings are per site: `path_prefix` is
+`editions/main`, `editions/sz`, `editions/za`, `editions/ng`. Local uploads for editions live in `uploads/sites/<id>/`.
 
 Volumes:
 - `fv3fqo7fe0dryfdgho4xcceg_noa-wp-content` → `/var/www/html/wp-content` (plugins, themes, local media copies).
@@ -97,7 +104,9 @@ The VM's Cloudflare token has no R2 permissions, and the only R2 S3 key on the b
 2. Bucket → Settings → Custom Domains → add `media.newsonafrica.com` (Cloudflare creates the DNS record).
 3. Optional: CORS GET/HEAD from `https://app.newsonafrica.com` and `https://cms.newsonafrica.com`.
 4. Create an R2 API token: **Object Read & Write**, scoped to **`noa-media-prod` only**, with no TTL or with a reminder set.
-5. Put the values into the Coolify service env (`NOA_R2_ACCOUNT_ID`, `NOA_R2_ACCESS_KEY_ID`, `NOA_R2_SECRET_ACCESS_KEY`) and restart.
+5. Save the key ID and secret as root-only files `/srv/eljaymedia/secrets/newsonafrica/r2-access-key-id` and `r2-secret-access-key`
+   (via `read -rsp`, never in chat), then run `sudo /srv/eljaymedia/infra/scripts/noa-r2-apply.sh` (copy in this directory). It
+   validates the lengths, sets `NOA_R2_ACCOUNT_ID`/`NOA_R2_ACCESS_KEY_ID`/`NOA_R2_SECRET_ACCESS_KEY` in Coolify and restarts, printing only hashes.
 6. Optional hardening: a bucket lock rule (or lifecycle rule for retention) on `editions/` to stop bulk deletes, and a cache rule on
    `media.newsonafrica.com` with Edge TTL ≥ 1 month (object versioning gives every upload a unique key).
 7. Re-run the media checks in section 9 (rows 6–8, 11).
@@ -128,7 +137,11 @@ Rehearse it first with `sudo bash restore-test.sh` (disposable container, `--net
 - WP-CLI: `sudo /srv/eljaymedia/infra/scripts/noa-wp-cli.sh <args>` (copy in this directory). It runs the pinned CLI image as uid 33
   with the live container's env. **Do not use `--prompt`** for passwords: WP-CLI echoes the expanded command, including the value.
 - Admin: `noa-admin`. The password is in `/srv/eljaymedia/secrets/newsonafrica/wp-admin-password` (root-only).
-- Health checks: `wordpress` curls `/wp-login.php` (200/302) every 30s. `wp-cron` hits `http://wordpress/wp-cron.php` every 60s
+- WP-CLI on an edition: add `--url=https://cms.newsonafrica.com/<cc>/`. New edition: `wp site create --slug=<cc> --title=...`
+  (**omit `--email`**, which creates a new admin user), then `wp user set-role noa-admin administrator --url=...`, set its
+  `advmo_settings` prefix, and add `/<cc>/` to `NOA_CRON_PATHS`.
+- Health checks: `wordpress` curls `/wp-login.php` (200/302, `Host: cms.newsonafrica.com`) every 30s. `wp-cron` hits each site's
+  `wp-cron.php` listed in `NOA_CRON_PATHS` (default `/ /sz/ /za/ /ng/`) every 60s
   and has its own health check. MySQL uses Coolify's built-in check. Restart policy `unless-stopped`. Memory caps: WP 768m, cron 64m, MySQL 640m.
 - Monitoring: add an Uptime Kuma HTTP monitor for `https://cms.newsonafrica.com/wp-json/` (not yet created).
 
@@ -163,6 +176,19 @@ Nothing pre-existing was changed. To remove everything (see `/srv/eljaymedia/bac
 
 All test content and media were deleted afterwards (0 posts, 0 upload files).
 
+Multisite conversion (2026-11-16, backup `/srv/eljaymedia/backups/noa-multisite-20261116_050545/`):
+
+| Test | Result |
+|---|---|
+| Network created (subdirectory); sites `sz`=2, `za`=3, `ng`=4 | PASS |
+| Each edition: `/<cc>/wp-json/` name and home, `/<cc>/graphql` `generalSettings`, posts 200, `/<cc>/wp-admin` → https | PASS |
+| XML-RPC 403 and `noindex` on every edition | PASS |
+| Login on `/sz/wp-login.php`, edition dashboard 200, network admin 200 | PASS |
+| Post with featured image on `/sz`: 5 sizes in `uploads/sites/2/`, image 200 via `/sz/wp-content/…`, REST `_embed` author, GraphQL `featuredImage` | PASS |
+| Edition isolation (the `/sz` post is not on `/` or `/za`) | PASS |
+| Scheduled post on `/za` published by the cron sidecar | PASS |
+| Offloader without R2 credentials fails safe (local copy kept) | PASS |
+
 ## 10. Source site: what the migration must handle
 
 The source is a **subdirectory WordPress multisite**:
@@ -175,7 +201,7 @@ The source is a **subdirectory WordPress multisite**:
 | 4 | `/ng` | News on Africa Nigeria Edition | 1 | 1 | 1 |
 
 (`/ke` redirects to the reader app.) Plugins visible through REST: WPGraphQL, Yoast SEO (`yoast/v1`), Easy MCP AI.
-The new install is single-site and **is not a network yet**. Converting a fresh install is low-risk, but it needs a decision (see below).
+The new install is now a matching subdirectory network (blog IDs 1–4 as above).
 
 Reader-app dependencies that change at cutover (names only):
 - `WORDPRESS_API_URL` (set in Coolify, currently `https://newsonafrica.com`)
@@ -189,11 +215,10 @@ Reader-app dependencies that change at cutover (names only):
 
 ## 11. Migration runbook (content: not yet authorized)
 
-1. **Decide the network shape.** To keep `/sz`, `/za`, `/ng` URLs and the reader's per-edition endpoints, make the new install a
-   *subdirectory* network before importing:
-   `wp core multisite-convert --title="News On Africa" --base=/` (no `--subdomains`), add `WP_ALLOW_MULTISITE`/`MULTISITE` constants
-   to `WORDPRESS_CONFIG_EXTRA`, and replace `.htaccess` with the multisite rules. Then create sites 2–4 **in the same order** so blog IDs
-   match (`sz`=2, `za`=3, `ng`=4) and `uploads/sites/<id>` paths keep working.
+1. **Network shape: done (2026-11-16).** Subdirectory network with `sz`=2, `za`=3, `ng`=4, so `uploads/sites/<id>` paths and the
+   reader's per-edition endpoints line up. Before importing, confirm the source's blog IDs still match (`wp site list` on cPanel).
+   The import replaces `wp_site`/`wp_blogs`/`wp_sitemeta`, so re-check `DOMAIN_CURRENT_SITE`, `site_admins` and the network-activated
+   plugins afterwards, and re-apply the per-site `advmo_settings` prefixes if the source's options overwrite them.
 2. Freeze editing on the source (maintenance notice for editors).
 3. Export from cPanel: `mysqldump --single-transaction` of the network DB, and `wp-content/uploads` (including `sites/*`).
    Inventory the plugins and the mu-plugin that sends the reader webhook.
