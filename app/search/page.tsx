@@ -88,7 +88,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   ]);
 
   return (
-    <Container className="space-y-8 py-8">
+    <Container className="space-y-8 py-8 lg:pt-[12px]">
       <header className="space-y-4 border-b border-border pb-6">
         <h1 className="display-lg">Search</h1>
 

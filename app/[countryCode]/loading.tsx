@@ -18,18 +18,18 @@ export default function CountryHomeLoading() {
         <div className="grid grid-cols-1 gap-4 border-t border-border pt-6 sm:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <div key={index} className="space-y-2">
-              <Skeleton className="aspect-video w-full rounded-lg" />
+              <Skeleton className="aspect-video w-full rounded-media" />
               <Skeleton className="h-4 w-full" />
             </div>
           ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-[12px]">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 9 }).map((_, index) => (
             <div key={index} className="space-y-2">
-              <Skeleton className="aspect-video w-full rounded-lg" />
+              <Skeleton className="aspect-video w-full rounded-media" />
               <Skeleton className="h-4 w-full" />
               <Skeleton className="h-4 w-2/3" />
             </div>

@@ -45,7 +45,16 @@ export const colorTokens = {
   },
 } as const;
 
-/** Semantic typography scale. Each maps to a helper class in globals.css. */
+/**
+ * Semantic typography scale. Each maps to a helper class in globals.css.
+ * Sizes are the base (mobile) values. From lg (1024px) up the root font size
+ * is 83.333%, so every rem value renders at 5/6 of what is listed here, with
+ * small text floored at 11px and article body held at ~17px.
+ */
+export const desktopRootScale = 5 / 6;
+
+/** Minimum rendered size for small text (meta, eyebrows, text-xs). */
+export const smallTextFloorPx = 11;
 export const typographyScale = {
   "display-2xl": { size: "clamp(3rem, 8vw, 4.5rem)", weight: 800 },
   "display-xl": { size: "clamp(2.25rem, 6vw, 3.75rem)", weight: 700 },
@@ -77,6 +86,8 @@ export const radiusScale = {
   md: "calc(0.625rem - 2px)",
   lg: "0.625rem",
   xl: "calc(0.625rem + 4px)",
+  /** Photos and media frames (`rounded-media`). */
+  media: "3px",
 } as const;
 
 export type ColorTokenName = keyof typeof colorTokens.light;

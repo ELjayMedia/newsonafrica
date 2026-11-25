@@ -18,7 +18,7 @@ export default function SearchLoading() {
       <div className="flex flex-col gap-6">
         {Array.from({ length: 6 }).map((_, index) => (
           <div key={index} className="flex gap-4 border-b border-border pb-6 sm:gap-6">
-            <Skeleton className="aspect-[4/3] w-28 flex-shrink-0 rounded-lg sm:w-40 md:w-48" />
+            <Skeleton className="aspect-[4/3] w-28 flex-shrink-0 rounded-media sm:w-40 md:w-48" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-5 w-24 rounded-full" />
               <Skeleton className="h-5 w-3/4" />

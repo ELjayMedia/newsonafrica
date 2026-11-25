@@ -74,7 +74,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const rows = showLead ? remainingPosts : listing.items;
 
   return (
-    <Container className="pb-8 pt-5 md:py-8">
+    <Container className="pb-8 pt-5 md:py-8 lg:pt-[12px]">
       {/* Desktop billboard under the header, on the grey canvas. */}
       <AdSlot format="billboard" className="mb-6 hidden lg:block" />
       {/* BreadcrumbList structured data (NOA-114). */}

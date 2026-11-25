@@ -50,7 +50,7 @@ export function AdSlot({
 
   return (
     <div className={cn(sticky && "lg:sticky lg:top-24", className)}>
-      <p className="noa-eyebrow mb-2 text-center text-[0.625rem] tracking-[0.18em] text-noa-faint">
+      <p className="noa-eyebrow mb-2 text-center text-[0.625rem] tracking-[0.18em] text-noa-faint lg:text-[0.75rem]">
         {label}
       </p>
       <div
