@@ -55,7 +55,7 @@ export default async function AuthorPage({ params, searchParams }: AuthorPagePro
   ).slice(0, 6);
 
   return (
-    <Container className="space-y-8 py-8 max-md:space-y-5 max-md:px-4 max-md:py-4">
+    <Container className="space-y-8 py-8 max-md:space-y-5 max-md:px-4 max-md:py-4 lg:pt-[12px]">
       <header className="flex items-center gap-4 border-b border-border pb-6 max-md:block max-md:rounded-2xl max-md:border max-md:bg-card max-md:p-5 max-md:shadow-sm">
         <div className="flex items-center gap-4">
           {author.avatarUrl ? (

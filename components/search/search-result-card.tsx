@@ -22,7 +22,7 @@ export function SearchResultCard({ result }: { result: SearchResult }) {
         href={result.url}
         tabIndex={-1}
         aria-hidden
-        className="relative block aspect-[4/3] w-24 flex-shrink-0 overflow-hidden rounded-lg bg-muted sm:w-40 md:w-48"
+        className="relative block aspect-[4/3] w-24 flex-shrink-0 overflow-hidden rounded-media bg-muted sm:w-40 md:w-48"
       >
         {result.featuredImageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted images; see components/article/article-card.tsx header

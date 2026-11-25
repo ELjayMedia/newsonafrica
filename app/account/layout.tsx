@@ -13,7 +13,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
   const [, rail] = await Promise.all([requireUser("/account/profile"), getHomeRailData()]);
 
   return (
-    <Container className="py-10">
+    <Container className="py-10 lg:pt-[12px]">
       <RailLayout rail={<HomeRail mostRead={rail.mostRead} latest={rail.latest} />}>
         <div className="mx-auto w-full max-w-2xl lg:mx-0">{children}</div>
       </RailLayout>

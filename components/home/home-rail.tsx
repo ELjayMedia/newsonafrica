@@ -71,7 +71,7 @@ export function HomeRail({ mostRead, latest }: HomeRailProps) {
   return (
     // Rail sections are separate white panels; ad units sit on the grey
     // canvas between them (the rail only renders from lg up).
-    <div className="space-y-6">
+    <div className="space-y-6 lg:space-y-[12px]">
       <MostRead posts={mostRead} />
       <AdSlot format="mpu" />
       <LatestNews posts={latest} />

@@ -95,7 +95,13 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
     })),
   ];
 
-  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+  const homeHref = `/${country}`;
+  // Home matches exactly: every edition route starts with `/${country}/`, so a
+  // prefix match would keep Home underlined on category and article pages.
+  const isActive = (href: string) =>
+    href === homeHref
+      ? pathname === href || pathname === "/"
+      : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     // Article pages show the compact ArticleToolbar below md instead.

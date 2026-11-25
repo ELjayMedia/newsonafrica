@@ -63,7 +63,7 @@ export function ListingLead({ post, showCategory = true }: ListingLeadProps) {
     <article className="space-y-4">
       <Link
         href={href}
-        className="group -mx-4 block overflow-hidden bg-noa-hairline sm:mx-0 sm:rounded-lg"
+        className="group -mx-4 block overflow-hidden bg-noa-hairline sm:mx-0 sm:rounded-media"
       >
         {post.featuredImage ? (
           // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image

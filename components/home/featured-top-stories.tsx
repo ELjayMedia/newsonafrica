@@ -15,7 +15,7 @@ function StoryImage({
   className: string;
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-lg bg-noa-hairline ${className}`}>
+    <div className={`relative overflow-hidden rounded-media bg-noa-hairline ${className}`}>
       {post.featuredImage ? (
         // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
         <img

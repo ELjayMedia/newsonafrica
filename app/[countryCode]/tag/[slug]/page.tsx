@@ -50,7 +50,7 @@ export default async function TagPage({ params, searchParams }: TagPageProps) {
   ]);
 
   return (
-    <Container className="space-y-8 py-8">
+    <Container className="space-y-8 py-8 lg:pt-[12px]">
       <header className="space-y-2 border-b border-border pb-6">
         <p className="ui-sm uppercase tracking-wide text-primary">Tag</p>
         <h1 className="display-lg">#{tag.name}</h1>

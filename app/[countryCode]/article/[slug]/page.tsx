@@ -106,7 +106,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
       {/* Compact app-style toolbar below md (back · mark); the global
           masthead and utility bar hide on article routes there. */}
       <ArticleToolbar fallbackHref={`/${countryCode}`} fallbackLabel={editionName} />
-      <Container className="pb-8 pt-3 md:py-8">
+      <Container className="pb-8 pt-3 md:py-8 lg:pt-[12px]">
         {/* Desktop billboard under the header, on the grey canvas. */}
         <AdSlot format="billboard" className="mb-6 hidden lg:block" />
         {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
@@ -276,7 +276,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                       post.featuredImage.height,
                     ),
                   }}
-                  className="-mx-4 w-[calc(100%+2rem)] max-w-none bg-noa-hairline object-cover sm:mx-0 sm:w-full sm:rounded-lg"
+                  className="-mx-4 w-[calc(100%+2rem)] max-w-none bg-noa-hairline object-cover sm:mx-0 sm:w-full sm:rounded-media"
                 />
               ) : null}
 

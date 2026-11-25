@@ -193,6 +193,13 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Photos and media frames: near-square editorial corners, separate from the
+     UI --radius used by buttons, inputs and panels. Used as `rounded-media`. */
+  --radius-media: 3px;
+
+  /* Small text floor: 12px on phones as before, never below 11px once the
+     desktop root scale (below) shrinks rem units. */
+  --text-xs: max(11px, 0.75rem);
 
   /* Body copy: Source Sans 3 (design system §03), loaded via next/font in
      app/layout.tsx as --font-source. Display: Archivo for mastheads, eyebrows
@@ -206,6 +213,17 @@
 @layer base {
   * {
     border-color: hsl(var(--border));
+  }
+
+  /* Compact desktop: type and rem-based spacing (Tailwind's --spacing is
+     0.25rem) render at 5/6 size from lg up, so more of each story fits the
+     fixed 970px box. A percentage, not px, so a reader's own browser font
+     size still scales the page. Pixel widths (--noa-well-w, the 320px rail,
+     ad frames) are unaffected. */
+  @media (min-width: 1024px) {
+    html {
+      font-size: 83.3333%;
+    }
   }
 
   body {
@@ -296,7 +314,7 @@
     font-weight: 500;
   }
   .ui-sm {
-    font-size: 0.75rem;
+    font-size: max(11px, 0.75rem);
     line-height: 1.4;
     letter-spacing: 0.025em;
     font-weight: 500;
@@ -311,7 +329,7 @@
   .noa-eyebrow {
     font-family: var(--font-display);
     font-weight: 800;
-    font-size: 0.75rem;
+    font-size: max(11px, 0.75rem);
     letter-spacing: 0.06em;
     text-transform: uppercase;
     line-height: 1.2;
@@ -338,7 +356,7 @@
 
   /* One muted metadata line at the foot of a card ("4 hours ago | Business"). */
   .story-meta {
-    font-size: 0.8125rem;
+    font-size: max(11px, 0.8125rem);
     line-height: 1.4;
     color: hsl(var(--muted-foreground));
   }
@@ -425,6 +443,13 @@
       font-size: 1.1875rem;
     }
   }
+  /* Desktop: the root scale would take body copy to ~15.8px; hold it at
+     ~17px (1.275 x 13.33px), still within the 17-19px news-reading range. */
+  @media (min-width: 1024px) {
+    .prose-article {
+      font-size: 1.275rem;
+    }
+  }
   /* Subheads in the display face so they read as structure, with less space
      below than above to bind them to the paragraph they introduce. */
   .prose-article h2 {
@@ -453,7 +478,7 @@
   .prose-article img {
     width: 100%;
     height: auto;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-media);
   }
   /* Quotes in the Bold Punch display face behind a green rule, so they read
      as pull quotes rather than faded asides. */
@@ -484,7 +509,7 @@
   .prose-article iframe {
     width: 100%;
     aspect-ratio: 16 / 9;
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-media);
   }
   .prose-article figcaption {
     margin-top: 0.5rem;

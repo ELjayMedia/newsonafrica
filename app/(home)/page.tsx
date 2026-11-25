@@ -51,7 +51,7 @@ export default async function HomePage() {
   const allStories = posts;
 
   return (
-    <div className="px-4 py-6 sm:px-6">
+    <div className="px-4 py-6 sm:px-6 lg:pt-[12px]">
       <AdSlot format="billboard" className="mb-8 hidden lg:block" />
 
       {hero ? (
@@ -60,7 +60,7 @@ export default async function HomePage() {
               lg). Desktop leads with the Yahoo-style top-stories module and a
               two-column "Latest stories" grid that the infinite feed
               continues; mobile keeps its own dense feed. */}
-          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8">
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-[12px]">
             <div className="min-w-0 lg:self-start lg:border lg:border-noa-hairline lg:bg-noa-white lg:p-6">
               <div className="hidden space-y-10 lg:block">
                 <FeaturedTopStories lead={hero} side={sideStories} />
