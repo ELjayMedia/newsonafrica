@@ -7,8 +7,14 @@
  * Colours come from `lib/design-tokens` (dark theme + brand green) so the
  * cards can't drift from the design system.
  */
+import {
+  AFRICA_DOT,
+  AFRICA_OUTLINE_PATH,
+  AFRICA_STROKE,
+  MADAGASCAR_PATH,
+} from "@/components/africa-glyph";
+import { WORDMARK_LINE1, WORDMARK_LINE2, WORDMARK_SIZE } from "@/lib/brand/wordmark";
 import { colorTokens } from "@/lib/design-tokens";
-import { SITE_NAME } from "@/lib/seo/config";
 import { hslChannelsToHex } from "@/lib/seo/og-color";
 
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 };
@@ -56,35 +62,41 @@ export function OgCard({ title, eyebrow }: OgCardProps) {
         padding: "64px 72px",
       }}
     >
-      {/* Brand row */}
-      <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-        <div
-          style={{
-            width: 56,
-            height: 56,
-            borderRadius: 14,
-            backgroundColor: brandGreen,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: background,
-            fontSize: 34,
-            fontWeight: 700,
-          }}
+      {/* Brand row: Africa outline glyph + stacked "news on / Africa" wordmark */}
+      <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+        <svg width={80} height={80} viewBox="0 0 100 100">
+          <path
+            d={AFRICA_OUTLINE_PATH}
+            fill="none"
+            stroke={brandGreen}
+            strokeWidth={AFRICA_STROKE.mark}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle
+            cx={AFRICA_DOT.cx}
+            cy={AFRICA_DOT.cy}
+            r={AFRICA_STROKE.mark * 0.7}
+            fill={brandGreen}
+          />
+          <path d={MADAGASCAR_PATH} fill={brandGreen} />
+        </svg>
+        <svg
+          width={(WORDMARK_SIZE.width * 34) / 100}
+          height={(WORDMARK_SIZE.height * 34) / 100}
+          viewBox={`0 0 ${WORDMARK_SIZE.width} ${WORDMARK_SIZE.height}`}
         >
-          N
-        </div>
-        <div
-          style={{
-            color: foreground,
-            fontSize: 30,
-            fontWeight: 700,
-            letterSpacing: 2,
-            textTransform: "uppercase",
-          }}
-        >
-          {SITE_NAME}
-        </div>
+          <path
+            transform={`translate(${WORDMARK_LINE1.x} ${WORDMARK_LINE1.y})`}
+            d={WORDMARK_LINE1.d}
+            fill={foreground}
+          />
+          <path
+            transform={`translate(${WORDMARK_LINE2.x} ${WORDMARK_LINE2.y})`}
+            d={WORDMARK_LINE2.d}
+            fill={brandGreen}
+          />
+        </svg>
       </div>
 
       {/* Headline block */}

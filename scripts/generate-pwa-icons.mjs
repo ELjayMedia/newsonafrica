@@ -4,7 +4,8 @@
  * Renders the brand SVG sources in `public/icons/` to the PNG sizes required
  * for installability (manifest icons, maskable icons, Apple touch icon), plus
  * the multi-size `public/favicon.ico` that browsers, Safari tabs and search
- * engines request at the site root.
+ * engines request at the site root, and the Android (TWA) launcher, splash,
+ * shortcut and notification PNGs under `android/app/src/main/res/`.
  *
  * Usage: node scripts/generate-pwa-icons.mjs
  *
@@ -42,7 +43,7 @@ for (const [source, output, size, flatten] of targets) {
   const svg = await readFile(path.join(iconsDir, source));
   let pipeline = sharp(svg, { density: 300 }).resize(size, size);
   if (flatten) {
-    pipeline = pipeline.flatten({ background: "#16a34a" });
+    pipeline = pipeline.flatten({ background: "#15994a" });
   }
   await pipeline.png().toFile(path.join(iconsDir, output));
   console.log(`generated public/icons/${output} (${size}x${size})`);
@@ -79,3 +80,25 @@ frames.forEach((frame, i) => {
 });
 await writeFile(path.join(root, "public", "favicon.ico"), Buffer.concat([header, ...frames]));
 console.log(`generated public/favicon.ico (${faviconSizes.join("/")})`);
+
+// Android (TWA) resources — same sources, at each density bubblewrap emits.
+const resDir = path.join(root, "android", "app", "src", "main", "res");
+const densities = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+/** [source SVG, res folder prefix, file, size at mdpi] */
+const androidTargets = [
+  ["icon.svg", "mipmap", "ic_launcher.png", 48],
+  ["icon-maskable.svg", "mipmap", "ic_maskable.png", 82],
+  ["icon.svg", "drawable", "splash.png", 300],
+  ["icon.svg", "drawable", "shortcut_0.png", 48],
+  ["icon.svg", "drawable", "shortcut_1.png", 48],
+  ["notification.svg", "drawable", "ic_notification_icon.png", 24],
+];
+for (const [source, kind, file, base] of androidTargets) {
+  const svg = await readFile(path.join(iconsDir, source));
+  for (const [density, scale] of Object.entries(densities)) {
+    const size = Math.round(base * scale);
+    const out = path.join(resDir, `${kind}-${density}`, file);
+    await sharp(svg, { density: 300 }).resize(size, size).png().toFile(out);
+  }
+  console.log(`generated android ${kind}-*/${file}`);
+}
