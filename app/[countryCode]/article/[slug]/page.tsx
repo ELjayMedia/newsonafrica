@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import { AuthorAvatar } from "@/components/article/author-avatar";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AdSlot } from "@/components/ads/ad-slot";
 import { ArticleActions } from "@/components/article/article-actions";
 import { ArticleBody } from "@/components/article/article-body";
 import { ArticleToolbar } from "@/components/article/article-toolbar";
@@ -107,8 +107,6 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
           masthead and utility bar hide on article routes there. */}
       <ArticleToolbar fallbackHref={`/${countryCode}`} fallbackLabel={editionName} />
       <Container className="pb-8 pt-3 md:py-8 lg:pt-[12px]">
-        {/* Desktop billboard under the header, on the grey canvas. */}
-        <AdSlot placement="desktop-billboard" className="mb-6" />
         {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
         <NewsArticleJsonLd post={post} />
         <BreadcrumbJsonLd
@@ -206,16 +204,11 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                 </p>
 
                 <div className="flex items-center gap-3">
-                  {post.author?.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted avatar
-                    <img
-                      src={post.author.avatarUrl}
-                      alt=""
-                      width={36}
-                      height={36}
-                      className="hidden h-9 w-9 shrink-0 rounded-full object-cover md:block"
-                    />
-                  ) : null}
+                  <AuthorAvatar
+                    name={post.author?.name ?? "News on Africa"}
+                    src={post.author?.avatarUrl}
+                    className="hidden md:flex"
+                  />
                   <p className="body-md text-foreground">
                     By{" "}
                     {post.author ? (
@@ -292,28 +285,9 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
                 />
               ) : null}
 
-              {/* Article end: topics, then the next-read pathway before the
-                discussion. */}
-              {post.tags.length > 0 ? (
-                <footer className="space-y-2 border-t border-border pt-6">
-                  <h2 className="ui-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    Topics
-                  </h2>
-                  <ul className="flex flex-wrap gap-2">
-                    {post.tags.map((tag) => (
-                      <li key={tag.slug}>
-                        <Link
-                          href={`/${countryCode}/tag/${tag.slug}`}
-                          className="ui-sm inline-flex min-h-10 items-center rounded-full border border-input px-3.5 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:min-h-8"
-                        >
-                          {tag.name}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </footer>
-              ) : null}
-
+              {/* Article end: the next-read pathway before the discussion. Tags
+                are newsroom curation (fp = front page, ft = section lead), so
+                they are not shown to readers. */}
               <RelatedArticles posts={related} />
 
               <CommentSection

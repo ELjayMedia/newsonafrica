@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StoryImage as Img } from "@/components/story-image";
 
 import { heroFlag } from "@/components/home/hero-flag";
 import { StoryMeta } from "@/components/story-meta";
@@ -16,23 +17,14 @@ function StoryImage({
 }) {
   return (
     <div className={`relative overflow-hidden rounded-media bg-noa-hairline ${className}`}>
-      {post.featuredImage ? (
-        // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
-        <img
-          src={post.featuredImage.url}
-          alt={priority ? post.featuredImage.alt || post.title : ""}
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
-          decoding="async"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-        />
-      ) : (
-        <div
-          aria-hidden
-          className="h-full w-full"
-          style={{ background: "linear-gradient(135deg,#0b5e2d,#15994a)" }}
-        />
-      )}
+      <Img
+        src={post.featuredImage?.url}
+        alt={priority ? post.featuredImage?.alt || post.title : ""}
+        label={post.categories[0]?.name}
+        size={priority ? "lg" : "md"}
+        priority={priority}
+        className="duration-500 group-hover:scale-[1.03]"
+      />
     </div>
   );
 }
@@ -93,7 +85,7 @@ export function FeaturedTopStories({ lead, side }: { lead: PostSummary; side: Po
                   <Link href={sideHref} tabIndex={-1} aria-hidden className="block">
                     <StoryImage post={post} className="aspect-[16/10]" />
                   </Link>
-                  <h2 className="story-hed line-clamp-3 text-[0.9375rem]">
+                  <h2 className="story-hed line-clamp-3 text-[0.9375rem] lg:text-[1.0625rem]">
                     <Link href={sideHref} className="transition-colors hover:text-primary">
                       {post.title}
                     </Link>

@@ -17,6 +17,17 @@ const nextConfig: NextConfig = {
   // bundling it.
   serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
 
+  async redirects() {
+    return [
+      // "Bussiness" was a misspelled duplicate of Business; merged in the CMS
+      // on 2026-11-26. Keep old links and search results working.
+      {
+        source: "/:country/category/bussiness",
+        destination: "/:country/category/business",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {

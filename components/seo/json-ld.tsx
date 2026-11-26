@@ -24,6 +24,8 @@ import {
   type BreadcrumbItem,
 } from "@/lib/seo/json-ld";
 
+const CURATION_TAGS = new Set(["fp", "ft"]);
+
 export function JsonLd({ data }: { data: object }) {
   return (
     <script
@@ -59,7 +61,8 @@ export function NewsArticleJsonLd({ post }: { post: Post }) {
           ? { name: post.author.name, path: `/${post.country}/author/${post.author.slug}` }
           : undefined,
         section: post.categories[0]?.name,
-        keywords: post.tags.map((tag) => tag.name),
+        // fp / ft are curation tags, not topics: keep them out of keywords.
+        keywords: post.tags.filter((tag) => !CURATION_TAGS.has(tag.slug)).map((tag) => tag.name),
       })}
     />
   );

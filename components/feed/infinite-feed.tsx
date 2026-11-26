@@ -159,11 +159,12 @@ export function InfiniteFeed({
 
   return (
     <section
-      aria-labelledby={heading ? "more-stories-heading" : undefined}
-      aria-label={heading ? undefined : "More stories"}
+      aria-labelledby={heading && items.length > 0 ? "more-stories-heading" : undefined}
+      aria-label={heading && items.length > 0 ? undefined : (heading ?? "More stories")}
       className={cn(heading ? "space-y-4" : "space-y-2", className)}
     >
-      {heading ? (
+      {/* The heading waits for stories, so it never sits over an empty gap. */}
+      {heading && items.length > 0 ? (
         <h2 id="more-stories-heading" className={cn("section-title", headingClassName)}>
           {heading}
         </h2>
@@ -190,7 +191,7 @@ export function InfiniteFeed({
               {/* The ad row only takes a grid row / divider once its zone has a creative. */}
               {adEvery && (index + 1) % adEvery === 0 ? (
                 <li className="hidden lg:col-span-2 lg:has-[[data-ad-filled=true]]:block">
-                  <AdSlot placement="desktop-infeed-leaderboard" className="py-2" />
+                  <AdSlot placement="desktop-infeed-mpu" className="py-4" />
                 </li>
               ) : null}
             </React.Fragment>

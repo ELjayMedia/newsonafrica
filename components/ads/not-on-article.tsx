@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 
+import { isHomeRoute } from "@/lib/ads/routes";
 import { isArticlePath } from "@/lib/article/route";
 
 /**
@@ -12,4 +13,13 @@ import { isArticlePath } from "@/lib/article/route";
 export function NotOnArticle({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   return isArticlePath(pathname) ? null : <>{children}</>;
+}
+
+/**
+ * Renders its children everywhere except the home routes, which lead with the
+ * billboard instead (one top unit per page, never leaderboard + billboard).
+ */
+export function NotOnHome({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  return isHomeRoute(pathname) ? null : <>{children}</>;
 }

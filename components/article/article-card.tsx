@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StoryImage } from "@/components/story-image";
 
 import { StoryMeta } from "@/components/story-meta";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
@@ -59,39 +60,41 @@ export function ArticleCard({
         className,
       )}
     >
-      <Link
-        href={href}
+      {/* Compact list rows go text-only when the story has no image. */}
+      {(isList || isSplit) && !post.featuredImage ? null : (
+        <Link
+          href={href}
+          className={cn(
+            "relative block flex-shrink-0 overflow-hidden rounded-media bg-muted",
+            IMAGE_ASPECT[variant],
+            isList && "w-28 self-start sm:w-40",
+            // Split feed: 90px square thumbnail from md up (phones unchanged).
+            isSplit && "w-28 self-start sm:w-40 md:w-[90px]",
+            isFeed && "w-28 self-start sm:w-40 md:w-full md:self-auto",
+          )}
+        >
+          <StoryImage
+            src={post.featuredImage?.url}
+            alt={post.featuredImage?.alt || post.title}
+            label={post.categories[0]?.name}
+            size={isList || isSplit ? "sm" : "md"}
+            priority={priority}
+          />
+        </Link>
+      )}
+
+      <div
         className={cn(
-          "relative block flex-shrink-0 overflow-hidden rounded-media bg-muted",
-          IMAGE_ASPECT[variant],
-          isList && "w-28 self-start sm:w-40",
-          // Split feed: 90px square thumbnail from md up (phones unchanged).
-          isSplit && "w-28 self-start sm:w-40 md:w-[90px]",
-          isFeed && "w-28 self-start sm:w-40 md:w-full md:self-auto",
+          "flex min-w-0 flex-1 flex-col gap-2",
+          isFeed ? "md:pt-3" : !isList && !isSplit && "pt-3",
         )}
       >
-        {post.featuredImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted images; see components/article/article-card.tsx header
-          <img
-            src={post.featuredImage.url}
-            alt={post.featuredImage.alt || post.title}
-            loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : "auto"}
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20" aria-hidden />
-        )}
-      </Link>
-
-      <div className={cn("flex min-w-0 flex-1 flex-col gap-2", isFeed ? "md:pt-3" : !isList && !isSplit && "pt-3")}>
         {/* Headline first, details last (BBC-style): one card headline style
             everywhere, sized by variant; the section moves into the meta line. */}
         <h3
           className={cn(
             "story-hed",
-            variant === "compact" && "text-[0.9375rem]",
+            variant === "compact" && "text-[0.9375rem] lg:text-[1.0625rem]",
             variant === "list" && "text-[1.0625rem] sm:text-lg",
             variant === "feed" && "text-[1.0625rem] md:text-xl",
             isSplit && "text-[1.0625rem] md:text-lg",
@@ -104,7 +107,9 @@ export function ArticleCard({
         </h3>
 
         {variant !== "compact" && !isFeed && !isSplit && post.excerpt ? (
-          <p className={cn("body-sm line-clamp-2 text-muted-foreground", isList && "max-sm:hidden")}>
+          <p
+            className={cn("body-sm line-clamp-2 text-muted-foreground", isList && "max-sm:hidden")}
+          >
             {post.excerpt}
           </p>
         ) : null}

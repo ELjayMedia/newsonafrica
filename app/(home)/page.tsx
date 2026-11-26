@@ -11,6 +11,8 @@ import { ListingRows } from "@/components/listing/story-listing";
 import { createLogger } from "@/lib/log";
 import type { PostSummary } from "@/lib/dal";
 import { initialFeedState, loadFeedPage } from "@/lib/feed/load";
+import { getFrontPagePicks, leadWith } from "@/lib/dal/home";
+import { PUBLIC_COUNTRY_CODES } from "@/lib/countries";
 
 // Canonical for the root page (NOA-114); resolved against metadataBase.
 export const metadata: Metadata = {
@@ -34,7 +36,10 @@ export default async function HomePage() {
       initialFeedState(AFRICA_SCOPE),
       PAN_AFRICAN_POST_COUNT,
     );
-    posts = page.posts;
+    // The newsroom's fp (front page) picks from every edition lead; the
+    // newest stories fill the rest.
+    const picks = await getFrontPagePicks(PUBLIC_COUNTRY_CODES);
+    posts = leadWith(picks, page.posts, PAN_AFRICAN_POST_COUNT);
     moreCursor = page.nextCursor;
   } catch (error) {
     log.warn("Pan-African home feed unavailable", { err: error });

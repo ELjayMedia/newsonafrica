@@ -20,7 +20,7 @@ function MostRead({ posts }: { posts: MostReadPost[] }) {
             <span className="heading-md font-display text-noa-green" aria-hidden>
               {index + 1}
             </span>
-            <h3 className="story-hed text-[0.9375rem]">
+            <h3 className="story-hed text-[0.9375rem] lg:text-[1.0625rem]">
               <Link href={post.url} className="transition-colors hover:text-noa-green">
                 {post.title}
               </Link>

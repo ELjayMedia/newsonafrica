@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { StoryImage } from "@/components/story-image";
 import Link from "next/link";
 
 import { ExploreAfrica } from "@/components/home/explore-africa";
@@ -32,23 +33,13 @@ function MobileLeadStory({ post }: { post: PostSummary }) {
         href={href}
         className="group relative block aspect-[16/10] overflow-hidden rounded-xl bg-noa-hairline"
       >
-        {post.featuredImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
-          <img
-            src={post.featuredImage.url}
-            alt={post.featuredImage.alt || post.title}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div
-            aria-hidden
-            className="h-full w-full"
-            style={{ background: "linear-gradient(135deg,#0b5e2d,#15994a)" }}
-          />
-        )}
+        <StoryImage
+          src={post.featuredImage?.url}
+          alt={post.featuredImage?.alt || post.title}
+          label={post.categories[0]?.name}
+          size="lg"
+          priority
+        />
       </Link>
 
       {/* BBC app order: optional LIVE flag, headline, then the meta line. The

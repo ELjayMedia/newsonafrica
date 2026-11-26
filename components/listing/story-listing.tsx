@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StoryImage } from "@/components/story-image";
 
 import { ArticleCard } from "@/components/article/article-card";
 import { StoryMeta } from "@/components/story-meta";
@@ -65,23 +66,15 @@ export function ListingLead({ post, showCategory = true }: ListingLeadProps) {
         href={href}
         className="group -mx-4 block overflow-hidden bg-noa-hairline sm:mx-0 sm:rounded-media"
       >
-        {post.featuredImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
-          <img
-            src={post.featuredImage.url}
-            alt={post.featuredImage.alt || post.title}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className="aspect-video w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+        <div className="aspect-video w-full">
+          <StoryImage
+            src={post.featuredImage?.url}
+            alt={post.featuredImage?.alt || post.title}
+            label={post.categories[0]?.name}
+            size="lg"
+            priority
           />
-        ) : (
-          <div
-            aria-hidden
-            className="aspect-video w-full"
-            style={{ background: "linear-gradient(135deg,#0b5e2d,#15994a)" }}
-          />
-        )}
+        </div>
       </Link>
 
       <div className="space-y-3">
