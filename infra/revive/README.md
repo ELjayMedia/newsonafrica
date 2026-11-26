@@ -65,11 +65,10 @@ creative, so the page blends into the ad:
 
 Advertiser **News On Africa (house)** → campaign **House · Advertise with us**
 is a _remnant_ campaign (priority 0). It has one HTML creative per size
-linking to `/advertise`. It is linked to only four zones, so pages don't
-turn into a wall of house ads: the desktop rail MPU (3), the desktop
-in-article MPU (6), mobile in-feed MPU 1 (10) and mobile in-article MPU 1
-(12). Every other zone collapses until a paid campaign is linked
-(`$HOUSE_KEYS` in `noa-setup.php`).
+linking to `/advertise`, and is linked to every zone (`$HOUSE_KEYS` in
+`noa-setup.php`). To hide the house ad on a zone, unlink that zone from the
+campaign in Revive (**Campaign → Linked Zones**). An unlinked, unsold zone
+collapses on the site, leaving no space.
 
 The leaderboard (1) and billboard (2) never appear on the same page: the
 billboard leads the home and edition pages, and the leaderboard tops every
