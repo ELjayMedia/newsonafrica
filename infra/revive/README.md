@@ -71,7 +71,7 @@ is idempotent and reuses anything that already exists by name.
 
 ```sh
 sudo docker cp infra/revive/noa-setup.php eljaymedia-revive-1:/tmp/
-sudo docker exec -w /var/www/html eljaymedia-revive-1 php /tmp/noa-setup.php ads.eljaymedia.com
+sudo docker exec -u www-data -w /var/www/html eljaymedia-revive-1 php /tmp/noa-setup.php ads.eljaymedia.com
 ```
 
 A Revive DB dump from before the first run is at

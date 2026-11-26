@@ -1,7 +1,9 @@
 <?php
 // Create the News On Africa website, its 14 zones, and a house campaign with
 // "Advertise with us" creatives. Idempotent: re-running reuses what exists.
-// Run inside the Revive container: php noa-setup.php ads.eljaymedia.com
+// Run inside the Revive container AS www-data (root leaves cache files Revive
+// cannot rewrite -> "File permission errors detected"):
+//   docker exec -u www-data -w /var/www/html eljaymedia-revive-1 php /tmp/noa-setup.php ads.eljaymedia.com
 require_once '/var/www/html/init.php';
 require_once MAX_PATH . '/lib/max/Admin_DA.php';
 require_once MAX_PATH . '/lib/max/Dal/Admin/Zones.php';
