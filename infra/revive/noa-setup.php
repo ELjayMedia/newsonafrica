@@ -49,8 +49,10 @@ if (!$site) {
 }
 $siteId = (int) $site->affiliateid;
 
-// Zones that carry the house ad; every other zone collapses until sold.
-$HOUSE_KEYS = ['desktop-rail-mpu', 'desktop-inarticle-mpu', 'mobile-infeed-mpu-1', 'mobile-inarticle-mpu-1'];
+// Zones that carry the house ad; any zone not listed collapses until sold.
+// All zones by default (owner's call, 2026-11-26): unwanted ones are switched
+// off per zone in Revive.
+$HOUSE_KEYS = array_keys($ZONES);
 // Zones renamed since the first run (old key => new key).
 $RENAMED = ['desktop-infeed-leaderboard' => 'desktop-infeed-mpu'];
 
