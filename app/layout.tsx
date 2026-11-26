@@ -11,6 +11,8 @@ import { TakeoverSkin } from "@/components/ads/takeover-skin";
 import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
 import { BottomNavigation } from "@/components/bottom-navigation";
+import { MobileStickyAd } from "@/components/ads/mobile-sticky-ad";
+import { NotOnArticle } from "@/components/ads/not-on-article";
 import { HideOnMobileArticle } from "@/components/hide-on-mobile-article";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
@@ -132,7 +134,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </HideOnMobileArticle>
           {/* Desktop leaderboard above the header, on the grey canvas. Renders
               nothing (no space) unless a campaign or ad preview fills it. */}
-          <AdSlot format="leaderboard" className="relative z-10 hidden py-5 lg:block" />
+          <AdSlot placement="desktop-top-leaderboard" className="relative z-10 py-5" />
           {/* The header stays boxed to the content column; the footer is a
               full-width band. Between them the page content sits in the
               centred well (a white sheet on mobile, a transparent column of
@@ -140,6 +142,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="relative z-10 mx-auto w-full max-w-[var(--noa-well-w)] lg:px-6">
             <SiteHeader sections={navSections} />
           </div>
+          {/* Mobile top banner under the header (not on articles, which carry
+              in-article zones). Collapses until Revive fills it. */}
+          <NotOnArticle>
+            <AdSlot placement="mobile-top-banner" className="relative z-10 bg-noa-paper py-3" />
+          </NotOnArticle>
           <div className="noa-well relative z-10 flex flex-1 flex-col">
             <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
               {children}
@@ -148,6 +155,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="relative z-10">
             <SiteFooter />
           </div>
+          <MobileStickyAd />
           <BottomNavigation />
           <ServiceWorkerRegistration />
           <PageViewTracker />

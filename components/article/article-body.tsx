@@ -1,4 +1,4 @@
-import { SponsoredCard } from "@/components/home/sponsored-card";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { countWords } from "@/lib/article/reading-time";
 import { sanitizeArticleHtml } from "@/lib/sanitize-html";
 import { cn } from "@/lib/utils";
@@ -46,20 +46,19 @@ function ArticleHtmlChunk({ html, className }: { html: string; className?: strin
   );
 }
 
-function MobileArticleSponsor({ position }: { position: "first" | "second" }) {
-  const headline =
-    position === "first"
-      ? "Useful context from a News On Africa partner, placed after the story begins."
-      : "More insight for readers following this story in depth.";
-
+/**
+ * In-article ad break: the mobile zone below lg, and (first break only) the
+ * desktop in-article zone from lg. Both collapse until Revive fills them.
+ */
+function ArticleAdBreak({ position }: { position: "first" | "second" }) {
   return (
-    <div className="lg:hidden">
-      <SponsoredCard
-        advertiser="News On Africa Partner"
-        headline={headline}
-        disclosure="Clearly marked sponsored placement"
+    <>
+      <AdSlot
+        placement={position === "first" ? "mobile-inarticle-mpu-1" : "mobile-inarticle-mpu-2"}
+        className="my-6"
       />
-    </div>
+      {position === "first" ? <AdSlot placement="desktop-inarticle-mpu" className="my-8" /> : null}
+    </>
   );
 }
 
@@ -89,9 +88,9 @@ export function ArticleBody({ html, className }: ArticleBodyProps) {
   return (
     <>
       <ArticleHtmlChunk html={beforeFirstAd} className={className} />
-      <MobileArticleSponsor position="first" />
+      <ArticleAdBreak position="first" />
       <ArticleHtmlChunk html={betweenAds} className={className} />
-      {shouldShowSecondMobileAd ? <MobileArticleSponsor position="second" /> : null}
+      {shouldShowSecondMobileAd ? <ArticleAdBreak position="second" /> : null}
       <ArticleHtmlChunk html={afterSecondAd} className={className} />
     </>
   );

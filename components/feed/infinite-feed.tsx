@@ -4,7 +4,6 @@ import * as React from "react";
 
 import { AdSlot } from "@/components/ads/ad-slot";
 import { ArticleCard } from "@/components/article/article-card";
-import { AD_PREVIEW } from "@/lib/ads/preview";
 import {
   STORY_LIST_CARD_VARIANT,
   STORY_LIST_CLASSES,
@@ -188,9 +187,10 @@ export function InfiniteFeed({
                   showCategory={showCategory}
                 />
               </li>
-              {AD_PREVIEW && adEvery && (index + 1) % adEvery === 0 ? (
-                <li className="hidden py-2 lg:col-span-2 lg:block">
-                  <AdSlot format="leaderboard" />
+              {/* The ad row only takes a grid row / divider once its zone has a creative. */}
+              {adEvery && (index + 1) % adEvery === 0 ? (
+                <li className="hidden lg:col-span-2 lg:has-[[data-ad-filled=true]]:block">
+                  <AdSlot placement="desktop-infeed-leaderboard" className="py-2" />
                 </li>
               ) : null}
             </React.Fragment>

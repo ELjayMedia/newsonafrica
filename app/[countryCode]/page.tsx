@@ -110,7 +110,7 @@ export default async function CountryHomePage({ params }: CountryHomePageProps) 
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:pt-[12px]">
-      <AdSlot format="billboard" className="mb-8 hidden lg:block" />
+      <AdSlot placement="desktop-billboard" className="mb-8" />
 
       {hero ? (
         <>

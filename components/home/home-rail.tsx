@@ -73,9 +73,9 @@ export function HomeRail({ mostRead, latest }: HomeRailProps) {
     // canvas between them (the rail only renders from lg up).
     <div className="space-y-6 lg:space-y-[12px]">
       <MostRead posts={mostRead} />
-      <AdSlot format="mpu" />
+      <AdSlot placement="desktop-rail-mpu" />
       <LatestNews posts={latest} />
-      <AdSlot format="half-page" label="Advertisement · Sticky" sticky />
+      <AdSlot placement="desktop-rail-halfpage" sticky />
     </div>
   );
 }

@@ -76,7 +76,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   return (
     <Container className="pb-8 pt-5 md:py-8 lg:pt-[12px]">
       {/* Desktop billboard under the header, on the grey canvas. */}
-      <AdSlot format="billboard" className="mb-6 hidden lg:block" />
+      <AdSlot placement="desktop-billboard" className="mb-6" />
       {/* BreadcrumbList structured data (NOA-114). */}
       <BreadcrumbJsonLd
         items={[{ name: editionName, path: `/${countryCode}` }, { name: category.name }]}
