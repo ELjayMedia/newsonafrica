@@ -20,6 +20,9 @@ buildscript {
 
     repositories {
         google()
+        // Google's mirror of Maven Central first: Central rate-limits GitHub's
+        // shared runner IPs (HTTP 429). Same artifacts; Central stays as fallback.
+        maven { url "https://maven-central.storage-download.googleapis.com/maven2/" }
         mavenCentral()
     }
     dependencies {
@@ -33,6 +36,9 @@ buildscript {
 allprojects {
     repositories {
         google()
+        // Google's mirror of Maven Central first: Central rate-limits GitHub's
+        // shared runner IPs (HTTP 429). Same artifacts; Central stays as fallback.
+        maven { url "https://maven-central.storage-download.googleapis.com/maven2/" }
         mavenCentral()
     }
 }
