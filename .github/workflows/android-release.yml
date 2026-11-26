@@ -83,6 +83,13 @@ jobs:
         with:
           packages: 'platform-tools platforms;android-36 build-tools;35.0.0'
 
+      # Reuse the dependency cache built by CI on main (read-only here, so a
+      # release build never writes to it).
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
       - name: Decode and check signing credentials
         env:
           NOA_ANDROID_KEYSTORE: ${{ secrets.NOA_ANDROID_KEYSTORE }}

@@ -54,6 +54,9 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: "platform-tools platforms;android-36 build-tools;35.0.0"
+      # Caches Gradle dependencies and the wrapper between runs, so most builds
+      # never download from Maven Central (which throttles runners with 429s).
+      - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK without release credentials
         working-directory: android
         run: bash ./gradlew assembleDebug --no-daemon --stacktrace
