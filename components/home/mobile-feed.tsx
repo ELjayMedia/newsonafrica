@@ -5,7 +5,7 @@ import { ExploreAfrica } from "@/components/home/explore-africa";
 import { heroFlag } from "@/components/home/hero-flag";
 import { FeedRow } from "@/components/home/story-card";
 import { StoryMeta } from "@/components/story-meta";
-import { SponsoredCard } from "@/components/home/sponsored-card";
+import { AdSlot } from "@/components/ads/ad-slot";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
 import type { PostSummary } from "@/lib/dal/types";
 
@@ -75,7 +75,7 @@ function MobileLeadStory({ post }: { post: PostSummary }) {
 
 /**
  * Mobile home feed: a strong lead story followed by dense image-left rows,
- * with clearly-labelled native sponsorships woven into the flow only after
+ * with clearly-labelled ad zones (Revive) woven into the flow only after
  * the reader has seen real editorial content.
  *
  * Mobile ad policy:
@@ -109,11 +109,15 @@ export function MobileFeed({ posts }: { posts: PostSummary[] }) {
                 <Fragment key={`${post.country}-${post.id}`}>
                   <FeedRow post={post} />
                   {shouldRenderNativeAdAfter(storyNumber, posts.length) ? (
-                    <div className="py-5">
-                      <SponsoredCard
-                        advertiser="News On Africa Partner"
-                        headline="Useful business insight for readers moving Africa forward."
-                        disclosure="Clearly marked sponsored story"
+                    // The wrapper (and its divider) only shows once the zone fills.
+                    <div className="hidden has-[[data-ad-filled=true]]:block">
+                      <AdSlot
+                        placement={
+                          storyNumber === FIRST_NATIVE_AD_AFTER_STORIES
+                            ? "mobile-infeed-mpu-1"
+                            : "mobile-infeed-mpu-2"
+                        }
+                        className="py-5"
                       />
                     </div>
                   ) : null}

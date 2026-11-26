@@ -108,7 +108,7 @@ export default async function ArticlePage({ params, searchParams }: ArticlePageP
       <ArticleToolbar fallbackHref={`/${countryCode}`} fallbackLabel={editionName} />
       <Container className="pb-8 pt-3 md:py-8 lg:pt-[12px]">
         {/* Desktop billboard under the header, on the grey canvas. */}
-        <AdSlot format="billboard" className="mb-6 hidden lg:block" />
+        <AdSlot placement="desktop-billboard" className="mb-6" />
         {/* NewsArticle + BreadcrumbList structured data (NOA-114). */}
         <NewsArticleJsonLd post={post} />
         <BreadcrumbJsonLd
