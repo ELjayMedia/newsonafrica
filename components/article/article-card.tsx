@@ -94,7 +94,8 @@ export function ArticleCard({
             variant === "compact" && "text-[0.9375rem]",
             variant === "list" && "text-[1.0625rem] sm:text-lg",
             variant === "feed" && "text-[1.0625rem] md:text-xl",
-            isSplit && "text-[1.0625rem] md:text-lg",
+            // Split rows from md: text-lg (1.125rem) less 1/7 = 0.9643rem.
+            isSplit && "text-[1.0625rem] md:text-[0.9643rem]",
             variant === "grid" && "text-lg",
           )}
         >
