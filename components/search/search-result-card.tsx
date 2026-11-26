@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StoryImage } from "@/components/story-image";
 
 import { Badge } from "@/components/ui/badge";
 import { COUNTRIES } from "@/lib/countries";
@@ -24,21 +25,7 @@ export function SearchResultCard({ result }: { result: SearchResult }) {
         aria-hidden
         className="relative block aspect-[4/3] w-24 flex-shrink-0 overflow-hidden rounded-media bg-muted sm:w-40 md:w-48"
       >
-        {result.featuredImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted images; see components/article/article-card.tsx header
-          <img
-            src={result.featuredImageUrl}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div
-            className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20"
-            aria-hidden
-          />
-        )}
+        <StoryImage src={result.featuredImageUrl} label={category} size="sm" />
       </Link>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:gap-2">
@@ -61,7 +48,11 @@ export function SearchResultCard({ result }: { result: SearchResult }) {
 
         <div className="mt-auto flex items-center gap-2 ui-sm text-muted-foreground">
           {result.author ? <span className="hidden sm:inline">{result.author}</span> : null}
-          {result.author ? <span className="hidden sm:inline" aria-hidden>&middot;</span> : null}
+          {result.author ? (
+            <span className="hidden sm:inline" aria-hidden>
+              &middot;
+            </span>
+          ) : null}
           <time dateTime={result.publishedAt}>{formatDate(result.publishedAt)}</time>
         </div>
       </div>

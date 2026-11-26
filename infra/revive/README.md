@@ -8,24 +8,36 @@ News On Africa ads are served by Revive Adserver at **https://ads.eljaymedia.com
 Website **News On Africa** (id 1) has one zone per placement. The reader maps
 placements to zone ids in `lib/ads/zones.ts`; keep the two in sync.
 
-| Zone | Placement key | Size | Where |
-|---|---|---|---|
-| 1 | desktop-top-leaderboard | 728×90 | Above the masthead, every page (lg+) |
-| 2 | desktop-billboard | 970×250 | Under the header: home, edition, category, article (lg+) |
-| 3 | desktop-rail-mpu | 300×250 | Right rail between Most Read and Latest (lg+) |
-| 4 | desktop-rail-halfpage | 300×600 | Bottom of the right rail, sticky (lg+) |
-| 5 | desktop-infeed-leaderboard | 728×90 | Every 8 stories in long feeds (lg+) |
-| 6 | desktop-inarticle-mpu | 300×250 | Article body after paragraph 4 (lg+) |
-| 7 | desktop-takeover-left | 160×600 | Left gutter on home routes, ≥1440px |
-| 8 | desktop-takeover-right | 160×600 | Right gutter on home routes, ≥1440px |
-| 9 | mobile-top-banner | 320×50 | Under the header on listing pages (< lg) |
-| 10 | mobile-infeed-mpu-1 | 300×250 | Mobile home feed after story 4 |
-| 11 | mobile-infeed-mpu-2 | 300×250 | Mobile home feed after story 11 (14+ stories) |
-| 12 | mobile-inarticle-mpu-1 | 300×250 | Article body after paragraph 4 (< lg) |
-| 13 | mobile-inarticle-mpu-2 | 300×250 | After paragraph 9 on 800+ word articles (< lg) |
-| 14 | mobile-sticky-anchor | 320×50 | Bottom of screen above the tab bar, closable (< lg) |
+| Zone | Placement key           | Size    | Where                                                    |
+| ---- | ----------------------- | ------- | -------------------------------------------------------- |
+| 1    | desktop-top-leaderboard | 728×90  | Above the masthead, every page (lg+)                     |
+| 2    | desktop-billboard       | 970×250 | Under the header: home, edition, category, article (lg+) |
+| 3    | desktop-rail-mpu        | 300×250 | Right rail between Most Read and Latest (lg+)            |
+| 4    | desktop-rail-halfpage   | 300×600 | Bottom of the right rail, sticky (lg+)                   |
+| 5    | desktop-infeed-mpu      | 300×250 | Every 8 stories in long feeds, centred (lg+)             |
+| 6    | desktop-inarticle-mpu   | 300×250 | Article body after paragraph 4 (lg+)                     |
+| 7    | desktop-takeover-left   | 160×600 | Left gutter on home routes, ≥1440px                      |
+| 8    | desktop-takeover-right  | 160×600 | Right gutter on home routes, ≥1440px                     |
+| 9    | mobile-top-banner       | 320×50  | Under the header on listing pages (< lg)                 |
+| 10   | mobile-infeed-mpu-1     | 300×250 | Mobile home feed after story 4                           |
+| 11   | mobile-infeed-mpu-2     | 300×250 | Mobile home feed after story 11 (14+ stories)            |
+| 12   | mobile-inarticle-mpu-1  | 300×250 | Article body after paragraph 4 (< lg)                    |
+| 13   | mobile-inarticle-mpu-2  | 300×250 | After paragraph 9 on 800+ word articles (< lg)           |
+| 14   | mobile-sticky-anchor    | 320×50  | Bottom of screen above the tab bar, closable (< lg)      |
 
 The takeover is sold as one buy: link the campaign to zones 7, 8 and 2.
+
+**Takeover background.** Each page gutter is painted to match its own
+creative, so the page blends into the ad:
+
+1. Put `data-noa-skin="…"` anywhere in an HTML creative to choose the
+   background: a colour (`#c8102e`), a gradient, or an https image
+   (`url(https://…) center / cover`). Anything else is ignored.
+2. Otherwise, for an image banner, the reader samples the colour along the
+   image's outer edge (`/api/ads/skin`, only for images hosted on
+   ads.eljaymedia.com).
+3. Otherwise, for an HTML banner, its own root background is used.
+4. If none of these applies, the default dark green skin.
 
 ## How the reader loads ads
 
@@ -41,7 +53,7 @@ The takeover is sold as one buy: link the campaign to zones 7, 8 and 2.
   navigation fetches the new page's zones.
 - Each request sends `source=<edition>` (`sz`, `za`, `ng`, or `pan` for
   pan-African pages). To sell a country, add a delivery rule
-  *Source → is equal to → sz* on the campaign or banner.
+  _Source → is equal to → sz_ on the campaign or banner.
 - Kill switch: build with `NEXT_PUBLIC_ADS_ENABLED=0`. Layout review: build
   with `NEXT_PUBLIC_AD_PREVIEW=1`, which shows labelled IAB frames instead of
   live ads.
@@ -52,14 +64,21 @@ The takeover is sold as one buy: link the campaign to zones 7, 8 and 2.
 ## House campaign
 
 Advertiser **News On Africa (house)** → campaign **House · Advertise with us**
-is a *remnant* campaign (priority 0). It has one HTML creative per size
-linking to `/advertise`, and fills every zone that paid campaigns leave
-empty. Pause it to let unsold zones collapse instead.
+is a _remnant_ campaign (priority 0). It has one HTML creative per size
+linking to `/advertise`. It is linked to only four zones, so pages don't
+turn into a wall of house ads: the desktop rail MPU (3), the desktop
+in-article MPU (6), mobile in-feed MPU 1 (10) and mobile in-article MPU 1
+(12). Every other zone collapses until a paid campaign is linked
+(`$HOUSE_KEYS` in `noa-setup.php`).
+
+The leaderboard (1) and billboard (2) never appear on the same page: the
+billboard leads the home and edition pages, and the leaderboard tops every
+other page.
 
 ## Selling a placement
 
 1. In Revive, go to **Inventory → Advertisers** and add the advertiser, then
-   a campaign. Use *Contract* or *Override* so it outranks the house ads.
+   a campaign. Use _Contract_ or _Override_ so it outranks the house ads.
 2. Add a banner at the zone's exact size.
 3. Link the campaign to the zones on the campaign's **Linked Zones** tab.
 4. Optionally limit it by Source (edition), dates or impressions.

@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import { ReviveZone } from "@/components/ads/revive-zone";
 import { AD_PREVIEW } from "@/lib/ads/preview";
 import { ADS_ENABLED, AD_ZONES } from "@/lib/ads/zones";
-import { isValidCountry } from "@/lib/countries";
+import { DEFAULT_SKIN, skinSourceFor } from "@/lib/ads/skin";
+import { isHomeRoute } from "@/lib/ads/routes";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,11 +26,6 @@ import { cn } from "@/lib/utils";
  * only render in ad preview, so demo creative is never presented as paid
  * advertising (NOA-180).
  */
-function isHomeRoute(pathname: string): boolean {
-  const segments = pathname.split("/").filter(Boolean);
-  if (segments.length === 0) return true; // pan-African root
-  return segments.length === 1 && isValidCountry(segments[0]!); // edition home
-}
 
 function RailSkin({ side }: { side: "left" | "right" }) {
   const alignEnd = side === "left";
@@ -74,41 +70,74 @@ export interface TakeoverSkinProps {
   preview?: boolean;
 }
 
-const SKIN_BACKGROUND = "radial-gradient(120% 80% at 50% 0%, #103b24 0%, #0c1410 60%, #080d0a 100%)";
+type Side = "left" | "right";
+
+/** Resolve one gutter's background from its creative (see lib/ads/skin.ts). */
+async function resolveSkin(html: string, side: Side): Promise<string> {
+  const source = skinSourceFor(html);
+  if (source.kind === "value") return source.value;
+  if (source.kind === "image") {
+    try {
+      const res = await fetch(`/api/ads/skin?src=${encodeURIComponent(source.src)}&edge=${side}`);
+      const { color } = (await res.json()) as { color?: string | null };
+      if (color) return color;
+    } catch {
+      // fall through to the default skin
+    }
+  }
+  return DEFAULT_SKIN;
+}
 
 /**
  * Live takeover: two Revive zones ("Desktop · Takeover skin left/right",
- * 160×600) in the page gutters. The dark skin only paints once at least one
- * side has a creative, so an unsold takeover leaves the normal page.
+ * 160×600) in the page gutters. Each gutter is painted to match its own
+ * creative (explicit data-noa-skin, the image's outer-edge colour, or the
+ * HTML creative's background), so the page blends into the ad. Nothing paints
+ * until a side fills: an unsold takeover leaves the normal page.
  */
 function LiveTakeover() {
-  const [filled, setFilled] = React.useState({ left: false, right: false });
-  const anyFilled = filled.left || filled.right;
-  const side = (s: "left" | "right") => (
+  const [skins, setSkins] = React.useState<Record<Side, string | null>>({
+    left: null,
+    right: null,
+  });
+  const onFill = (side: Side) => (html: string) => {
+    void resolveSkin(html, side).then((bg) => setSkins((s) => ({ ...s, [side]: bg })));
+  };
+  // A sold side with an unsold partner: mirror the sold side's skin.
+  const left = skins.left ?? skins.right;
+  const right = skins.right ?? skins.left;
+
+  const gutter = (side: Side, background: string | null) => (
     <div
       className={cn(
-        "absolute top-0 bottom-0 flex w-[calc((100%-var(--noa-well-w))/2)] min-w-0 justify-center pt-32",
-        s === "left" ? "left-0" : "right-0",
+        "absolute top-0 bottom-0 flex w-[calc((100%-var(--noa-well-w))/2)] min-w-0 justify-center pt-32 transition-[background] duration-500",
+        side === "left" ? "left-0" : "right-0",
       )}
+      style={
+        background
+          ? { background, backgroundSize: "cover", backgroundPosition: "center" }
+          : undefined
+      }
     >
-      <div className="pointer-events-auto h-fit [&_p]:text-[#5f6f64]">
+      <div className="pointer-events-auto h-fit [&_p]:text-white/70 [&_p]:mix-blend-difference">
         <ReviveZone
-          zoneId={AD_ZONES[`desktop-takeover-${s}`].zoneId}
-          width={AD_ZONES[`desktop-takeover-${s}`].width}
-          height={AD_ZONES[`desktop-takeover-${s}`].height}
+          zoneId={AD_ZONES[`desktop-takeover-${side}`].zoneId}
+          width={AD_ZONES[`desktop-takeover-${side}`].width}
+          height={AD_ZONES[`desktop-takeover-${side}`].height}
           media="(min-width: 1440px)"
-          onFill={() => setFilled((f) => ({ ...f, [s]: true }))}
+          onFill={onFill(side)}
         />
       </div>
     </div>
   );
+
   return (
     <div
       className="pointer-events-none fixed inset-0 z-0 hidden overflow-hidden min-[1440px]:block"
-      style={anyFilled ? { background: SKIN_BACKGROUND } : undefined}
+      style={left || right ? { background: left ?? DEFAULT_SKIN } : undefined}
     >
-      {side("left")}
-      {side("right")}
+      {gutter("left", left)}
+      {gutter("right", right)}
     </div>
   );
 }
@@ -122,7 +151,7 @@ export function TakeoverSkin({ preview = AD_PREVIEW }: TakeoverSkinProps) {
     <div
       aria-hidden
       className="pointer-events-none fixed inset-0 z-0 hidden overflow-hidden min-[1440px]:block"
-      style={{ background: SKIN_BACKGROUND }}
+      style={{ background: DEFAULT_SKIN }}
     >
       <RailSkin side="left" />
       <RailSkin side="right" />

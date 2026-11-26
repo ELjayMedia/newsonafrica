@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { AdSlot } from "@/components/ads/ad-slot";
 import { InfiniteFeed } from "@/components/feed/infinite-feed";
 import { HomeRail } from "@/components/home/home-rail";
 import { ListingHeader, ListingLead, ListingRows } from "@/components/listing/story-listing";
@@ -12,6 +11,7 @@ import { RailLayout } from "@/components/ui/rail-layout";
 import { COUNTRIES } from "@/lib/countries";
 import { getCategoryBySlug, isValidCountry, listPosts } from "@/lib/dal";
 import { getHomeRailData } from "@/lib/dal/home-rail";
+import { getSectionLead, leadWith } from "@/lib/dal/home";
 import { initialFeedState, loadFeedPage } from "@/lib/feed/load";
 
 interface CategoryPageProps {
@@ -52,7 +52,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
   const scope = { kind: "category", country: countryCode, slug } as const;
   // Page 1 comes from the cursor feed so infinite scroll can continue exactly
   // where it ends; ?page=N (N > 1) stays an offset-paged, crawlable page.
-  const [listing, rail] = await Promise.all([
+  const [listing, rail, sectionLead] = await Promise.all([
     page <= 1
       ? loadFeedPage(scope, initialFeedState(scope), PER_PAGE).then((feed) => ({
           items: feed.posts,
@@ -64,19 +64,24 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
           (result) => ({ ...result, nextCursor: null }),
         ),
     getHomeRailData(countryCode),
+    // The newsroom's ft pick leads page 1 of the section.
+    page <= 1 ? getSectionLead(countryCode, slug) : Promise.resolve(null),
   ]);
-  const [leadPost, ...remainingPosts] = listing.items;
+  const firstPageItems = sectionLead
+    ? leadWith([sectionLead], listing.items, listing.items.length + 1)
+    : listing.items;
+  const [leadPost, ...remainingPosts] = firstPageItems;
   const editionName = COUNTRIES[countryCode].name;
   const basePath = `/${countryCode}/category/${slug}`;
   const isFirstPage = listing.page === 1;
-  // The lead treatment is for the newest story; later pages are plain rows.
+  // The lead treatment is for the ft pick (else the newest story); later
+  // pages are plain rows.
   const showLead = isFirstPage && leadPost !== undefined;
   const rows = showLead ? remainingPosts : listing.items;
 
   return (
     <Container className="pb-8 pt-5 md:py-8 lg:pt-[12px]">
       {/* Desktop billboard under the header, on the grey canvas. */}
-      <AdSlot placement="desktop-billboard" className="mb-6" />
       {/* BreadcrumbList structured data (NOA-114). */}
       <BreadcrumbJsonLd
         items={[{ name: editionName, path: `/${countryCode}` }, { name: category.name }]}
@@ -106,7 +111,7 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
                   scope={{ scope: "category", country: countryCode, category: slug }}
                   initialCursor={listing.nextCursor}
                   initialItems={rows}
-                  seenKeys={listing.items.map((post) => `${post.country}-${post.id}`)}
+                  seenKeys={firstPageItems.map((post) => `${post.country}-${post.id}`)}
                   layout="grid"
                   adEvery={8}
                   heading={null}

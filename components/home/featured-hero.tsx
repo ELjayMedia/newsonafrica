@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StoryImage } from "@/components/story-image";
 
 import { Badge } from "@/components/ui/badge";
 import { getArticleUrl } from "@/lib/content-sync/article-url";
@@ -20,22 +21,13 @@ export function FeaturedHero({ post }: FeaturedHeroProps) {
         href={href}
         className="group relative block aspect-video w-full overflow-hidden rounded-xl bg-muted md:aspect-auto md:h-full"
       >
-        {post.featuredImage ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external CMS-hosted image
-          <img
-            src={post.featuredImage.url}
-            alt={post.featuredImage.alt || post.title}
-            loading="eager"
-            fetchPriority="high"
-            decoding="async"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        ) : (
-          <div
-            className="h-full w-full bg-gradient-to-br from-muted to-muted-foreground/20"
-            aria-hidden
-          />
-        )}
+        <StoryImage
+          src={post.featuredImage?.url}
+          alt={post.featuredImage?.alt || post.title}
+          label={post.categories[0]?.name}
+          size="lg"
+          priority
+        />
       </Link>
 
       <div className="flex flex-col justify-center gap-3">

@@ -51,8 +51,8 @@ export interface ReviveZoneProps {
    * never fetched (and counted as an impression) on a phone, and vice versa.
    */
   media?: string;
-  /** Called once the zone has a creative (not called for empty zones). */
-  onFill?: () => void;
+  /** Called with the creative's HTML once the zone fills (never for empty zones). */
+  onFill?: (html: string) => void;
 }
 
 /**
@@ -61,7 +61,15 @@ export interface ReviveZoneProps {
  * host div). Nothing shows, not even the "Advertisement" label, until Revive
  * returns a creative: an unsold zone takes no space (NOA-180).
  */
-export function ReviveZone({ zoneId, width, height, label = "Advertisement", className, media, onFill }: ReviveZoneProps) {
+export function ReviveZone({
+  zoneId,
+  width,
+  height,
+  label = "Advertisement",
+  className,
+  media,
+  onFill,
+}: ReviveZoneProps) {
   const pathname = usePathname();
   const hostRef = React.useRef<HTMLDivElement>(null);
   const [filled, setFilled] = React.useState(false);
@@ -83,12 +91,17 @@ export function ReviveZone({ zoneId, width, height, label = "Advertisement", cla
 
     const loadedEvent = `revive-${REVIVE_ID}-loaded`;
     const onLoaded = (e: Event) => {
-      const detail = (e as CustomEvent<{ id?: string; data?: { html?: string } }>).detail;
-      if (!detail?.id || !detail.data?.html) return;
+      const detail = (
+        e as CustomEvent<{ id?: string; data?: { html?: string; width?: number; height?: number } }>
+      ).detail;
+      // An unsold zone still returns HTML: a hidden 0×0 impression beacon.
+      // Only a creative with a real size counts as filled.
+      const data = detail?.data;
+      if (!detail?.id || !data?.html || !((data.width ?? 0) > 0 || (data.height ?? 0) > 0)) return;
       const el = document.getElementById(detail.id);
       if (el && host.contains(el)) {
         setFilled(true);
-        onFillRef.current?.();
+        onFillRef.current?.(data.html);
       }
     };
     document.addEventListener(loadedEvent, onLoaded);
@@ -102,7 +115,11 @@ export function ReviveZone({ zoneId, width, height, label = "Advertisement", cla
   }, [zoneId, pathname, media]);
 
   return (
-    <div className={cn(!filled && "hidden", className)} data-ad-zone={zoneId} data-ad-filled={filled ? "true" : "false"}>
+    <div
+      className={cn(!filled && "hidden", className)}
+      data-ad-zone={zoneId}
+      data-ad-filled={filled ? "true" : "false"}
+    >
       <p className="noa-eyebrow mb-2 text-center text-[0.625rem] tracking-[0.18em] text-noa-faint lg:text-[0.75rem]">
         {label}
       </p>

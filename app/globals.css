@@ -253,6 +253,20 @@
  * consistent across the news site.
  */
 @layer components {
+  /* Branded image placeholder (components/story-image.tsx): green wash with a
+     fine diagonal pattern, readable in both themes. */
+  .noa-placeholder {
+    background-color: var(--noa-green-50);
+    background-image: repeating-linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--noa-green) 7%, transparent) 0 1px,
+      transparent 1px 9px
+    );
+  }
+  .dark .noa-placeholder {
+    background-color: color-mix(in srgb, var(--noa-green) 12%, var(--noa-paper));
+  }
+
   .display-2xl {
     font-size: clamp(3rem, 8vw, 4.5rem);
     line-height: 1.1;
@@ -349,8 +363,11 @@
   .story-hed {
     font-family: var(--font-display);
     font-weight: 700;
-    line-height: 1.22;
-    letter-spacing: -0.01em;
+    line-height: 1.25;
+    /* Neutral tracking with a touch of word space: at card sizes Archivo's
+       tight setting ran words together ("Authorityto"). */
+    letter-spacing: 0;
+    word-spacing: 0.04em;
     color: hsl(var(--foreground));
   }
 

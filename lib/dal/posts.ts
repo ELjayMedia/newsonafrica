@@ -5,7 +5,15 @@ import { SUPPORTED_COUNTRY_CODES } from "@/lib/countries";
 import type { CountryCode } from "@/lib/wordpress/countries";
 import { fetchWordPressGraphQL } from "@/lib/wordpress/graphql-client";
 import { buildPaginatedResult, normalizePage, normalizePerPage } from "@/lib/dal/pagination";
-import type { AuthorSummary, CategorySummary, PaginatedResult, Post, PostListParams, PostSummary, TagSummary } from "@/lib/dal/types";
+import type {
+  AuthorSummary,
+  CategorySummary,
+  PaginatedResult,
+  Post,
+  PostListParams,
+  PostSummary,
+  TagSummary,
+} from "@/lib/dal/types";
 import { decodeHtmlEntities, stripHtml } from "@/lib/wordpress/html";
 
 const REVALIDATE_SECONDS = 60;
@@ -105,7 +113,12 @@ const POST_BY_ID_QUERY = /* GraphQL */ `
 `;
 
 type GqlTerm = { databaseId?: number | null; name?: string | null; slug?: string | null };
-type GqlAuthor = { databaseId?: number | null; name?: string | null; slug?: string | null; avatar?: { url?: string | null } | null };
+type GqlAuthor = {
+  databaseId?: number | null;
+  name?: string | null;
+  slug?: string | null;
+  avatar?: { url?: string | null } | null;
+};
 type GqlCorrection = { date?: string | null; note?: string | null; kind?: string | null };
 type GqlSponsor = {
   isSponsored?: boolean | null;
@@ -123,7 +136,13 @@ type GqlPost = {
   title?: string | null;
   excerpt?: string | null;
   content?: string | null;
-  featuredImage?: { node?: { sourceUrl?: string | null; altText?: string | null; mediaDetails?: { width?: number | null; height?: number | null } | null } | null } | null;
+  featuredImage?: {
+    node?: {
+      sourceUrl?: string | null;
+      altText?: string | null;
+      mediaDetails?: { width?: number | null; height?: number | null } | null;
+    } | null;
+  } | null;
   categories?: { nodes?: GqlTerm[] | null } | null;
   tags?: { nodes?: GqlTerm[] | null } | null;
   author?: { node?: GqlAuthor | null } | null;
@@ -131,7 +150,9 @@ type GqlPost = {
   sponsor?: GqlSponsor | null;
 };
 
-type PostsListData = { posts?: { pageInfo?: { hasNextPage?: boolean }; nodes?: GqlPost[] | null } | null };
+type PostsListData = {
+  posts?: { pageInfo?: { hasNextPage?: boolean }; nodes?: GqlPost[] | null } | null;
+};
 type PostData = { post?: GqlPost | null };
 
 function mapTerm(term: GqlTerm): CategorySummary | TagSummary {
@@ -152,14 +173,16 @@ function mapAuthor(author?: GqlAuthor | null): AuthorSummary | null {
   };
 }
 
-function mapCorrections(corrections?: { nodes?: GqlCorrection[] | null } | null): Post["corrections"] {
+function mapCorrections(
+  corrections?: { nodes?: GqlCorrection[] | null } | null,
+): Post["corrections"] {
   if (!corrections?.nodes?.length) return undefined;
   return corrections.nodes
     .filter((c) => c.date && c.note && c.kind)
     .map((c) => ({
       date: c.date!,
       note: c.note!,
-      kind: c.kind === "update" ? "update" as const : "correction" as const,
+      kind: c.kind === "update" ? ("update" as const) : ("correction" as const),
     }))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
@@ -209,7 +232,13 @@ function mapGraphQLPostSummary(raw: GqlPost, country: CountryCode | string): Pos
   return summary;
 }
 
-async function graphQL<T>(country: CountryCode | string, query: string, variables: Record<string, unknown>, tags: string[], operationName: string): Promise<T> {
+async function graphQL<T>(
+  country: CountryCode | string,
+  query: string,
+  variables: Record<string, unknown>,
+  tags: string[],
+  operationName: string,
+): Promise<T> {
   const result = await fetchWordPressGraphQL<T>(country, query, variables, {
     tags,
     revalidate: REVALIDATE_SECONDS,
@@ -325,8 +354,11 @@ export async function listPosts(params: PostListParams): Promise<PaginatedResult
   );
 
   const allItems = data.posts?.nodes ?? [];
-  const items = allItems.slice((page - 1) * perPage, page * perPage).map((raw) => mapGraphQLPostSummary(raw, params.country));
-  const hasNextPage = Boolean(data.posts?.pageInfo?.hasNextPage) || allItems.length > page * perPage;
+  const items = allItems
+    .slice((page - 1) * perPage, page * perPage)
+    .map((raw) => mapGraphQLPostSummary(raw, params.country));
+  const hasNextPage =
+    Boolean(data.posts?.pageInfo?.hasNextPage) || allItems.length > page * perPage;
   const total = hasNextPage ? page * perPage + 1 : (page - 1) * perPage + items.length;
 
   return buildPaginatedResult(items, page, perPage, {
@@ -335,36 +367,59 @@ export async function listPosts(params: PostListParams): Promise<PaginatedResult
   });
 }
 
+/** Newsroom curation tags (fp = front page, ft = section lead): not topics. */
+const CURATION_TAG_SLUGS = new Set(["fp", "ft"]);
+
+/**
+ * Stories to read next: same category and topic first, then the rest of the
+ * category, then the edition's latest, so the module is always full.
+ */
 export async function getRelatedPosts(
   country: CountryCode | string,
   post: Pick<Post, "id" | "categories" | "tags">,
   limit = 3,
 ): Promise<PostSummary[]> {
-  const categorySlug = post.categories[0]?.slug;
-  const tagSlug = post.tags[0]?.slug;
-  if (!categorySlug && !tagSlug) return [];
+  const categorySlug = post.categories[0]?.slug ?? null;
+  const tagSlug = post.tags.find((tag) => !CURATION_TAG_SLUGS.has(tag.slug))?.slug ?? null;
 
-  const data = await graphQL<PostsListData>(
-    country,
-    POSTS_LIST_QUERY,
-    {
-      first: limit + 4,
-      categoryName: categorySlug ?? null,
-      tagSlugIn: tagSlug ? [tagSlug] : null,
-      authorName: null,
-      search: null,
-    },
-    [cacheTags.posts(country)],
-    "PostsList",
-  );
+  const fetchList = async (categoryName: string | null, tagSlugIn: string[] | null) => {
+    try {
+      const data = await graphQL<PostsListData>(
+        country,
+        POSTS_LIST_QUERY,
+        { first: limit + 4, categoryName, tagSlugIn, authorName: null, search: null },
+        [cacheTags.posts(country)],
+        "PostsList",
+      );
+      return (data.posts?.nodes ?? []).map((raw) => mapGraphQLPostSummary(raw, country));
+    } catch {
+      return [];
+    }
+  };
 
-  return (data.posts?.nodes ?? [])
-    .map((raw) => mapGraphQLPostSummary(raw, country))
-    .filter((summary) => summary.id !== post.id)
-    .slice(0, limit);
+  const tiers: Array<[string | null, string[] | null]> = [];
+  if (categorySlug && tagSlug) tiers.push([categorySlug, [tagSlug]]);
+  if (categorySlug) tiers.push([categorySlug, null]);
+  tiers.push([null, null]);
+
+  const seen = new Set<number>([post.id]);
+  const out: PostSummary[] = [];
+  for (const [categoryName, tagSlugIn] of tiers) {
+    if (out.length >= limit) break;
+    for (const summary of await fetchList(categoryName, tagSlugIn)) {
+      if (seen.has(summary.id)) continue;
+      seen.add(summary.id);
+      out.push(summary);
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
 }
 
-export async function getPostBySlug(country: CountryCode | string, slug: string): Promise<Post | null> {
+export async function getPostBySlug(
+  country: CountryCode | string,
+  slug: string,
+): Promise<Post | null> {
   const data = await graphQL<PostData>(
     country,
     POST_BY_SLUG_QUERY,

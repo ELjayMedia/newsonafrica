@@ -12,7 +12,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { AccountMenu, AccountMenuFallback } from "@/components/account/account-menu";
 import { BottomNavigation } from "@/components/bottom-navigation";
 import { MobileStickyAd } from "@/components/ads/mobile-sticky-ad";
-import { NotOnArticle } from "@/components/ads/not-on-article";
+import { NotOnArticle, NotOnHome } from "@/components/ads/not-on-article";
 import { HideOnMobileArticle } from "@/components/hide-on-mobile-article";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
 import { PageViewTracker } from "@/components/analytics/page-view-tracker";
@@ -134,7 +134,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </HideOnMobileArticle>
           {/* Desktop leaderboard above the header, on the grey canvas. Renders
               nothing (no space) unless a campaign or ad preview fills it. */}
-          <AdSlot placement="desktop-top-leaderboard" className="relative z-10 py-5" />
+          {/* Home routes lead with the billboard instead: one top unit a page. */}
+          <NotOnHome>
+            <AdSlot placement="desktop-top-leaderboard" className="relative z-10 py-5" />
+          </NotOnHome>
           {/* The header stays boxed to the content column; the footer is a
               full-width band. Between them the page content sits in the
               centred well (a white sheet on mobile, a transparent column of
@@ -153,7 +156,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </main>
           </div>
           <div className="relative z-10">
-            <SiteFooter />
+            <SiteFooter sections={navSections} />
           </div>
           <MobileStickyAd />
           <BottomNavigation />

@@ -60,3 +60,58 @@ export async function getHomeFeed(
     grid: rest.slice(secondary),
   };
 }
+
+/** WordPress tag the newsroom uses to pick a section (category) lead story. */
+export const SECTION_LEAD_TAG = "ft";
+
+/**
+ * Newest `ft`-tagged story in a category: the newsroom's pick to lead that
+ * section page. Null when none is tagged (the page then leads with the newest).
+ */
+export async function getSectionLead(
+  country: CountryCode | string,
+  categorySlug: string,
+): Promise<PostSummary | null> {
+  try {
+    const result = await listPosts({
+      country,
+      categorySlug,
+      tagSlug: SECTION_LEAD_TAG,
+      perPage: 1,
+    });
+    return result.items[0] ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Front-page (`fp`) picks across several editions, newest first: what leads
+ * the pan-African home. Each edition degrades independently.
+ */
+export async function getFrontPagePicks(
+  countries: readonly string[],
+  limit = FEATURED_FETCH,
+): Promise<PostSummary[]> {
+  const results = await Promise.allSettled(
+    countries.map((country) => listPosts({ country, tagSlug: FEATURED_TAG, perPage: limit })),
+  );
+  return results
+    .flatMap((r) => (r.status === "fulfilled" ? r.value.items : []))
+    .sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt))
+    .slice(0, limit);
+}
+
+/** Put `picks` first, then `posts`, without repeating a story; cap at `total`. */
+export function leadWith(picks: PostSummary[], posts: PostSummary[], total: number): PostSummary[] {
+  const seen = new Set<string>();
+  const out: PostSummary[] = [];
+  for (const post of [...picks, ...posts]) {
+    const key = `${post.country}:${post.id}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(post);
+    if (out.length >= total) break;
+  }
+  return out;
+}

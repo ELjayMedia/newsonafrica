@@ -46,6 +46,11 @@ export function CountrySwitcher({ className }: { className?: string }) {
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const next = event.target.value;
+    // "Africa" is the pan-African home: every edition together.
+    if (next === "") {
+      router.push("/");
+      return;
+    }
     if (!isValidCountry(next)) return;
 
     void fetch("/api/set-country", {
@@ -68,11 +73,7 @@ export function CountrySwitcher({ className }: { className?: string }) {
         aria-label="Choose country edition"
         className="ui-md h-11 rounded-md border border-input bg-background px-2 text-foreground max-md:text-base md:h-10"
       >
-        {!current ? (
-          <option value="" disabled>
-            Edition
-          </option>
-        ) : null}
+        <option value="">Africa</option>
         {countryOptions.map((country) => (
           <option key={country.code} value={country.code}>
             {country.name}

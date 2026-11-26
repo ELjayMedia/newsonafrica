@@ -44,6 +44,41 @@ const PRODUCTS = [
   },
 ] as const;
 
+/** Display placements (Revive zones in lib/ads/zones.ts). */
+const PLACEMENTS = {
+  Desktop: [
+    {
+      name: "Billboard",
+      size: "970 × 250",
+      where: "Under the header on the home and edition pages",
+    },
+    { name: "Leaderboard", size: "728 × 90", where: "Top of section and article pages" },
+    { name: "Rail MPU", size: "300 × 250", where: "Right rail beside the news" },
+    { name: "Half page", size: "300 × 600", where: "Right rail, stays in view as readers scroll" },
+    {
+      name: "In-article MPU",
+      size: "300 × 250",
+      where: "Inside the story, after the opening paragraphs",
+    },
+    { name: "In-feed MPU", size: "300 × 250", where: "Between stories in the news feed" },
+    {
+      name: "Takeover skin",
+      size: "2 × 160 × 600",
+      where: "Both page gutters, sold with the billboard",
+    },
+  ],
+  Mobile: [
+    { name: "Top banner", size: "320 × 50", where: "Under the header" },
+    { name: "In-feed MPU", size: "300 × 250", where: "Between stories in the home feed" },
+    { name: "In-article MPU", size: "300 × 250", where: "Inside the story, two per long read" },
+    {
+      name: "Sticky banner",
+      size: "320 × 50",
+      where: "Bottom of the screen, readers can close it",
+    },
+  ],
+} as const;
+
 const MEASUREMENT = [
   "Campaign impressions and clicks",
   "Click-through rate",
@@ -59,7 +94,7 @@ export default function AdvertisePage() {
         <p className="ui-sm font-semibold uppercase tracking-wide text-primary">
           Advertise & partner
         </p>
-        <h1 className="heading-lg">Reach Africa in context.</h1>
+        <h1 className="noa-hed text-4xl text-foreground sm:text-5xl">Reach Africa in context.</h1>
         <p className="body-lg text-muted-foreground">
           News on Africa gives brands a credible editorial environment for reaching readers through
           country editions, high-value verticals, display inventory and clearly disclosed sponsored
@@ -97,6 +132,40 @@ export default function AdvertisePage() {
               <h3 className="heading-sm">{product.name}</h3>
               <p className="mt-2 body-sm text-muted-foreground">{product.description}</p>
             </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-5" aria-labelledby="placements">
+        <div className="max-w-2xl space-y-2">
+          <h2 id="placements" className="heading-md">
+            Where your ad appears
+          </h2>
+          <p className="body-md text-muted-foreground">
+            Every placement is clearly labelled &ldquo;Advertisement&rdquo; and can be limited to
+            one country edition.
+          </p>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {Object.entries(PLACEMENTS).map(([device, rows]) => (
+            <div key={device} className="rounded-xl border border-border bg-card p-5">
+              <h3 className="noa-eyebrow text-[0.6875rem] tracking-[0.16em] text-noa-green-text">
+                {device}
+              </h3>
+              <ul className="mt-3 divide-y divide-border">
+                {rows.map((row) => (
+                  <li key={row.name} className="flex items-baseline justify-between gap-4 py-2.5">
+                    <span className="min-w-0">
+                      <span className="block font-semibold text-foreground">{row.name}</span>
+                      <span className="body-sm text-muted-foreground">{row.where}</span>
+                    </span>
+                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
+                      {row.size}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
         </div>
       </section>

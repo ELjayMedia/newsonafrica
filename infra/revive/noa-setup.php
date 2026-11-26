@@ -18,7 +18,7 @@ $ZONES = [
   'desktop-billboard'         => ['NOA · Desktop · Billboard', 970, 250, 'Under the header on home, edition, category and article pages (lg+).'],
   'desktop-rail-mpu'          => ['NOA · Desktop · Rail MPU', 300, 250, 'Right rail between Most Read and Latest (home and articles, lg+).'],
   'desktop-rail-halfpage'     => ['NOA · Desktop · Rail half-page (sticky)', 300, 600, 'Bottom of the right rail, sticks while scrolling (lg+).'],
-  'desktop-infeed-leaderboard'=> ['NOA · Desktop · In-feed leaderboard', 728, 90,  'Between story rows in long feeds (lg+).'],
+  'desktop-infeed-mpu'        => ['NOA · Desktop · In-feed MPU', 300, 250, 'Between story rows in long feeds, centred (lg+).'],
   'desktop-inarticle-mpu'     => ['NOA · Desktop · In-article MPU', 300, 250, 'Inside the article body after paragraph 4 (lg+).'],
   'desktop-takeover-left'     => ['NOA · Desktop · Takeover skin left', 160, 600, 'Left page gutter on home routes, viewport >= 1440px. Sell with the right skin and billboard.'],
   'desktop-takeover-right'    => ['NOA · Desktop · Takeover skin right', 160, 600, 'Right page gutter on home routes, viewport >= 1440px.'],
@@ -49,10 +49,25 @@ if (!$site) {
 }
 $siteId = (int) $site->affiliateid;
 
-// 2. Zones
+// Zones that carry the house ad; every other zone collapses until sold.
+$HOUSE_KEYS = ['desktop-rail-mpu', 'desktop-inarticle-mpu', 'mobile-infeed-mpu-1', 'mobile-inarticle-mpu-1'];
+// Zones renamed since the first run (old key => new key).
+$RENAMED = ['desktop-infeed-leaderboard' => 'desktop-infeed-mpu'];
+
+// 2. Zones (found by their "reader key" comment, so renames update in place)
 $zoneIds = [];
 foreach ($ZONES as $key => [$name, $w, $h, $desc]) {
-  $z = one('zones', ['affiliateid' => $siteId, 'zonename' => $name]);
+  $z = one('zones', ['affiliateid' => $siteId, 'comments' => 'reader key: ' . $key]);
+  $old = array_search($key, $RENAMED, true);
+  if (!$z && $old !== false) $z = one('zones', ['affiliateid' => $siteId, 'comments' => 'reader key: ' . $old]);
+  if ($z && ($z->zonename !== $name || (int) $z->width !== $w || (int) $z->height !== $h || $z->comments !== 'reader key: ' . $key)) {
+    $z->zonename = $name;
+    $z->description = $desc;
+    $z->comments = 'reader key: ' . $key;
+    $z->width = $w;
+    $z->height = $h;
+    $z->update();
+  }
   if (!$z) {
     $z = OA_Dal::factoryDO('zones');
     $z->affiliateid = $siteId;
@@ -93,7 +108,8 @@ if (!$camp) {
 $campId = (int) $camp->campaignid;
 
 $dalZones = OA_Dal::factoryDAL('zones');
-$dalZones->linkZonesToCampaign(array_values($zoneIds), $campId);
+$houseZoneIds = array_values(array_intersect_key($zoneIds, array_flip($HOUSE_KEYS)));
+$dalZones->linkZonesToCampaign($houseZoneIds, $campId);
 
 // 4. House creatives, one per size
 $creative = function (int $w, int $h): string {
@@ -133,7 +149,16 @@ foreach ($sizes as $label => [$w, $h]) {
   $b->iframe_friendly = 1;
   $b->insert();
 }
-// Re-link so every new banner lands on its matching-size zones.
-$dalZones->linkZonesToCampaign(array_values($zoneIds), $campId);
+// Re-link so every new banner lands on its matching-size house zones, and
+// take the house ad off every other zone.
+$dalZones->linkZonesToCampaign($houseZoneIds, $campId);
+$notHouse = array_values(array_diff(array_values($zoneIds), $houseZoneIds));
+if ($notHouse) $dalZones->unlinkZonesFromCampaign($notHouse, $campId);
 
-echo json_encode(['website' => $siteId, 'campaign' => $campId, 'zones' => $zoneIds], JSON_PRETTY_PRINT), "\n";
+// Linking changes only reach delivery once Revive's delivery cache (20 min by
+// default) expires: clear it so they apply now.
+foreach (glob(MAX_PATH . '/var/cache/deliverycache_*') ?: [] as $f) {
+  @unlink($f);
+}
+
+echo json_encode(['website' => $siteId, 'campaign' => $campId, 'zones' => $zoneIds, 'house_zones' => $houseZoneIds], JSON_PRETTY_PRINT), "\n";

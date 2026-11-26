@@ -7,7 +7,9 @@
  *
  * NEXT_PUBLIC_ADS_ENABLED=0 at build time switches every live zone off.
  */
-export const REVIVE_URL = (process.env.NEXT_PUBLIC_REVIVE_URL ?? "https://ads.eljaymedia.com").replace(/\/$/, "");
+export const REVIVE_URL = (
+  process.env.NEXT_PUBLIC_REVIVE_URL ?? "https://ads.eljaymedia.com"
+).replace(/\/$/, "");
 /** Revive's install id, sent as data-revive-id on every <ins> tag. */
 export const REVIVE_ID = process.env.NEXT_PUBLIC_REVIVE_ID ?? "91712920500236a3b860a14f786261a4";
 export const ADS_ENABLED = process.env.NEXT_PUBLIC_ADS_ENABLED !== "0";
@@ -26,7 +28,7 @@ export const AD_ZONES = {
   "desktop-billboard": { zoneId: 2, width: 970, height: 250, device: "desktop" },
   "desktop-rail-mpu": { zoneId: 3, width: 300, height: 250, device: "desktop" },
   "desktop-rail-halfpage": { zoneId: 4, width: 300, height: 600, device: "desktop" },
-  "desktop-infeed-leaderboard": { zoneId: 5, width: 728, height: 90, device: "desktop" },
+  "desktop-infeed-mpu": { zoneId: 5, width: 300, height: 250, device: "desktop" },
   "desktop-inarticle-mpu": { zoneId: 6, width: 300, height: 250, device: "desktop" },
   "desktop-takeover-left": { zoneId: 7, width: 160, height: 600, device: "desktop" },
   "desktop-takeover-right": { zoneId: 8, width: 160, height: 600, device: "desktop" },
