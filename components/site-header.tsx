@@ -114,7 +114,7 @@ export function SiteHeader({ sections = [] }: SiteHeaderProps) {
       {/* Masthead row */}
       <div className="mx-auto flex w-full max-w-[var(--noa-well-w)] items-center gap-4 px-4 py-3.5 sm:px-6">
         <Link href="/" aria-label="News On Africa home" className="shrink-0">
-          <BrandMark />
+          <BrandMark className="text-[1.15rem] md:text-[1.5rem]" />
         </Link>
 
         <div className="hidden flex-1 items-center gap-3 md:flex">

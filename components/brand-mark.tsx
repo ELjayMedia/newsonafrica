@@ -1,35 +1,26 @@
+import { AfricaGlyph } from "@/components/africa-glyph";
 import { cn } from "@/lib/utils";
 
 /**
- * News On Africa lockup (design system §01): the green pin/leaf glyph beside the
- * stacked "NEWS ON / AFRICA" wordmark in Archivo Black, with AFRICA tracked and
- * in brand green. `glyphSize` sizes the pin so the mark can shrink for compact
- * contexts (e.g. the mobile masthead) without duplicating markup.
+ * News On Africa lockup (brand refresh, Option A "Broken Line"): the stroked
+ * Africa outline beside the stacked lowercase wordmark "news on / Africa" in
+ * Archivo Bold. "Africa" is set 1.305× larger so its ink width matches "news on"
+ * (measured against the self-hosted Archivo file).
+ *
+ * The whole mark is sized in `em`, so the font size on the wrapper scales it:
+ * pass a `text-[…]` class (the size of the "news on" line) to resize, including
+ * responsively (`text-[1.15rem] md:text-[1.5rem]`). Default is 1.5rem.
  */
-export function BrandMark({
-  className,
-  glyphSize = 30,
-}: {
-  className?: string;
-  glyphSize?: number;
-}) {
+export function BrandMark({ className }: { className?: string }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <svg
-        width={glyphSize}
-        height={glyphSize}
-        viewBox="0 0 100 100"
-        aria-hidden
-        className="shrink-0"
-      >
-        <path
-          d="M50 8 C58 8 64 10 70 12 C76 14 82 14 84 20 C86 26 82 30 80 36 C78 42 80 46 78 52 C76 60 70 66 64 74 C60 80 58 88 52 92 C48 95 44 90 43 84 C42 78 38 74 34 68 C30 62 26 58 24 50 C22 42 20 34 22 28 C24 22 30 20 36 16 C42 12 44 8 50 8 Z"
-          fill="var(--noa-green)"
-        />
-      </svg>
-      <span className="noa-wordmark leading-[0.9]">
-        <span className="block text-[1.35rem] text-noa-ink">NEWS ON</span>
-        <span className="block text-[1.35rem] tracking-[0.18em] text-noa-green">AFRICA</span>
+    <span className={cn("flex items-center gap-[0.3em] text-[1.5rem]", className)}>
+      <AfricaGlyph
+        color="currentColor"
+        className="h-[2.3em] w-[2.3em] shrink-0 text-noa-green dark:text-noa-green-bright"
+      />
+      <span className="flex flex-col gap-[0.08em] font-display font-bold leading-[0.9] whitespace-nowrap">
+        <span className="tracking-[-0.02em] text-noa-ink">news on</span>
+        <span className="text-[1.305em] text-noa-green dark:text-noa-green-bright">Africa</span>
       </span>
     </span>
   );

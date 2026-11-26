@@ -60,7 +60,7 @@ export function SiteFooter({ sections = [] }: { sections?: NavSection[] }) {
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div className="space-y-4">
             <Link href="/" aria-label="News On Africa home" className="inline-block">
-              <BrandMark glyphSize={28} />
+              <BrandMark className="text-[1.3rem]" />
             </Link>
             <p className="body-sm max-w-xs text-muted-foreground">
               Independent African journalism: news, business and culture from the continent&rsquo;s

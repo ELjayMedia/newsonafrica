@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,7 @@ export function LoginForm({
         <CardDescription>Welcome back to News on Africa.</CardDescription>
       </CardHeader>
       <CardHeader className="items-center px-6 pb-3 pt-8 text-center md:hidden">
-        <div className="space-y-1">
-          <p className="noa-wordmark text-4xl text-foreground">NOA</p>
-          <p className="ui-sm uppercase tracking-wide text-primary">News On Africa</p>
-        </div>
+        <BrandMark className="text-[1.4rem]" />
         <CardTitle className="mt-5 text-3xl font-bold tracking-tight">Welcome back</CardTitle>
         <CardDescription className="max-w-xs">
           Sign in to save stories, follow topics, and continue reading across the continent.
@@ -47,8 +45,12 @@ export function LoginForm({
             That sign-in link is invalid or has expired. Please sign in below or request a new link.
           </FormAlert>
         ) : null}
-        {resetSuccess ? <FormAlert tone="success">Password updated. Sign in with your new password.</FormAlert> : null}
-        {state.status === "error" && state.message ? <FormAlert tone="error">{state.message}</FormAlert> : null}
+        {resetSuccess ? (
+          <FormAlert tone="success">Password updated. Sign in with your new password.</FormAlert>
+        ) : null}
+        {state.status === "error" && state.message ? (
+          <FormAlert tone="error">{state.message}</FormAlert>
+        ) : null}
 
         <form action={formAction} className="flex flex-col gap-4" noValidate>
           {next ? <input type="hidden" name="next" value={next} /> : null}
@@ -76,7 +78,10 @@ export function LoginForm({
               <label htmlFor="login-password" className="ui-sm font-medium">
                 Password
               </label>
-              <Link href="/forgot-password" className="ui-sm inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline md:min-h-0">
+              <Link
+                href="/forgot-password"
+                className="ui-sm inline-flex min-h-11 items-center text-primary underline-offset-4 hover:underline md:min-h-0"
+              >
                 Forgot password?
               </Link>
             </div>
@@ -94,7 +99,11 @@ export function LoginForm({
             <FieldErrors id="login-password-errors" errors={state.fieldErrors?.password} />
           </div>
 
-          <Button type="submit" className="h-12 w-full rounded-xl md:h-10 md:rounded-full" disabled={pending}>
+          <Button
+            type="submit"
+            className="h-12 w-full rounded-xl md:h-10 md:rounded-full"
+            disabled={pending}
+          >
             {pending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
@@ -111,7 +120,10 @@ export function LoginForm({
           </Link>
         </p>
 
-        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-muted p-3 md:hidden" aria-label="Sign-in benefits">
+        <div
+          className="grid grid-cols-3 gap-2 rounded-2xl border border-border bg-muted p-3 md:hidden"
+          aria-label="Sign-in benefits"
+        >
           <div className="text-center">
             <p className="text-lg" aria-hidden>
               ✓

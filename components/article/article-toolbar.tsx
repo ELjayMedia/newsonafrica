@@ -54,7 +54,7 @@ export function ArticleToolbar({ fallbackHref, fallbackLabel }: ArticleToolbarPr
         </button>
 
         <Link href="/" aria-label="News On Africa home" className="justify-self-center">
-          <BrandMark glyphSize={22} className="gap-2 [&_.noa-wordmark>span]:text-[1.05rem]" />
+          <BrandMark className="text-[0.95rem]" />
         </Link>
 
         {/* Empty third column keeps the mark optically centred. */}
