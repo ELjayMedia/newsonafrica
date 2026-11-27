@@ -46,13 +46,13 @@ pages, on screens 1440px and wider. The page column covers its centre; the
 two sides show it and click through to the banner's URL, with an
 "Advertisement" label on each side.
 
-**Creative spec** (template: `wallpaper-template-1920x1200.png`):
+**Creative spec** (template: `wallpaper-template-1920x1200.png`; its marked safe areas are the older, 16 px narrower ones, so they still fit):
 
 | | |
 |---|---|
 | Size | **1920 × 1200 px**, JPG/PNG/WebP, under 300 KB |
-| Hidden behind the page | centre **1018 px** (x 451–1469): keep empty |
-| Always visible (≥1440 px screens) | **211 × 640 px** beside each side of the page: x 240–451 and x 1469–1680, y 60–700. Put the logo and message here. |
+| Hidden behind the page | centre **986 px** (x 467–1453): the 970 px page plus an 8 px grey edge each side; keep empty |
+| Always visible (≥1440 px screens) | **227 × 640 px** beside each side of the page: x 240–467 and x 1453–1680, y 60–700. Put the logo and message here. |
 | Visible only on wider screens | outer strips x 0–240 and x 1680–1920 |
 | Top 37 px | under the site's black top bar |
 | Edges | keep the bottom edge a flat colour: it fills any screen space beyond the image (wider than 1920px or taller than 1200px) |

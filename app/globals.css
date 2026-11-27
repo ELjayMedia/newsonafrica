@@ -94,6 +94,11 @@
 @media (min-width: 1024px) {
   :root {
     --noa-well-w: 1018px;
+    /* With a takeover wallpaper, the grey canvas strip behind the page is only
+       this much wider than the 970px visible box on each side, so the artwork
+       comes right up to the billboard and panels (the well keeps its 24px
+       gutters; the extra 16px each side shows the wallpaper). */
+    --noa-skin-gap: 8px;
   }
 }
 

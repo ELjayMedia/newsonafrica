@@ -176,9 +176,11 @@ function LiveTakeover() {
       }
     >
       {/* With a wallpaper, the page column keeps its normal grey canvas so the
-          gaps between panels never show the artwork: only the gutters do. */}
+          gaps between panels never show the artwork: only the gutters do. The
+          strip is the 970px visible box plus --noa-skin-gap each side (narrower
+          than the well) so the wallpaper sits close to the billboard. */}
       {wallpaper ? (
-        <div className="absolute inset-y-0 left-1/2 w-[var(--noa-well-w)] -translate-x-1/2 bg-noa-canvas" />
+        <div className="absolute inset-y-0 left-1/2 w-[calc(970px+2*var(--noa-skin-gap))] -translate-x-1/2 bg-noa-canvas" />
       ) : null}
       {gutter("left", left)}
       {gutter("right", right)}
