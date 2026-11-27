@@ -115,10 +115,13 @@ export const brandTokens = {
  * that the header, page content and takeover-skin gutters all share. From lg
  * it is 1018px, a 970px visible box (matching the 970×250 billboard) plus
  * 24px gutters. It stays fixed so the side gutters remain available for
- * wallpaper/takeover ads.
+ * wallpaper/takeover ads. `skinGap` is `--noa-skin-gap`: with a wallpaper,
+ * the grey canvas behind the page is only the 970px box plus this each side,
+ * so the artwork shows inside the well's gutters, close to the billboard.
  */
 export const layoutTokens = {
   wellWidth: { base: "980px", lg: "1018px" },
+  skinGap: "8px",
   railWidth: "320px",
   /** Gap between the main panel, the rail and stacked rail panels (lg+). */
   panelGap: "12px",
