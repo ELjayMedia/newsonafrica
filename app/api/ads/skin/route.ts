@@ -9,14 +9,15 @@ const MAX_BYTES = 3 * 1024 * 1024;
 
 /**
  * Average colour along one edge of an ad-server image, for the takeover skin:
- * GET /api/ads/skin?src=<https://ads.eljaymedia.com/...>&edge=left|right
+ * GET /api/ads/skin?src=<https://ads.eljaymedia.com/...>&edge=left|right|bottom
  * Only images on the Revive host are fetched. Responses are cached hard (an
  * image URL's pixels don't change).
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const src = searchParams.get("src") ?? "";
-  const edge = searchParams.get("edge") === "right" ? "right" : "left";
+  const edgeParam = searchParams.get("edge");
+  const edge = edgeParam === "right" || edgeParam === "bottom" ? edgeParam : "left";
   if (!isSampleableImage(src, REVIVE_URL)) {
     return Response.json({ error: "unsupported image" }, { status: 400 });
   }
@@ -31,11 +32,12 @@ export async function GET(request: Request) {
     const image = sharp(buf, { limitInputPixels: 4_000_000 });
     const { width = 0, height = 0 } = await image.metadata();
     if (!width || !height) return Response.json({ color: null }, { status: 200 });
-    const strip = Math.max(1, Math.round(width * 0.04));
-    const { channels } = await image
-      .clone()
-      .extract({ left: edge === "left" ? 0 : width - strip, top: 0, width: strip, height })
-      .stats();
+    const strip = Math.max(1, Math.round((edge === "bottom" ? height : width) * 0.04));
+    const region =
+      edge === "bottom"
+        ? { left: 0, top: height - strip, width, height: strip }
+        : { left: edge === "left" ? 0 : width - strip, top: 0, width: strip, height };
+    const { channels } = await image.clone().extract(region).stats();
     const [r, g, b, alpha] = channels.map((c) => c.mean);
     // A transparent edge has no colour to blend with: use the default skin.
     if (alpha !== undefined && alpha < 128) {

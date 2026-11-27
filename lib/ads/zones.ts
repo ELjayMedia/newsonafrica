@@ -32,6 +32,8 @@ export const AD_ZONES = {
   "desktop-inarticle-mpu": { zoneId: 6, width: 300, height: 250, device: "desktop" },
   "desktop-takeover-left": { zoneId: 7, width: 160, height: 600, device: "desktop" },
   "desktop-takeover-right": { zoneId: 8, width: 160, height: 600, device: "desktop" },
+  /** Full-page background behind everything on home routes (≥1440px). */
+  "desktop-takeover-wallpaper": { zoneId: 15, width: 1920, height: 1200, device: "desktop" },
   "mobile-top-banner": { zoneId: 9, width: 320, height: 50, device: "mobile" },
   "mobile-infeed-mpu-1": { zoneId: 10, width: 300, height: 250, device: "mobile" },
   "mobile-infeed-mpu-2": { zoneId: 11, width: 300, height: 250, device: "mobile" },

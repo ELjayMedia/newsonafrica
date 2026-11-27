@@ -62,3 +62,30 @@ describe("takeover skin", () => {
     expect(toHex(300, -2, 15.6)).toBe("#ff0010");
   });
 });
+
+describe("wallpaper takeover", () => {
+  it("turns an image banner into a full-page background with its click URL", async () => {
+    const { wallpaperFromCreative } = await import("@/lib/ads/skin");
+    const html =
+      "<a href='https://ads.eljaymedia.com/delivery/cl.php?bannerid=20&zoneid=15' target='_blank'><img src='https://ads.eljaymedia.com/images/wall.jpg' width='1920' height='1200'></a><div id='beacon_x'><img src='https://ads.eljaymedia.com/delivery/lg.php?bannerid=20'></div>";
+    expect(wallpaperFromCreative(html)).toEqual({
+      background: 'url("https://ads.eljaymedia.com/images/wall.jpg") center top / auto no-repeat',
+      image: "https://ads.eljaymedia.com/images/wall.jpg",
+      clickUrl: "https://ads.eljaymedia.com/delivery/cl.php?bannerid=20&zoneid=15",
+    });
+  });
+
+  it("lets an HTML creative set the wallpaper with data-noa-skin", async () => {
+    const { wallpaperFromCreative } = await import("@/lib/ads/skin");
+    expect(wallpaperFromCreative('<div data-noa-skin="#c8102e">x</div>')).toEqual({
+      background: "#c8102e",
+      image: null,
+      clickUrl: null,
+    });
+  });
+
+  it("ignores creatives with nothing to paint", async () => {
+    const { wallpaperFromCreative } = await import("@/lib/ads/skin");
+    expect(wallpaperFromCreative("<span>text only</span>")).toBeNull();
+  });
+});

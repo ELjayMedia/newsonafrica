@@ -93,3 +93,35 @@ export function toHex(r: number, g: number, b: number): string {
       .join("")
   );
 }
+
+export interface Wallpaper {
+  /** CSS background for the whole page (image, gradient or colour). */
+  background: string;
+  /** The creative's image, if any: sampled for the fill colour around it. */
+  image: string | null;
+  /** Where a click on the visible wallpaper goes (Revive's click-tracking URL). */
+  clickUrl: string | null;
+}
+
+/** First https link in the creative: Revive wraps banners in its click URL. */
+export function firstLinkHref(html: string): string | null {
+  const m = html.match(/<a[^>]+href\s*=\s*(["'])(https:\/\/[^"']+)\1/i);
+  return m ? decode(m[2]!) : null;
+}
+
+/**
+ * Wallpaper takeover from a creative. An image banner is shown at its real
+ * size, centred at the top (never scaled, so the strip beside the page is
+ * the same on every screen); an HTML creative can instead set `data-noa-skin`
+ * or its own background. Null when the creative has nothing to paint.
+ */
+export function wallpaperFromCreative(html: string): Wallpaper | null {
+  const explicit = explicitSkin(html);
+  const img = firstImageSrc(html);
+  const background =
+    explicit ??
+    (img ? safeSkinValue(`url("${img}") center top / auto no-repeat`) : null) ??
+    inlineBackground(html);
+  if (!background) return null;
+  return { background, image: explicit ? null : img, clickUrl: firstLinkHref(html) };
+}
