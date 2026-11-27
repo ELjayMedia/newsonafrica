@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { ReviveZone } from "@/components/ads/revive-zone";
 import { AD_PREVIEW } from "@/lib/ads/preview";
 import { ADS_ENABLED, AD_ZONES } from "@/lib/ads/zones";
-import { DEFAULT_SKIN, skinSourceFor } from "@/lib/ads/skin";
+import { DEFAULT_SKIN, skinSourceFor, wallpaperFromCreative, type Wallpaper } from "@/lib/ads/skin";
 import { isHomeRoute } from "@/lib/ads/routes";
 import { cn } from "@/lib/utils";
 
@@ -100,6 +100,21 @@ function LiveTakeover() {
     left: null,
     right: null,
   });
+  const [wallpaper, setWallpaper] = React.useState<Wallpaper | null>(null);
+  const [wallpaperFill, setWallpaperFill] = React.useState<string | null>(null);
+  const onWallpaper = (html: string) => {
+    const wp = wallpaperFromCreative(html);
+    setWallpaper(wp);
+    // Screen beyond the image (wider than 1920px, or taller than it) takes the
+    // colour of the image's bottom edge, so it reads as one canvas.
+    if (wp?.image) {
+      void fetch(`/api/ads/skin?src=${encodeURIComponent(wp.image)}&edge=bottom`)
+        .then((r) => r.json() as Promise<{ color?: string | null }>)
+        .then(({ color }) => setWallpaperFill(color ?? null))
+        .catch(() => undefined);
+    }
+  };
+  const wallpaperZone = AD_ZONES["desktop-takeover-wallpaper"];
   const onFill = (side: Side) => (html: string) => {
     void resolveSkin(html, side).then((bg) => setSkins((s) => ({ ...s, [side]: bg })));
   };
@@ -114,11 +129,29 @@ function LiveTakeover() {
         side === "left" ? "left-0" : "right-0",
       )}
       style={
-        background
+        // A sold wallpaper shows through the gutters; otherwise each gutter
+        // blends with its own creative.
+        background && !wallpaper
           ? { background, backgroundSize: "cover", backgroundPosition: "center" }
           : undefined
       }
     >
+      {wallpaper ? (
+        <>
+          <span className="absolute top-14 left-1/2 -translate-x-1/2 rounded bg-black/45 px-1.5 py-0.5 font-display text-[0.5625rem] font-bold tracking-[0.18em] text-white/85 uppercase">
+            Advertisement
+          </span>
+          {wallpaper.clickUrl ? (
+            <a
+              href={wallpaper.clickUrl}
+              target="_blank"
+              rel="sponsored noopener"
+              aria-label="Advertisement (opens the advertiser's site)"
+              className="pointer-events-auto absolute inset-0"
+            />
+          ) : null}
+        </>
+      ) : null}
       <div className="pointer-events-auto h-fit [&_p]:text-white/70 [&_p]:mix-blend-difference">
         <ReviveZone
           zoneId={AD_ZONES[`desktop-takeover-${side}`].zoneId}
@@ -134,10 +167,36 @@ function LiveTakeover() {
   return (
     <div
       className="pointer-events-none fixed inset-0 z-0 hidden overflow-hidden min-[1440px]:block"
-      style={left || right ? { background: left ?? DEFAULT_SKIN } : undefined}
+      style={
+        wallpaper
+          ? { background: wallpaper.background, backgroundColor: wallpaperFill ?? "#0c1410" }
+          : left || right
+            ? { background: left ?? DEFAULT_SKIN }
+            : undefined
+      }
     >
+      {/* With a wallpaper, the page column keeps its normal grey canvas so the
+          gaps between panels never show the artwork: only the gutters do. */}
+      {wallpaper ? (
+        <div className="absolute inset-y-0 left-1/2 w-[var(--noa-well-w)] -translate-x-1/2 bg-noa-canvas" />
+      ) : null}
       {gutter("left", left)}
       {gutter("right", right)}
+      {/* The wallpaper zone is fetched off-screen (so Revive still logs the
+          impression via the creative's beacon) and painted as the page
+          background above. */}
+      <div
+        aria-hidden
+        className="absolute -left-[9999px] top-0 h-px w-px overflow-hidden opacity-0"
+      >
+        <ReviveZone
+          zoneId={wallpaperZone.zoneId}
+          width={wallpaperZone.width}
+          height={wallpaperZone.height}
+          media="(min-width: 1440px)"
+          onFill={onWallpaper}
+        />
+      </div>
     </div>
   );
 }

@@ -22,6 +22,7 @@ $ZONES = [
   'desktop-inarticle-mpu'     => ['NOA · Desktop · In-article MPU', 300, 250, 'Inside the article body after paragraph 4 (lg+).'],
   'desktop-takeover-left'     => ['NOA · Desktop · Takeover skin left', 160, 600, 'Left page gutter on home routes, viewport >= 1440px. Sell with the right skin and billboard.'],
   'desktop-takeover-right'    => ['NOA · Desktop · Takeover skin right', 160, 600, 'Right page gutter on home routes, viewport >= 1440px.'],
+  'desktop-takeover-wallpaper'=> ['NOA · Desktop · Takeover wallpaper', 1920, 1200, 'Full-page background image behind everything on home routes, viewport >= 1440px. Upload a 1920x1200 image banner; the page gutters show it and click through to the banner URL. See infra/revive/README.md for the safe areas.'],
   'mobile-top-banner'         => ['NOA · Mobile · Top banner', 320, 50, 'Under the header on listing pages (< lg).'],
   'mobile-infeed-mpu-1'       => ['NOA · Mobile · In-feed MPU 1', 300, 250, 'Mobile home feed after story 4.'],
   'mobile-infeed-mpu-2'       => ['NOA · Mobile · In-feed MPU 2', 300, 250, 'Mobile home feed after story 11 (deep feeds only).'],
@@ -52,7 +53,8 @@ $siteId = (int) $site->affiliateid;
 // Zones that carry the house ad; any zone not listed collapses until sold.
 // All zones by default (owner's call, 2026-11-26): unwanted ones are switched
 // off per zone in Revive.
-$HOUSE_KEYS = array_keys($ZONES);
+$HOUSE_KEYS = array_values(array_diff(array_keys($ZONES), ['desktop-takeover-wallpaper']));
+// (The wallpaper needs a real full-page image, so no house creative there.)
 // Zones renamed since the first run (old key => new key).
 $RENAMED = ['desktop-infeed-leaderboard' => 'desktop-infeed-mpu'];
 
@@ -130,7 +132,9 @@ $creative = function (int $w, int $h): string {
     . '</span>' . $cta . '</a>';
 };
 $sizes = [];
-foreach ($ZONES as [$n, $w, $h]) $sizes["{$w}x{$h}"] = [$w, $h];
+foreach ($ZONES as $k => [$n, $w, $h]) {
+  if (in_array($k, $HOUSE_KEYS, true)) $sizes["{$w}x{$h}"] = [$w, $h];
+}
 foreach ($sizes as $label => [$w, $h]) {
   $bname = "House · Advertise with us · $label";
   if (one('banners', ['campaignid' => $campId, 'description' => $bname])) continue;

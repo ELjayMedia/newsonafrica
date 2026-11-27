@@ -9,7 +9,7 @@ describe("Revive ad zones", () => {
   it("maps every placement to a distinct Revive zone", () => {
     const ids = Object.values(AD_ZONES).map((z) => z.zoneId);
     expect(new Set(ids).size).toBe(ids.length);
-    expect(ids.length).toBe(14);
+    expect(ids.length).toBe(15);
   });
 
   it("keeps desktop and mobile zones apart by name and breakpoint", () => {

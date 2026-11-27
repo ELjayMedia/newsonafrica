@@ -39,6 +39,35 @@ creative, so the page blends into the ad:
 3. Otherwise, for an HTML banner, its own root background is used.
 4. If none of these applies, the default dark green skin.
 
+## Wallpaper takeover (zone 15)
+
+The wallpaper is one image behind the whole page on the home and edition
+pages, on screens 1440px and wider. The page column covers its centre; the
+two sides show it and click through to the banner's URL, with an
+"Advertisement" label on each side.
+
+**Creative spec** (template: `wallpaper-template-1920x1200.png`):
+
+| | |
+|---|---|
+| Size | **1920 × 1200 px**, JPG/PNG/WebP, under 300 KB |
+| Hidden behind the page | centre **1018 px** (x 451–1469): keep empty |
+| Always visible (≥1440 px screens) | **211 × 640 px** beside each side of the page: x 240–451 and x 1469–1680, y 60–700. Put the logo and message here. |
+| Visible only on wider screens | outer strips x 0–240 and x 1680–1920 |
+| Top 37 px | under the site's black top bar |
+| Edges | keep the bottom edge a flat colour: it fills any screen space beyond the image (wider than 1920px or taller than 1200px) |
+
+The image is shown at its real size, centred at the top, and never scaled,
+so the strip beside the page looks the same on every desktop. It stays in
+place while the page scrolls.
+
+**Booking it:** add a 1920×1200 *image* banner with the click-through URL,
+link it to zone 15, and usually the billboard (2) too. While a wallpaper is
+live, unlink zones 7 and 8 (the takeover side skyscrapers) from the house
+campaign, or link the advertiser's own 160×600s, because they sit on top of
+the safe area. An HTML creative can set the background with
+`data-noa-skin` instead of an image. The house campaign never fills zone 15.
+
 ## How the reader loads ads
 
 `components/ads/revive-zone.tsx` uses Revive's async tag
