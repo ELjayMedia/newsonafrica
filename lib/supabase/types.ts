@@ -43,7 +43,14 @@ export type ContentIndexInsert = Omit<
   Partial<
     Pick<
       ContentIndexRow,
-      "categories" | "tags" | "excerpt" | "content_plain" | "author" | "featured_image_url"
+      | "categories"
+      | "tags"
+      | "excerpt"
+      | "content_plain"
+      | "author"
+      | "featured_image_url"
+      // Defaults to now() on insert; the sync stamps it on every upsert.
+      | "updated_at"
     >
   >;
 
@@ -276,10 +283,7 @@ export type AnalyticsPageViewRow = {
   metadata: Record<string, unknown>;
 };
 
-export type AnalyticsPageViewInsert = Pick<
-  AnalyticsPageViewRow,
-  "path" | "session_id"
-> &
+export type AnalyticsPageViewInsert = Pick<AnalyticsPageViewRow, "path" | "session_id"> &
   Partial<
     Pick<
       AnalyticsPageViewRow,
@@ -287,14 +291,10 @@ export type AnalyticsPageViewInsert = Pick<
     >
   >;
 
-export type PressCredentialStatus = "active" | "expired" | "suspended" | "revoked" | "lost" | "stolen";
+export type PressCredentialStatus =
+  "active" | "expired" | "suspended" | "revoked" | "lost" | "stolen";
 export type PressCredentialRole =
-  | "journalist"
-  | "editor"
-  | "photographer"
-  | "videographer"
-  | "freelancer"
-  | "contributor";
+  "journalist" | "editor" | "photographer" | "videographer" | "freelancer" | "contributor";
 
 export type PressCredentialRow = {
   id: string;
@@ -315,7 +315,10 @@ export type PressCredentialRow = {
   updated_at: string;
 };
 
-export type PressCredentialInsert = Pick<PressCredentialRow, "holder_name" | "role" | "expiry_date"> &
+export type PressCredentialInsert = Pick<
+  PressCredentialRow,
+  "holder_name" | "role" | "expiry_date"
+> &
   Partial<Omit<PressCredentialRow, "holder_name" | "role" | "expiry_date">>;
 
 export type CredentialVerificationRow = {
@@ -401,7 +404,10 @@ export type AdEventRow = {
   metadata: Record<string, unknown> | null;
 };
 
-export type AdEventInsert = Pick<AdEventRow, "event_type" | "placement_type" | "edition_code" | "country"> &
+export type AdEventInsert = Pick<
+  AdEventRow,
+  "event_type" | "placement_type" | "edition_code" | "country"
+> &
   Partial<Omit<AdEventRow, "event_type" | "placement_type" | "edition_code" | "country">>;
 
 export type CommercialEnquiryRow = {
@@ -432,7 +438,15 @@ export type CommercialEnquiryInsert = Pick<
   Partial<
     Pick<
       CommercialEnquiryRow,
-      "status" | "phone" | "campaign_timing" | "budget_range" | "product_interest" | "notes" | "source_path" | "source_campaign" | "metadata"
+      | "status"
+      | "phone"
+      | "campaign_timing"
+      | "budget_range"
+      | "product_interest"
+      | "notes"
+      | "source_path"
+      | "source_campaign"
+      | "metadata"
     >
   >;
 

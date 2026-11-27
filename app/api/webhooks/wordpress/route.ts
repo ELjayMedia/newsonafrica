@@ -38,7 +38,13 @@ interface WordPressWebhookPost {
 }
 
 interface WordPressWebhookPayload {
-  action?: "post_published" | "post_updated" | "post_deleted" | "category_updated" | "tag_updated" | string;
+  action?:
+    | "post_published"
+    | "post_updated"
+    | "post_deleted"
+    | "category_updated"
+    | "tag_updated"
+    | string;
   country?: string;
   post?: WordPressWebhookPost;
 }
@@ -119,12 +125,31 @@ function revalidatePost(countries: string[], post: WordPressWebhookPost) {
   return Array.from(tags);
 }
 
-function revalidateTaxonomy(countries: string[], kind: "category" | "tag", slug: string | undefined) {
+function revalidateTaxonomy(
+  countries: string[],
+  kind: "category" | "tag",
+  slug: string | undefined,
+) {
   if (!slug) return [];
 
-  const tags = countries.map((country) => (kind === "category" ? cacheTags.category(country, slug) : cacheTags.tag(country, slug)));
+  const tags = countries.map((country) =>
+    kind === "category" ? cacheTags.category(country, slug) : cacheTags.tag(country, slug),
+  );
   for (const tag of tags) revalidateTag(tag);
   return tags;
+}
+
+/**
+ * Run a content-index sync step without letting it take the webhook down: a
+ * missing service-role key or a Supabase outage must not stop the cache tags
+ * from being revalidated (NOA-191).
+ */
+async function safeSync(step: () => Promise<{ success: boolean; error?: string }>) {
+  try {
+    return await step();
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -152,28 +177,44 @@ export async function POST(request: NextRequest) {
   // resolved one when known, otherwise the default (webhooks should always
   // include `country`; this only matters for the conservative fallback).
   const syncCountry = countries[0]!;
-  const actionLog = log.child({ action, country: syncCountry, slug: post?.slug, wpPostId: post?.id });
+  const actionLog = log.child({
+    action,
+    country: syncCountry,
+    slug: post?.slug,
+    wpPostId: post?.id,
+  });
   metrics.increment("webhook.wordpress.received", 1, { action: String(action) });
 
   switch (action) {
     case "post_published":
     case "post_updated": {
       if (!post?.slug || post.id === undefined) {
-        return NextResponse.json({ error: "post_published/post_updated requires post.id and post.slug" }, { status: 400 });
+        return NextResponse.json(
+          { error: "post_published/post_updated requires post.id and post.slug" },
+          { status: 400 },
+        );
       }
 
       const wpPostId = normalizeWpPostId(post.id);
       const syncResult =
         wpPostId !== null
-          ? await metrics.time("webhook.wordpress.sync_ms", () => syncPostById(syncCountry, wpPostId), { action })
+          ? await safeSync(() =>
+              metrics.time("webhook.wordpress.sync_ms", () => syncPostById(syncCountry, wpPostId), {
+                action,
+              }),
+            )
           : { success: false, error: "invalid post id" };
       const revalidated = revalidatePost(countries, post);
 
       if (syncResult.success) {
-        actionLog.info("Synced post and revalidated cache tags", { revalidated: revalidated.length });
+        actionLog.info("Synced post and revalidated cache tags", {
+          revalidated: revalidated.length,
+        });
       } else {
         metrics.increment("webhook.wordpress.sync_failed", 1, { action });
-        actionLog.error("Content-index sync failed; cache tags still revalidated", { error: syncResult.error });
+        actionLog.error("Content-index sync failed; cache tags still revalidated", {
+          error: syncResult.error,
+        });
       }
 
       return NextResponse.json({ success: true, action, revalidated, sync: syncResult });
@@ -181,19 +222,28 @@ export async function POST(request: NextRequest) {
 
     case "post_deleted": {
       if (!post?.slug || post.id === undefined) {
-        return NextResponse.json({ error: "post_deleted requires post.id and post.slug" }, { status: 400 });
+        return NextResponse.json(
+          { error: "post_deleted requires post.id and post.slug" },
+          { status: 400 },
+        );
       }
 
       const wpPostId = normalizeWpPostId(post.id);
       const syncResult =
-        wpPostId !== null ? await deletePostFromIndex(syncCountry, wpPostId) : { success: false, error: "invalid post id" };
+        wpPostId !== null
+          ? await safeSync(() => deletePostFromIndex(syncCountry, wpPostId))
+          : { success: false, error: "invalid post id" };
       const revalidated = revalidatePost(countries, post);
 
       if (syncResult.success) {
-        actionLog.info("Removed post from content index and revalidated cache tags", { revalidated: revalidated.length });
+        actionLog.info("Removed post from content index and revalidated cache tags", {
+          revalidated: revalidated.length,
+        });
       } else {
         metrics.increment("webhook.wordpress.sync_failed", 1, { action });
-        actionLog.error("Content-index delete failed; cache tags still revalidated", { error: syncResult.error });
+        actionLog.error("Content-index delete failed; cache tags still revalidated", {
+          error: syncResult.error,
+        });
       }
 
       return NextResponse.json({ success: true, action, revalidated, sync: syncResult });
@@ -218,5 +268,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
-  return NextResponse.json({ message: "WordPress webhook endpoint is active", timestamp: new Date().toISOString() });
+  return NextResponse.json({
+    message: "WordPress webhook endpoint is active",
+    timestamp: new Date().toISOString(),
+  });
 }

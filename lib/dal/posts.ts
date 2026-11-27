@@ -459,28 +459,68 @@ export async function getPostById(country: CountryCode | string, id: number): Pr
   return data.post ? mapGraphQLPost(data.post, country) : null;
 }
 
+/** WPGraphQL refuses `first` above 100 (its default max query amount). */
+const SYNC_CHUNK = 100;
+
+const POSTS_SYNC_QUERY = /* GraphQL */ `
+  query PostsSync($first: Int!, $after: String) {
+    posts(first: $first, after: $after, where: { status: PUBLISH, orderby: { field: DATE, order: DESC } }) {
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      nodes {
+        ${POST_FIELDS}
+      }
+    }
+  }
+`;
+
+/**
+ * One page of an edition's published posts (full content), for the content
+ * index backfill. Walks WPGraphQL cursors in chunks of 100: asking for
+ * `first: page * perPage` in one request silently capped every edition at 100
+ * posts (NOA-191).
+ */
 export async function listPostsForSync(
   country: CountryCode | string,
   { page = 1, perPage = 50 }: { page?: number; perPage?: number } = {},
 ): Promise<{ posts: Post[]; total: number; hasNextPage: boolean }> {
   const normalizedPage = normalizePage(page);
   const normalizedPerPage = normalizePerPage(perPage);
-  const first = normalizedPage * normalizedPerPage;
+  const start = (normalizedPage - 1) * normalizedPerPage;
+  const end = start + normalizedPerPage;
 
-  const result = await fetchWordPressGraphQL<PostsListData>(
-    country,
-    POSTS_LIST_QUERY,
-    { first, categoryName: null, tagSlugIn: null, authorName: null, search: null },
-    { tags: [cacheTags.posts(country)], revalidate: 0, operationName: "PostsList" },
-  );
-  if (!result.ok) throw result.error;
+  type SyncPage = {
+    posts?: {
+      pageInfo?: { hasNextPage?: boolean | null; endCursor?: string | null } | null;
+      nodes?: GqlPost[] | null;
+    } | null;
+  };
+  const nodes: GqlPost[] = [];
+  let after: string | null = null;
+  let more = true;
+  let sourceHasMore = false;
+  // Fetch until we hold one item past the window (to know if there's a next page).
+  while (more && nodes.length <= end) {
+    const result: Awaited<ReturnType<typeof fetchWordPressGraphQL<SyncPage>>> =
+      await fetchWordPressGraphQL<SyncPage>(
+        country,
+        POSTS_SYNC_QUERY,
+        { first: SYNC_CHUNK, after },
+        { tags: [cacheTags.posts(country)], revalidate: 0, operationName: "PostsSync" },
+      );
+    if (!result.ok) throw result.error;
+    const chunk = result.data.posts?.nodes ?? [];
+    nodes.push(...chunk);
+    after = result.data.posts?.pageInfo?.endCursor ?? null;
+    sourceHasMore = Boolean(result.data.posts?.pageInfo?.hasNextPage);
+    more = sourceHasMore && Boolean(after) && chunk.length > 0;
+  }
 
-  const allItems = result.data.posts?.nodes ?? [];
-  const windowItems = allItems.slice((normalizedPage - 1) * normalizedPerPage, first);
-  const posts = windowItems.map((raw) => mapGraphQLPost(raw, country));
-  const hasNextPage = Boolean(result.data.posts?.pageInfo?.hasNextPage) || allItems.length > first;
-  const total = hasNextPage ? first + 1 : (normalizedPage - 1) * normalizedPerPage + posts.length;
-
+  const posts = nodes.slice(start, end).map((raw) => mapGraphQLPost(raw, country));
+  const hasNextPage = nodes.length > end || (sourceHasMore && nodes.length >= end);
+  const total = hasNextPage ? end + 1 : start + posts.length;
   return { posts, total, hasNextPage };
 }
 
