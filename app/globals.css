@@ -263,6 +263,13 @@
       transparent 1px 9px
     );
   }
+  /* Highlighted ad in the advertise page's placement mock-ups. */
+  .noa-mock-ad {
+    background: linear-gradient(135deg, var(--noa-green-dark), var(--noa-green-bright));
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--noa-green) 40%, transparent),
+      0 0 0 4px color-mix(in srgb, var(--noa-green) 15%, transparent);
+  }
   .dark .noa-placeholder {
     background-color: color-mix(in srgb, var(--noa-green) 12%, var(--noa-paper));
   }

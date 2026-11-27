@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { CommercialEnquiryForm } from "@/components/commercial-enquiry-form";
+import { PlacementMockup, type MockSpot } from "@/components/advertise/placement-mockup";
 import { Container } from "@/components/ui/container";
 
 export const metadata: Metadata = {
@@ -45,39 +46,71 @@ const PRODUCTS = [
 ] as const;
 
 /** Display placements (Revive zones in lib/ads/zones.ts). */
-const PLACEMENTS = {
+const PLACEMENTS: Record<
+  "Desktop" | "Mobile",
+  ReadonlyArray<{ name: string; size: string; where: string; spot: MockSpot }>
+> = {
   Desktop: [
     {
       name: "Billboard",
       size: "970 × 250",
       where: "Under the header on the home and edition pages",
+      spot: "billboard",
     },
-    { name: "Leaderboard", size: "728 × 90", where: "Top of section and article pages" },
-    { name: "Rail MPU", size: "300 × 250", where: "Right rail beside the news" },
-    { name: "Half page", size: "300 × 600", where: "Right rail, stays in view as readers scroll" },
+    {
+      name: "Leaderboard",
+      size: "728 × 90",
+      where: "Top of section and article pages",
+      spot: "leaderboard",
+    },
+    { name: "Rail MPU", size: "300 × 250", where: "Right rail beside the news", spot: "rail-mpu" },
+    {
+      name: "Half page",
+      size: "300 × 600",
+      where: "Right rail, stays in view as readers scroll",
+      spot: "half-page",
+    },
     {
       name: "In-article MPU",
       size: "300 × 250",
       where: "Inside the story, after the opening paragraphs",
+      spot: "in-article",
     },
-    { name: "In-feed MPU", size: "300 × 250", where: "Between stories in the news feed" },
+    {
+      name: "In-feed MPU",
+      size: "300 × 250",
+      where: "Between stories in the news feed",
+      spot: "in-feed",
+    },
     {
       name: "Takeover skin",
-      size: "2 × 160 × 600",
-      where: "Both page gutters, sold with the billboard",
+      size: "2 × 160 × 600 + billboard",
+      where: "Both page gutters with the billboard, as one buy",
+      spot: "takeover",
     },
   ],
   Mobile: [
-    { name: "Top banner", size: "320 × 50", where: "Under the header" },
-    { name: "In-feed MPU", size: "300 × 250", where: "Between stories in the home feed" },
-    { name: "In-article MPU", size: "300 × 250", where: "Inside the story, two per long read" },
+    { name: "Top banner", size: "320 × 50", where: "Under the header", spot: "m-top-banner" },
+    {
+      name: "In-feed MPU",
+      size: "300 × 250",
+      where: "Between stories in the home feed",
+      spot: "m-in-feed",
+    },
+    {
+      name: "In-article MPU",
+      size: "300 × 250",
+      where: "Inside the story, two per long read",
+      spot: "m-in-article",
+    },
     {
       name: "Sticky banner",
       size: "320 × 50",
-      where: "Bottom of the screen, readers can close it",
+      where: "Bottom of the screen; readers can close it",
+      spot: "m-sticky",
     },
   ],
-} as const;
+};
 
 const MEASUREMENT = [
   "Campaign impressions and clicks",
@@ -146,28 +179,48 @@ export default function AdvertisePage() {
             one country edition.
           </p>
         </div>
-        <div className="grid gap-4 lg:grid-cols-2">
-          {Object.entries(PLACEMENTS).map(([device, rows]) => (
-            <div key={device} className="rounded-xl border border-border bg-card p-5">
-              <h3 className="noa-eyebrow text-[0.6875rem] tracking-[0.16em] text-noa-green-text">
-                {device}
-              </h3>
-              <ul className="mt-3 divide-y divide-border">
-                {rows.map((row) => (
-                  <li key={row.name} className="flex items-baseline justify-between gap-4 py-2.5">
-                    <span className="min-w-0">
-                      <span className="block font-semibold text-foreground">{row.name}</span>
-                      <span className="body-sm text-muted-foreground">{row.where}</span>
-                    </span>
-                    <span className="shrink-0 font-mono text-xs text-muted-foreground">
-                      {row.size}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+        {(
+          Object.entries(PLACEMENTS) as Array<
+            [keyof typeof PLACEMENTS, (typeof PLACEMENTS)["Desktop"]]
+          >
+        ).map(([device, rows]) => (
+          <div key={device} className="space-y-3">
+            <h3 className="noa-eyebrow text-[0.6875rem] tracking-[0.16em] text-noa-green-text">
+              {device}
+            </h3>
+            <ul
+              className={
+                device === "Desktop"
+                  ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  : "grid grid-cols-2 gap-4 lg:grid-cols-4"
+              }
+            >
+              {rows.map((row) => (
+                <li
+                  key={row.name}
+                  className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
+                >
+                  <div className="flex min-h-[7.5rem] items-center justify-center rounded-lg bg-noa-paper p-3">
+                    <PlacementMockup
+                      device={device === "Desktop" ? "desktop" : "mobile"}
+                      spot={row.spot}
+                      className={device === "Mobile" ? "w-[62%]" : undefined}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                      <span className="font-semibold text-foreground">{row.name}</span>
+                      <span className="shrink-0 font-mono text-[0.6875rem] text-muted-foreground">
+                        {row.size}
+                      </span>
+                    </div>
+                    <p className="body-sm text-muted-foreground">{row.where}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
       </section>
 
       <section className="grid gap-6 rounded-2xl border border-border bg-muted/30 p-6 lg:grid-cols-2">
