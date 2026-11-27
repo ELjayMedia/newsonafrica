@@ -10,10 +10,14 @@ import { createLogger } from "@/lib/log";
 import { createPublicClient } from "@/lib/supabase/public";
 import type { CountryCode } from "@/lib/wordpress/countries";
 import type { MostReadPost } from "@/lib/dal/types";
+import { getExistingPostSlugs } from "@/lib/dal/posts";
+import { getArticleUrl } from "@/lib/content-sync/article-url";
 
 const DEFAULT_LIMIT = 6;
 const MAX_RPC_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 150;
+/** Ask the index for extra rows: some may no longer exist in the CMS. */
+const CANDIDATE_FACTOR = 3;
 
 const log = createLogger("most-read");
 
@@ -54,21 +58,32 @@ export async function getMostReadPosts(
     for (let attempt = 1; attempt <= MAX_RPC_ATTEMPTS; attempt += 1) {
       const { data, error } = await supabase.rpc("most_read_content", {
         country_filter: country,
-        limit_count: limit,
+        limit_count: limit * CANDIDATE_FACTOR,
       });
 
       if (!error) {
-        return (data ?? []).map((row) => ({
-          id: row.id,
-          wpPostId: row.wp_post_id,
-          slug: row.slug,
-          country: row.edition_code as CountryCode,
-          title: row.title,
-          excerpt: row.excerpt ?? "",
-          url: row.url_path,
-          featuredImageUrl: row.featured_image_url,
-          publishedAt: row.published_at,
-        }));
+        const rows = data ?? [];
+        // The index outlives the CMS (stories lost in the archive rebuild are
+        // still counted), so only keep stories the edition still publishes.
+        const existing = await getExistingPostSlugs(
+          country,
+          rows.map((row) => row.slug),
+        );
+        return rows
+          .filter((row) => existing.has(row.slug))
+          .slice(0, limit)
+          .map((row) => ({
+            id: row.id,
+            wpPostId: row.wp_post_id,
+            slug: row.slug,
+            country: row.edition_code as CountryCode,
+            title: row.title,
+            excerpt: row.excerpt ?? "",
+            // Build the link from the edition + CMS slug, not the stored path.
+            url: getArticleUrl(row.edition_code, row.slug),
+            featuredImageUrl: row.featured_image_url,
+            publishedAt: row.published_at,
+          }));
       }
 
       if (attempt < MAX_RPC_ATTEMPTS && isTransientRpcError(error)) {
