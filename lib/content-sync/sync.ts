@@ -39,11 +39,19 @@ const DEFAULT_PER_PAGE = 50;
 
 const log = createLogger("content-sync");
 
-async function upsertRows(rows: ReturnType<typeof mapPostToContentIndexRow>[]): Promise<SyncError[]> {
+async function upsertRows(
+  rows: ReturnType<typeof mapPostToContentIndexRow>[],
+): Promise<SyncError[]> {
   if (rows.length === 0) return [];
 
   const supabase = createAdminClient();
-  const { error } = await supabase.from("content_index").upsert(rows, { onConflict: "edition_code,wp_post_id" });
+  // `updated_at` only defaults on insert: stamp it on every sync so a re-synced
+  // row shows when it was last refreshed (NOA-191).
+  const syncedAt = new Date().toISOString();
+  const { error } = await supabase.from("content_index").upsert(
+    rows.map((row) => ({ ...row, updated_at: syncedAt })),
+    { onConflict: "edition_code,wp_post_id" },
+  );
 
   if (!error) return [];
 
@@ -91,8 +99,10 @@ export async function syncPostById(
   }
 
   const supabase = createAdminClient();
-  const row = mapPostToContentIndexRow(post);
-  const { error } = await supabase.from("content_index").upsert([row], { onConflict: "edition_code,wp_post_id" });
+  const row = { ...mapPostToContentIndexRow(post), updated_at: new Date().toISOString() };
+  const { error } = await supabase
+    .from("content_index")
+    .upsert([row], { onConflict: "edition_code,wp_post_id" });
 
   if (error) {
     return { success: false, error: error.message };
@@ -105,7 +115,10 @@ export async function deletePostFromIndex(
   wpPostId: number,
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = createAdminClient();
-  const { error } = await supabase.from("content_index").delete().match({ edition_code: country, wp_post_id: wpPostId });
+  const { error } = await supabase
+    .from("content_index")
+    .delete()
+    .match({ edition_code: country, wp_post_id: wpPostId });
 
   if (error) {
     return { success: false, error: error.message };
@@ -145,7 +158,11 @@ export interface BackfillCountryResult {
  */
 export async function runBackfillForCountry(
   country: CountryCode | string,
-  { perPage = DEFAULT_PER_PAGE, startPage = 1, maxPages }: { perPage?: number; startPage?: number; maxPages?: number } = {},
+  {
+    perPage = DEFAULT_PER_PAGE,
+    startPage = 1,
+    maxPages,
+  }: { perPage?: number; startPage?: number; maxPages?: number } = {},
 ): Promise<BackfillCountryResult> {
   const startedAt = Date.now();
   log.info("Backfill started", { country, perPage, startPage, maxPages });
@@ -172,11 +189,26 @@ export async function runBackfillForCountry(
     }
 
     const status: ContentSyncStatus = errors.length > 0 ? "failed" : "completed";
-    await updateSyncCursor(country, status, errors.length > 0 ? `${errors.length} page(s) failed during sync` : undefined);
+    await updateSyncCursor(
+      country,
+      status,
+      errors.length > 0 ? `${errors.length} page(s) failed during sync` : undefined,
+    );
 
     const durationMs = Date.now() - startedAt;
-    getMetrics().observe("content_sync.backfill_ms", durationMs, { country: String(country), status });
-    log.info("Backfill finished", { country, status, pagesProcessed, synced, total, errorCount: errors.length, durationMs });
+    getMetrics().observe("content_sync.backfill_ms", durationMs, {
+      country: String(country),
+      status,
+    });
+    log.info("Backfill finished", {
+      country,
+      status,
+      pagesProcessed,
+      synced,
+      total,
+      errorCount: errors.length,
+      durationMs,
+    });
 
     return { country, pagesProcessed, synced, total, errors, status };
   } catch (error) {
@@ -184,10 +216,27 @@ export async function runBackfillForCountry(
     await updateSyncCursor(country, "failed", message);
 
     const durationMs = Date.now() - startedAt;
-    getMetrics().observe("content_sync.backfill_ms", durationMs, { country: String(country), status: "failed" });
-    log.error("Backfill aborted", { country, pagesProcessed, synced, total, durationMs, err: error });
+    getMetrics().observe("content_sync.backfill_ms", durationMs, {
+      country: String(country),
+      status: "failed",
+    });
+    log.error("Backfill aborted", {
+      country,
+      pagesProcessed,
+      synced,
+      total,
+      durationMs,
+      err: error,
+    });
 
-    return { country, pagesProcessed, synced, total, errors: [...errors, { message }], status: "failed" };
+    return {
+      country,
+      pagesProcessed,
+      synced,
+      total,
+      errors: [...errors, { message }],
+      status: "failed",
+    };
   }
 }
 

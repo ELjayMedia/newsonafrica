@@ -253,3 +253,27 @@ Reader-app dependencies that change at cutover (names only):
    the new volume, owned by `33:33`).
 5. Point the tunnel or DNS for `cms.newsonafrica.com` at the new server. Media URLs do not change (R2 custom domain).
 6. Run the section 9 checks.
+
+## Reader webhook (NOA-88 / NOA-191)
+
+`mu-plugins/noa-reader-webhook.php` tells the reader when a story is published,
+updated, unpublished or deleted. The reader then revalidates its cache and
+syncs the Supabase `content_index`, which is what drives search and Most read.
+
+- Install it by copying the file to `wp-content/mu-plugins/` (on the persistent
+  `noa-wp-content` volume). It's network-wide and needs no activation.
+- Configure it with network options. The secret is stored root-only at
+  `/srv/eljaymedia/secrets/newsonafrica/reader-webhook-secret`, and the same
+  value is set as the reader's `WORDPRESS_WEBHOOK_SECRET` (a runtime-only
+  Coolify variable):
+
+  ```sh
+  sudo noa-wp-cli.sh site option update noa_reader_webhook_url https://app.newsonafrica.com/api/webhooks/wordpress
+  sudo cat /srv/eljaymedia/secrets/newsonafrica/reader-webhook-secret | tr -d '\n' \
+    | sudo noa-wp-cli.sh site option update noa_reader_webhook_secret
+  ```
+- Each request is signed with HMAC-SHA256 (`x-wp-signature`) and sent
+  non-blocking, so an unreachable reader never slows publishing.
+- The reader needs `SUPABASE_SERVICE_ROLE_KEY` set at runtime to write the
+  index. Without it the webhook still refreshes the cache, but the index
+  sync fails and is logged.

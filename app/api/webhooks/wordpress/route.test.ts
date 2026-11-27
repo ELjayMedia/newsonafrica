@@ -41,6 +41,19 @@ describe("/api/webhooks/wordpress", () => {
     expect(revalidateTagMock).not.toHaveBeenCalled();
   });
 
+  it("still revalidates when the index sync throws (e.g. no service-role key)", async () => {
+    syncPostByIdMock.mockRejectedValueOnce(new Error("Missing required Supabase admin credential"));
+    const { POST } = await import("./route");
+    const response = await POST(
+      makeRequest({ action: "post_published", country: "sz", post: { id: 5, slug: "new-story" } }),
+    );
+    const json = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(json.sync).toEqual({ success: false, error: "Missing required Supabase admin credential" });
+    expect(revalidateTagMock).toHaveBeenCalledWith("home:sz");
+  });
+
   it("syncs and revalidates canonical tags on post_updated", async () => {
     const { POST } = await import("./route");
     const request = makeRequest({
