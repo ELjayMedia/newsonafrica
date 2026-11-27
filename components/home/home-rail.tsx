@@ -2,12 +2,15 @@ import Link from "next/link";
 
 import { AdSlot } from "@/components/ads/ad-slot";
 import { ThumbRow } from "@/components/home/story-card";
+import { formatRelativeTime } from "@/lib/format";
 import type { MostReadPost, PostSummary } from "@/lib/dal/types";
 // Note: rank list links use MostReadPost.url; ThumbRow resolves its own hrefs.
 
 /**
- * Numbered "Most Read" list (homepage mockup): oversized green Archivo rank
- * numbers beside tight headlines, under a green-underlined section heading.
+ * Numbered "Most read" list. Same row anatomy as Latest news (shared panel,
+ * hairline dividers, card headline, muted date line) so the two rail modules
+ * read as one system; the green rank sits in a fixed column aligned to the
+ * headline's first line.
  */
 function MostRead({ posts }: { posts: MostReadPost[] }) {
   if (posts.length === 0) return null;
@@ -16,15 +19,28 @@ function MostRead({ posts }: { posts: MostReadPost[] }) {
       <h2 className="section-title mb-4">Most read</h2>
       <ol className="space-y-4">
         {posts.map((post, index) => (
-          <li key={post.id} className="flex items-start gap-3">
-            <span className="heading-md font-display text-noa-green" aria-hidden>
+          <li
+            key={post.id}
+            className="flex items-start gap-3 border-b border-noa-hairline pb-4 last:border-0 last:pb-0"
+          >
+            <span
+              aria-hidden
+              className="w-6 shrink-0 font-display text-[1.375rem] leading-[1.1] font-extrabold tabular-nums text-noa-green"
+            >
               {index + 1}
             </span>
-            <h3 className="story-hed text-[0.9375rem] lg:text-[1.0625rem]">
-              <Link href={post.url} className="transition-colors hover:text-noa-green">
-                {post.title}
-              </Link>
-            </h3>
+            <div className="min-w-0 flex-1 space-y-1">
+              <h3 className="story-hed text-[0.9375rem] lg:text-[1.0625rem]">
+                <Link href={post.url} className="transition-colors hover:text-primary">
+                  {post.title}
+                </Link>
+              </h3>
+              <p className="story-meta">
+                <time dateTime={post.publishedAt} suppressHydrationWarning>
+                  {formatRelativeTime(post.publishedAt)}
+                </time>
+              </p>
+            </div>
           </li>
         ))}
       </ol>
