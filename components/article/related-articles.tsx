@@ -7,9 +7,9 @@ export interface RelatedArticlesProps {
 }
 
 /**
- * "You might also like" at the foot of an article (NOA-90): thumbnail rows
- * rather than tall stacked cards, so the next-read options fit on one phone
- * screen.
+ * "You might also like" at the foot of an article (NOA-90): the same
+ * image-on-top cards as the author page's story grid, headline and meta only
+ * (no excerpt), three across from sm up.
  */
 export function RelatedArticles({ posts, title = "You might also like" }: RelatedArticlesProps) {
   if (posts.length === 0) return null;
@@ -17,10 +17,10 @@ export function RelatedArticles({ posts, title = "You might also like" }: Relate
   return (
     <section aria-label={title} className="space-y-4 border-t border-border pt-8">
       <h2 className="section-title">{title}</h2>
-      <ul className="divide-y divide-border">
+      <ul className="grid grid-cols-1 gap-6 sm:grid-cols-3 sm:gap-4">
         {posts.map((post) => (
-          <li key={post.id} className="py-4 first:pt-0 last:pb-0">
-            <ArticleCard post={post} variant="list" />
+          <li key={`${post.country}-${post.id}`}>
+            <ArticleCard post={post} variant="grid" showExcerpt={false} />
           </li>
         ))}
       </ul>

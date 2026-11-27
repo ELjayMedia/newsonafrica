@@ -15,6 +15,8 @@ export interface ArticleCardProps {
   priority?: boolean;
   /** Omit the section from the meta line, e.g. on a category page where every card shares it. */
   showCategory?: boolean;
+  /** Show the excerpt under the headline (variants that have one). */
+  showExcerpt?: boolean;
   className?: string;
 }
 
@@ -39,6 +41,7 @@ export function ArticleCard({
   variant = "grid",
   priority = false,
   showCategory = true,
+  showExcerpt = true,
   className,
 }: ArticleCardProps) {
   const href = getArticleUrl(post.country, post.slug);
@@ -107,7 +110,7 @@ export function ArticleCard({
           </Link>
         </h3>
 
-        {variant !== "compact" && !isFeed && !isSplit && post.excerpt ? (
+        {showExcerpt && variant !== "compact" && !isFeed && !isSplit && post.excerpt ? (
           <p
             className={cn("body-sm line-clamp-2 text-muted-foreground", isList && "max-sm:hidden")}
           >
