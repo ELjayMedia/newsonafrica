@@ -483,3 +483,33 @@ export async function listPostsForSync(
 
   return { posts, total, hasNextPage };
 }
+
+const EXISTING_SLUGS_QUERY = /* GraphQL */ `
+  query ExistingSlugs($slugs: [String], $first: Int!) {
+    posts(first: $first, where: { status: PUBLISH, nameIn: $slugs }) {
+      nodes {
+        slug
+      }
+    }
+  }
+`;
+
+/**
+ * Which of these slugs are published posts in the edition's CMS. Used to drop
+ * stories that only survive in the Supabase index (e.g. lost in the archive
+ * rebuild) before linking to them.
+ */
+export async function getExistingPostSlugs(
+  country: CountryCode | string,
+  slugs: string[],
+): Promise<Set<string>> {
+  if (slugs.length === 0) return new Set();
+  const data = await graphQL<{ posts?: { nodes?: Array<{ slug?: string | null }> } }>(
+    country,
+    EXISTING_SLUGS_QUERY,
+    { slugs, first: slugs.length },
+    [cacheTags.posts(country)],
+    "ExistingSlugs",
+  );
+  return new Set((data.posts?.nodes ?? []).flatMap((n) => (n.slug ? [n.slug] : [])));
+}
