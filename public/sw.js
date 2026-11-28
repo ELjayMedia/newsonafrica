@@ -18,7 +18,7 @@
  * posts SKIP_WAITING when the user accepts.
  */
 
-const SW_VERSION = "v1";
+const SW_VERSION = "v2";
 const PRECACHE = `noa-precache-${SW_VERSION}`;
 const PAGE_CACHE = `noa-pages-${SW_VERSION}`;
 const ASSET_CACHE = `noa-assets-${SW_VERSION}`;

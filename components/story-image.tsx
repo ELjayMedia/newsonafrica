@@ -2,14 +2,12 @@
 
 import * as React from "react";
 
+import { AFRICA_STROKE, AfricaGlyph } from "@/components/africa-glyph";
 import { cn } from "@/lib/utils";
-
-const PIN_PATH =
-  "M50 8 C58 8 64 10 70 12 C76 14 82 14 84 20 C86 26 82 30 80 36 C78 42 80 46 78 52 C76 60 70 66 64 74 C60 80 58 88 52 92 C48 95 44 90 43 84 C42 78 38 74 34 68 C30 62 26 58 24 50 C22 42 20 34 22 28 C24 22 30 20 36 16 C42 12 44 8 50 8 Z";
 
 /**
  * Branded stand-in for a story without a usable image: a soft green wash with
- * a fine diagonal pattern, the News On Africa pin and (on larger frames) the
+ * a fine diagonal pattern, the News On Africa glyph (Africa outline) and (on larger frames) the
  * section name. One look everywhere, in both themes.
  */
 export function StoryImagePlaceholder({
@@ -29,15 +27,15 @@ export function StoryImagePlaceholder({
         className,
       )}
     >
-      <svg
-        viewBox="0 0 100 100"
+      <AfricaGlyph
+        color="currentColor"
+        // Small frames get the heavier icon stroke so the outline stays legible.
+        strokeWidth={size === "lg" ? AFRICA_STROKE.mark : AFRICA_STROKE.icon}
         className={cn(
           "opacity-60",
-          size === "sm" ? "h-6 w-6" : size === "md" ? "h-9 w-9" : "h-14 w-14",
+          size === "sm" ? "h-6 w-6" : size === "md" ? "h-10 w-10" : "h-16 w-16",
         )}
-      >
-        <path d={PIN_PATH} fill="currentColor" />
-      </svg>
+      />
       {label && size !== "sm" ? (
         <span className="noa-eyebrow max-w-[80%] truncate text-[0.625rem] tracking-[0.18em] text-noa-green-text/80">
           {label}
